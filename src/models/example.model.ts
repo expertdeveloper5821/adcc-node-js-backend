@@ -14,4 +14,4 @@ const ExampleSchema = new Schema({
   timestamps: true,
 });
 
-export default mongoose.model<IExample>('Example', ExampleSchema);
+export default mongoose.model<IExample>('examples', ExampleSchema);
