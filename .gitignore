@@ -46,6 +46,8 @@ Thumbs.db
 firebase-debug.log
 .firebase/
 serviceAccountKey.json
+.firebaserc
+firebase.json
 
 # Misc
 *.pem

@@ -18,19 +18,21 @@ import { AuthRequest } from '@/middleware/auth.middleware';
  */
 export const verifyFirebaseAuth = asyncHandler(
   async (req: Request, res: Response) => {
-    const { idToken, deviceId } = req.body;
+    const { idToken } = req.body;
 
-    // Verify Firebase token
-    const { phone } = await verifyFirebaseToken(idToken);
+    // Verify Firebase token - get UID
+    const { uid, phone, email } = await verifyFirebaseToken(idToken);
 
-    // Check if user exists
-    const user = await User.findOne({ phone });
+    // Find user by Firebase UID (primary lookup)
+    const user = await User.findOne({ firebaseUid: uid });
 
     if (user) {
       // Existing user - return tokens + user
       const tokens = generateTokens({
         id: user._id.toString(),
-        phone: user.phone,
+        uid: user.firebaseUid,
+        phone: user.phone || phone || '',
+        email: user.email || email || '',
       });
 
       // Store refresh token in database
@@ -40,7 +42,6 @@ export const verifyFirebaseAuth = asyncHandler(
       user.refreshTokens.push({
         token: tokens.refreshToken,
         expiresAt,
-        deviceId: deviceId || undefined,
         createdAt: new Date(),
       });
       await user.save();
@@ -50,9 +51,10 @@ export const verifyFirebaseAuth = asyncHandler(
         {
           user: {
             id: user._id,
-            name: user.name,
+            fullName: user.fullName,
             phone: user.phone,
-            age: user.age,
+            email: user.email,
+            gender: user.gender,
             isVerified: user.isVerified,
           },
           ...tokens,
@@ -60,16 +62,20 @@ export const verifyFirebaseAuth = asyncHandler(
         'Login successful'
       );
     } else {
-      // New user - return temporary token (with phone only, no user ID)
+      // New user - return temporary token (with UID, no user ID)
       const tokens = generateTokens({
-        phone,
+        uid,
+        phone: phone || '',
+        email: email || '',
       });
 
       sendSuccess(
         res,
         {
           isNewUser: true,
-          phone,
+          uid,
+          phone: phone || undefined,
+          email: email || undefined,
           ...tokens,
         },
         'OTP verified. Please complete registration.'
@@ -81,35 +87,41 @@ export const verifyFirebaseAuth = asyncHandler(
 /**
  * Register new user
  * POST /v1/auth/register
- * Creates user with name and age
+ * Creates user with fullName and gender
  */
 export const registerUser = asyncHandler(
   async (req: AuthRequest, res: Response) => {
-    const { name, age, deviceId } = req.body;
-    const phone = req.user?.phone; // From JWT (temporary token)
+    const { fullName, gender } = req.body;
+    const uid = req.user?.uid; // From JWT (temporary token)
+    const phone = req.user?.phone; // Optional phone from JWT
+    const email = req.user?.email; // Optional email from JWT
 
-    if (!phone) {
-      throw new AppError('Phone number not found in token', 400);
+    if (!uid) {
+      throw new AppError('Firebase UID not found in token', 400);
     }
 
-    // Check if user already exists
-    const existingUser = await User.findOne({ phone });
+    // Check if user already exists by UID
+    const existingUser = await User.findOne({ firebaseUid: uid });
     if (existingUser) {
       throw new AppError('User already registered', 400);
     }
 
-    // Create user
+    // Create user with Firebase UID
     const user = await User.create({
-      name,
-      phone,
-      age,
+      fullName,
+      firebaseUid: uid,
+      phone: phone || undefined,
+      email: email || undefined,
+      gender,
       isVerified: true,
     });
 
     // Generate new tokens with user ID
     const tokens = generateTokens({
       id: user._id.toString(),
-      phone: user.phone,
+      uid: user.firebaseUid,
+      phone: user.phone || phone || '',
+      email: user.email || email || '',
     });
 
     // Store refresh token
@@ -119,7 +131,6 @@ export const registerUser = asyncHandler(
     user.refreshTokens.push({
       token: tokens.refreshToken,
       expiresAt,
-      deviceId: deviceId || undefined,
       createdAt: new Date(),
     });
     await user.save();
@@ -129,9 +140,10 @@ export const registerUser = asyncHandler(
       {
         user: {
           id: user._id,
-          name: user.name,
+          fullName: user.fullName,
           phone: user.phone,
-          age: user.age,
+          email: user.email,
+          gender: user.gender,
           isVerified: user.isVerified,
         },
         ...tokens,
@@ -170,7 +182,9 @@ export const refreshAccessToken = asyncHandler(
     // Generate new access token
     const accessToken = generateAccessToken({
       id: user._id.toString(),
-      phone: user.phone,
+      uid: user.firebaseUid,
+      phone: user.phone || '',
+      email: user.email || '',
     });
 
     sendSuccess(res, { accessToken }, 'Token refreshed successfully');

@@ -2,13 +2,13 @@ import { z } from 'zod';
 
 export const verifyFirebaseAuthSchema = z.object({
   idToken: z.string().min(1, 'Firebase ID token is required'),
-  deviceId: z.string().optional(),
 });
 
 export const registerUserSchema = z.object({
-  name: z.string().min(1, 'Name is required'),
-  age: z.number().int().min(1, 'Age must be at least 1').max(120, 'Age must be at most 120'),
-  deviceId: z.string().optional(),
+  fullName: z.string().min(1, 'Full name is required'),
+  gender: z.enum(['Male', 'Female'], {
+    message: 'Gender must be either Male or Female',
+  }),
 }).strict();
 
 export const refreshTokenSchema = z.object({

@@ -3,14 +3,15 @@ import mongoose, { Schema, Document } from 'mongoose';
 export interface IRefreshToken {
   token: string;
   expiresAt: Date;
-  deviceId?: string;
   createdAt: Date;
 }
 
 export interface IUser extends Document {
-  name: string;
-  phone: string;
-  age: number;
+  fullName: string;
+  firebaseUid: string;
+  phone?: string;
+  email?: string;
+  gender: 'Male' | 'Female';
   isVerified: boolean;
   refreshTokens: IRefreshToken[];
   createdAt: Date;
@@ -26,9 +27,6 @@ const RefreshTokenSchema = new Schema({
     type: Date,
     required: true,
   },
-  deviceId: {
-    type: String,
-  },
   createdAt: {
     type: Date,
     default: Date.now,
@@ -37,22 +35,34 @@ const RefreshTokenSchema = new Schema({
 
 const UserSchema = new Schema(
   {
-    name: {
+    fullName: {
       type: String,
-      required: [true, 'Name is required'],
+      required: [true, 'Full name is required'],
       trim: true,
+    },
+    firebaseUid: {
+      type: String,
+      required: [true, 'Firebase UID is required'],
+      unique: true,
+      index: true,
     },
     phone: {
       type: String,
-      required: [true, 'Phone number is required'],
       unique: true,
+      sparse: true,
       trim: true,
     },
-    age: {
-      type: Number,
-      required: [true, 'Age is required'],
-      min: [1, 'Age must be at least 1'],
-      max: [120, 'Age must be at most 120'],
+    email: {
+      type: String,
+      unique: true,
+      sparse: true,
+      trim: true,
+      lowercase: true,
+    },
+    gender: {
+      type: String,
+      required: [true, 'Gender is required'],
+      enum: ['Male', 'Female'],
     },
     isVerified: {
       type: Boolean,

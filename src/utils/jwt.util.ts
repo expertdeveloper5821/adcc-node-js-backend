@@ -3,7 +3,9 @@ import { AppError } from './app-error';
 
 export interface JWTPayload extends JwtPayload {
   id?: string;
-  phone: string;
+  uid?: string;
+  phone?: string;
+  email?: string;
 }
 
 // Lazy-load environment variables (only when functions are called)

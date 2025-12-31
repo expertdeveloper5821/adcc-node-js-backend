@@ -36,24 +36,21 @@ const initializeFirebase = () => {
 /**
  * Verify Firebase ID token and extract user info
  * @param idToken - Firebase ID token from mobile app
- * @returns User phone number and UID
+ * @returns User UID and optional phone/email
  */
 export const verifyFirebaseToken = async (
   idToken: string
-): Promise<{ phone: string; uid: string }> => {
+): Promise<{ uid: string; phone?: string; email?: string }> => {
   // Initialize Firebase if not already initialized
   initializeFirebase();
 
   try {
     const decodedToken = await admin.auth().verifyIdToken(idToken);
 
-    if (!decodedToken.phone_number) {
-      throw new AppError('Phone number not found in token', 400);
-    }
-
     return {
-      phone: decodedToken.phone_number,
       uid: decodedToken.uid,
+      phone: decodedToken.phone_number || undefined,
+      email: decodedToken.email || undefined,
     };
   } catch (error: any) {
     if (error instanceof AppError) {
