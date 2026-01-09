@@ -5,7 +5,7 @@ export const verifyFirebaseAuthSchema = z.object({
 });
 
 export const registerUserSchema = z.object({
-  fullName: z.string().min(1, 'Full name is required'),
+  fullName: z.string().min(1, 'Full name is required').trim(),
   gender: z.enum(['Male', 'Female'], {
     message: 'Gender must be either Male or Female',
   }),

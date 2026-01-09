@@ -14,13 +14,14 @@ import { AuthRequest } from '@/middleware/auth.middleware';
 /**
  * Verify Firebase authentication
  * POST /v1/auth/verify
+ * Supports both mobile (phone OTP) and web (email/password) authentication
  * Returns JWT if user exists, or isNewUser flag if new
  */
 export const verifyFirebaseAuth = asyncHandler(
   async (req: Request, res: Response) => {
     const { idToken } = req.body;
 
-    // Verify Firebase token - get UID
+    // Verify Firebase token - get UID, phone (for phone auth), email (for email/password auth)
     const { uid, phone, email } = await verifyFirebaseToken(idToken);
 
     // Find user by Firebase UID (primary lookup)
@@ -80,7 +81,7 @@ export const verifyFirebaseAuth = asyncHandler(
           email: email || undefined,
           ...tokens,
         },
-        'OTP verified. Please complete registration.'
+        'Authentication verified. Please complete registration.'
       );
     }
   }
@@ -90,16 +91,22 @@ export const verifyFirebaseAuth = asyncHandler(
  * Register new user
  * POST /v1/auth/register
  * Creates user with fullName and gender
+ * Supports both phone OTP (mobile) and email/password (web) authentication
  */
 export const registerUser = asyncHandler(
   async (req: AuthRequest, res: Response) => {
     const { fullName, gender } = req.body;
     const uid = req.user?.uid; // From JWT (temporary token)
-    const phone = req.user?.phone; // Optional phone from JWT
-    const email = req.user?.email; // Optional email from JWT
+    const phone = req.user?.phone; // Optional phone from JWT (for phone auth)
+    const email = req.user?.email; // Optional email from JWT (for email/password auth)
 
     if (!uid) {
       throw new AppError('Firebase UID not found in token', 400);
+    }
+
+    // Validate that user has either phone or email (required for registration)
+    if (!phone && !email) {
+      throw new AppError('Either phone number or email address is required for registration', 400);
     }
 
     // Check if user already exists by UID
