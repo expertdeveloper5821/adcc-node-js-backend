@@ -12,6 +12,7 @@ export interface IUser extends Document {
   phone?: string;
   email?: string;
   gender: 'Male' | 'Female';
+  role: 'Admin' | 'Vendor' | 'Member';
   isVerified: boolean;
   refreshTokens: IRefreshToken[];
   createdAt: Date;
@@ -63,6 +64,11 @@ const UserSchema = new Schema(
       type: String,
       required: [true, 'Gender is required'],
       enum: ['Male', 'Female'],
+    },
+    role: {
+      type: String,
+      enum: ['Admin', 'Vendor', 'Member'],
+      default: 'Member',
     },
     isVerified: {
       type: Boolean,

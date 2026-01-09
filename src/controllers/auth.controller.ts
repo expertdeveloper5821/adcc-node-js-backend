@@ -33,6 +33,7 @@ export const verifyFirebaseAuth = asyncHandler(
         uid: user.firebaseUid,
         phone: user.phone || phone || '',
         email: user.email || email || '',
+        role: user.role,
       });
 
       // Store refresh token in database
@@ -55,6 +56,7 @@ export const verifyFirebaseAuth = asyncHandler(
             phone: user.phone,
             email: user.email,
             gender: user.gender,
+            role: user.role,
             isVerified: user.isVerified,
           },
           ...tokens,
@@ -122,6 +124,7 @@ export const registerUser = asyncHandler(
       uid: user.firebaseUid,
       phone: user.phone || phone || '',
       email: user.email || email || '',
+      role: user.role,
     });
 
     // Store refresh token
@@ -144,6 +147,7 @@ export const registerUser = asyncHandler(
           phone: user.phone,
           email: user.email,
           gender: user.gender,
+          role: user.role,
           isVerified: user.isVerified,
         },
         ...tokens,
@@ -185,6 +189,7 @@ export const refreshAccessToken = asyncHandler(
       uid: user.firebaseUid,
       phone: user.phone || '',
       email: user.email || '',
+      role: user.role,
     });
 
     sendSuccess(res, { accessToken }, 'Token refreshed successfully');

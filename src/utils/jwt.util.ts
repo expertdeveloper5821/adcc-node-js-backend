@@ -6,6 +6,7 @@ export interface JWTPayload extends JwtPayload {
   uid?: string;
   phone?: string;
   email?: string;
+  role?: string;
 }
 
 // Lazy-load environment variables (only when functions are called)
