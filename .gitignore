@@ -54,3 +54,5 @@ firebase.json
 *.key
 
 # Firebase Admin SDK
+
+scripts/
