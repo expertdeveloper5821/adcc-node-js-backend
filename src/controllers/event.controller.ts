@@ -34,13 +34,11 @@ export const createEvent = asyncHandler(async (req: AuthRequest, res: Response) 
  * Public - with optional filters
  */
 export const getAllEvents = asyncHandler(async (req: Request, res: Response) => {
-  const { category, eventType, status, page = 1, limit = 10 } = req.query;
+  const { status, page = 1, limit = 10 } = req.query;
 
   // Build filter object
   const filter: any = {};
 
-  if (category) filter.category = category;
-  if (eventType) filter.eventType = eventType;
   if (status) filter.status = status;
 
   // Pagination

@@ -13,6 +13,8 @@
     "seed:admin": "ts-node -r tsconfig-paths/register scripts/seed-admin.ts",
     "seed:admin:manual": "ts-node -r tsconfig-paths/register scripts/seed-admin-manual.ts",
     "seed:admin:direct": "ts-node -r tsconfig-paths/register scripts/seed-admin-direct.ts",
+    "seed:demo": "ts-node -r tsconfig-paths/register scripts/seed-demo-data.ts",
+    "seed:demo-data": "ts-node -r tsconfig-paths/register scripts/seed-demo-data.ts",
     "test:firebase": "ts-node -r tsconfig-paths/register scripts/test-firebase-connection.ts"
   },
   "author": "",

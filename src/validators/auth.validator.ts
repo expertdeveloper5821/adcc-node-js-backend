@@ -9,6 +9,7 @@ export const registerUserSchema = z.object({
   gender: z.enum(['Male', 'Female'], {
     message: 'Gender must be either Male or Female',
   }),
+  age: z.number().int().min(0, 'Age cannot be negative').max(150, 'Age must be realistic'),
 }).strict();
 
 export const refreshTokenSchema = z.object({

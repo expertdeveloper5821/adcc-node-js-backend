@@ -56,3 +56,6 @@ firebase.json
 # Firebase Admin SDK
 
 scripts/
+
+
+ADCC_API_Collection.postman_collection.json
