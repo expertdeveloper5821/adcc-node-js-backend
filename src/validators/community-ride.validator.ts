@@ -1,35 +1,32 @@
 import { z } from 'zod';
 
-export const createEventSchema = z
+export const createCommunityRideSchema = z
   .object({
-    title: z.string().min(1, 'Event title is required'),
-    description: z.string().min(1, 'Event description is required'),
-    mainImage: z.string().optional(),
-    eventImage: z.string().optional(),
-    eventDate: z.string().or(z.date()).refine(
+    title: z.string().min(1, 'Title is required'),
+    description: z.string().min(1, 'Description is required'),
+    image: z.string().optional(),
+    date: z.string().or(z.date()).refine(
       (val) => {
         const date = val instanceof Date ? val : new Date(val);
         return !isNaN(date.getTime());
       },
-      { message: 'Invalid event date' }
+      { message: 'Invalid date' }
     ),
-    eventTime: z.string().min(1, 'Event time is required'),
-    address: z.string().min(1, 'Event address is required'),
+    time: z.string().min(1, 'Time is required'),
+    address: z.string().min(1, 'Address is required'),
     maxParticipants: z.number().int().min(0, 'Max participants cannot be negative').optional(),
     minAge: z.number().int().min(0, 'Min age cannot be negative').optional(),
     maxAge: z.number().int().min(0, 'Max age cannot be negative').optional(),
-    youtubeLink: z.string().url('Invalid YouTube URL').optional().or(z.literal('')),
     status: z.enum(['upcoming', 'ongoing', 'completed', 'cancelled']).default('upcoming'),
   })
   .strict();
 
-export const updateEventSchema = z
+export const updateCommunityRideSchema = z
   .object({
-    title: z.string().min(1, 'Event title is required').optional(),
-    description: z.string().min(1, 'Event description is required').optional(),
-    mainImage: z.string().optional(),
-    eventImage: z.string().optional(),
-    eventDate: z
+    title: z.string().min(1, 'Title is required').optional(),
+    description: z.string().min(1, 'Description is required').optional(),
+    image: z.string().optional(),
+    date: z
       .string()
       .or(z.date())
       .refine(
@@ -37,25 +34,25 @@ export const updateEventSchema = z
           const date = val instanceof Date ? val : new Date(val);
           return !isNaN(date.getTime());
         },
-        { message: 'Invalid event date' }
+        { message: 'Invalid date' }
       )
       .optional(),
-    eventTime: z.string().min(1, 'Event time is required').optional(),
-    address: z.string().min(1, 'Event address is required').optional(),
+    time: z.string().min(1, 'Time is required').optional(),
+    address: z.string().min(1, 'Address is required').optional(),
     maxParticipants: z.number().int().min(0, 'Max participants cannot be negative').optional(),
     minAge: z.number().int().min(0, 'Min age cannot be negative').optional(),
     maxAge: z.number().int().min(0, 'Max age cannot be negative').optional(),
-    youtubeLink: z.string().url('Invalid YouTube URL').optional().or(z.literal('')),
     status: z.enum(['upcoming', 'ongoing', 'completed', 'cancelled']).optional(),
   })
   .strict();
 
-export const getEventsQuerySchema = z.object({
+export const getCommunityRidesQuerySchema = z.object({
   status: z.enum(['upcoming', 'ongoing', 'completed', 'cancelled']).optional(),
   page: z.string().regex(/^\d+$/).transform(Number).optional(),
   limit: z.string().regex(/^\d+$/).transform(Number).optional(),
 });
 
-export type CreateEventInput = z.infer<typeof createEventSchema>;
-export type UpdateEventInput = z.infer<typeof updateEventSchema>;
-export type GetEventsQueryInput = z.infer<typeof getEventsQuerySchema>;
+export type CreateCommunityRideInput = z.infer<typeof createCommunityRideSchema>;
+export type UpdateCommunityRideInput = z.infer<typeof updateCommunityRideSchema>;
+export type GetCommunityRidesQueryInput = z.infer<typeof getCommunityRidesQuerySchema>;
+

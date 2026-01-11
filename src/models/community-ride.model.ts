@@ -1,17 +1,15 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
-export interface IEvent extends Document {
+export interface ICommunityRide extends Document {
   title: string;
   description: string;
-  mainImage?: string;
-  eventImage?: string;
-  eventDate: Date;
-  eventTime: string;
+  image?: string;
+  date: Date;
+  time: string;
   address: string;
   maxParticipants?: number; // 0 means unlimited
   minAge?: number;
   maxAge?: number;
-  youtubeLink?: string;
   currentParticipants: number;
   status: 'upcoming' | 'ongoing' | 'completed' | 'cancelled';
   createdBy: mongoose.Types.ObjectId;
@@ -19,37 +17,33 @@ export interface IEvent extends Document {
   updatedAt: Date;
 }
 
-const EventSchema = new Schema(
+const CommunityRideSchema = new Schema(
   {
     title: {
       type: String,
-      required: [true, 'Event title is required'],
+      required: [true, 'Title is required'],
       trim: true,
     },
     description: {
       type: String,
-      required: [true, 'Event description is required'],
+      required: [true, 'Description is required'],
       trim: true,
     },
-    mainImage: {
+    image: {
       type: String,
       trim: true,
     },
-    eventImage: {
-      type: String,
-      trim: true,
-    },
-    eventDate: {
+    date: {
       type: Date,
-      required: [true, 'Event date is required'],
+      required: [true, 'Date is required'],
     },
-    eventTime: {
+    time: {
       type: String,
-      required: [true, 'Event time is required'],
+      required: [true, 'Time is required'],
     },
     address: {
       type: String,
-      required: [true, 'Event address is required'],
+      required: [true, 'Address is required'],
       trim: true,
     },
     maxParticipants: {
@@ -65,10 +59,6 @@ const EventSchema = new Schema(
       type: Number,
       min: [0, 'Max age cannot be negative'],
     },
-    youtubeLink: {
-      type: String,
-      trim: true,
-    },
     currentParticipants: {
       type: Number,
       default: 0,
@@ -82,7 +72,7 @@ const EventSchema = new Schema(
     createdBy: {
       type: Schema.Types.ObjectId,
       ref: 'users',
-      required: [true, 'Event creator is required'],
+      required: [true, 'Creator is required'],
     },
   },
   {
@@ -91,6 +81,7 @@ const EventSchema = new Schema(
 );
 
 // Index for filtering
-EventSchema.index({ eventDate: 1, status: 1 });
+CommunityRideSchema.index({ date: 1, status: 1 });
 
-export default mongoose.model<IEvent>('events', EventSchema);
+export default mongoose.model<ICommunityRide>('communityrides', CommunityRideSchema);
+

@@ -57,6 +57,7 @@ export const verifyFirebaseAuth = asyncHandler(
             phone: user.phone,
             email: user.email,
             gender: user.gender,
+            age: user.age,
             role: user.role,
             isVerified: user.isVerified,
           },
@@ -95,7 +96,7 @@ export const verifyFirebaseAuth = asyncHandler(
  */
 export const registerUser = asyncHandler(
   async (req: AuthRequest, res: Response) => {
-    const { fullName, gender } = req.body;
+    const { fullName, gender, age } = req.body;
     const uid = req.user?.uid; // From JWT (temporary token)
     const phone = req.user?.phone; // Optional phone from JWT (for phone auth)
     const email = req.user?.email; // Optional email from JWT (for email/password auth)
@@ -122,6 +123,7 @@ export const registerUser = asyncHandler(
       phone: phone || undefined,
       email: email || undefined,
       gender,
+      age,
       isVerified: true,
     });
 
