@@ -50,6 +50,17 @@ export const verifyFirebaseToken = async (
   // Initialize Firebase if not already initialized
   initializeFirebase();
 
+  // Basic token format validation
+  if (!idToken || typeof idToken !== 'string') {
+    throw new AppError('Firebase ID token is required', 400);
+  }
+
+  // Check if token looks like a JWT (has 3 parts separated by dots)
+  const tokenParts = idToken.split('.');
+  if (tokenParts.length !== 3) {
+    throw new AppError('Invalid Firebase token format. Token must be a valid JWT.', 400);
+  }
+
   try {
     const decodedToken = await admin.auth().verifyIdToken(idToken);
 
@@ -62,7 +73,40 @@ export const verifyFirebaseToken = async (
     if (error instanceof AppError) {
       throw error;
     }
-    throw new AppError('Invalid or expired Firebase token', 401);
+    
+    // Log the actual Firebase error for debugging
+    console.error('Firebase token verification error:', {
+      code: error.code,
+      message: error.message,
+      error: error,
+    });
+    
+    // Provide more specific error messages
+    if (error.code === 'auth/id-token-expired') {
+      throw new AppError('Firebase token has expired. Please login again.', 401);
+    }
+    if (error.code === 'auth/argument-error') {
+      // auth/argument-error can mean invalid format OR invalid signature (wrong project)
+      if (error.message?.includes('invalid signature')) {
+        throw new AppError(
+          'Firebase token signature is invalid. The token may be from a different Firebase project. ' +
+          'Please ensure your service account key matches the project that issued this token.',
+          401
+        );
+      }
+      throw new AppError('Invalid Firebase token format', 401);
+    }
+    if (error.code === 'auth/id-token-revoked') {
+      throw new AppError('Firebase token has been revoked', 401);
+    }
+    if (error.code === 'auth/project-not-found') {
+      throw new AppError('Firebase project not found. Check your service account configuration.', 500);
+    }
+    
+    throw new AppError(
+      `Invalid or expired Firebase token: ${error.message || error.code || 'Unknown error'}`,
+      401
+    );
   }
 };
 
