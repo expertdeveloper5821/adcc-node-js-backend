@@ -15,6 +15,7 @@
     "seed:admin:direct": "ts-node -r tsconfig-paths/register scripts/seed-admin-direct.ts",
     "seed:demo": "ts-node -r tsconfig-paths/register scripts/seed-demo-data.ts",
     "seed:demo-data": "ts-node -r tsconfig-paths/register scripts/seed-demo-data.ts",
+    "seed:demo-communities": "ts-node -r tsconfig-paths/register scripts/seed-demo-communities.ts",
     "test:firebase": "ts-node -r tsconfig-paths/register scripts/test-firebase-connection.ts"
   },
   "author": "",
