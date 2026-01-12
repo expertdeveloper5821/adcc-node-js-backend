@@ -7,18 +7,38 @@ const initializeFirebase = () => {
   if (!admin.apps.length) {
     let serviceAccount: admin.ServiceAccount;
 
-    // Option 1: Use environment variable (for cloud deployment - Render/Vercel)
-    if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+    // Option 1: Use individual environment variables (preferred for cloud deployment)
+    if (
+      process.env.FIREBASE_PROJECT_ID &&
+      process.env.FIREBASE_PRIVATE_KEY &&
+      process.env.FIREBASE_CLIENT_EMAIL
+    ) {
+      serviceAccount = {
+        projectId: process.env.FIREBASE_PROJECT_ID,
+        privateKeyId: process.env.FIREBASE_PRIVATE_KEY_ID,
+        privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'), // Replace literal \n with actual newlines
+        clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+        clientId: process.env.FIREBASE_CLIENT_ID,
+        authUri: process.env.FIREBASE_AUTH_URI || 'https://accounts.google.com/o/oauth2/auth',
+        tokenUri: process.env.FIREBASE_TOKEN_URI || 'https://oauth2.googleapis.com/token',
+        authProviderX509CertUrl:
+          process.env.FIREBASE_AUTH_PROVIDER_X509_CERT_URL ||
+          'https://www.googleapis.com/oauth2/v1/certs',
+        clientX509CertUrl: process.env.FIREBASE_CLIENT_X509_CERT_URL,
+        universeDomain: process.env.FIREBASE_UNIVERSE_DOMAIN || 'googleapis.com',
+      } as admin.ServiceAccount;
+    }
+    // Option 2: Use JSON string environment variable (alternative for cloud deployment)
+    else if (process.env.FIREBASE_SERVICE_ACCOUNT) {
       try {
         serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
       } catch (error) {
         throw new Error('FIREBASE_SERVICE_ACCOUNT is not valid JSON');
       }
     }
-    // Option 2: Use file path (for local development)
+    // Option 3: Use file path (for local development - deprecated, use env vars instead)
     else if (process.env.FIREBASE_SERVICE_ACCOUNT_PATH) {
       const absolutePath = path.resolve(process.cwd(), process.env.FIREBASE_SERVICE_ACCOUNT_PATH);
-      // Firebase Admin SDK can accept file path directly, but we'll load it to verify it exists
       try {
         serviceAccount = require(absolutePath) as admin.ServiceAccount;
       } catch (error) {
@@ -26,7 +46,7 @@ const initializeFirebase = () => {
       }
     } else {
       throw new Error(
-        'Either FIREBASE_SERVICE_ACCOUNT (JSON string) or FIREBASE_SERVICE_ACCOUNT_PATH (file path) must be set'
+        'Firebase service account not configured. Set FIREBASE_PROJECT_ID, FIREBASE_PRIVATE_KEY, and FIREBASE_CLIENT_EMAIL environment variables.'
       );
     }
 
