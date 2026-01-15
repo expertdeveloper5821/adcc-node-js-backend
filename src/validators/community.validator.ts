@@ -7,9 +7,7 @@ export const createCommunitySchema = z
     type: z.enum(['city', 'group', 'awareness'], {
       message: 'Type must be city, group, or awareness',
     }),
-    category: z.enum(['Social', 'Race', 'Family', 'Awareness', 'Partner', 'Other'], {
-      message: 'Invalid category',
-    }),
+    category: z.array(z.string().trim()).min(1, 'At least one category is required'),
     location: z.enum(['Abu Dhabi', 'Al Ain', 'Western Region']).optional(),
     image: z.string().optional(),
     trackName: z.string().optional(),
@@ -24,7 +22,7 @@ export const updateCommunitySchema = z
     title: z.string().min(1, 'Community title is required').optional(),
     description: z.string().min(1, 'Community description is required').optional(),
     type: z.enum(['city', 'group', 'awareness']).optional(),
-    category: z.enum(['Social', 'Race', 'Family', 'Awareness', 'Partner', 'Other']).optional(),
+    category: z.array(z.string().trim()).optional(),
     location: z.enum(['Abu Dhabi', 'Al Ain', 'Western Region']).optional(),
     image: z.string().optional(),
     trackName: z.string().optional(),

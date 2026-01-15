@@ -4,7 +4,7 @@ export interface ICommunity extends Document {
   title: string;
   description: string;
   type: 'city' | 'group' | 'awareness';
-  category: 'Social' | 'Race' | 'Family' | 'Awareness' | 'Partner' | 'Other';
+  category: string[];
   location?: 'Abu Dhabi' | 'Al Ain' | 'Western Region';
   image?: string;
   members: mongoose.Types.ObjectId[];
@@ -36,8 +36,8 @@ const CommunitySchema = new Schema(
       required: [true, 'Community type is required'],
     },
     category: {
-      type: String,
-      enum: ['Social', 'Race', 'Family', 'Awareness', 'Partner', 'Other'],
+      type: [String],
+      default: [],
       required: [true, 'Community category is required'],
     },
     location: {

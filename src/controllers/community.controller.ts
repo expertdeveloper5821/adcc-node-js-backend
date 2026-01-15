@@ -49,9 +49,9 @@ export const getAllCommunities = asyncHandler(async (req: Request, res: Response
     query.location = location;
   }
 
-  // Filter by category
+  // Filter by category (check if category array contains the query value)
   if (category) {
-    query.category = category;
+    query.category = { $in: [category] };
   }
 
   // Filter by active status
