@@ -3,9 +3,9 @@ import mongoose, { Schema, Document } from 'mongoose';
 export interface ICommunity extends Document {
   title: string;
   description: string;
-  type: 'city' | 'group' | 'awareness';
+  type: 'Club' | 'Shop' | 'Women' | 'Youth' | 'Family' | 'Corporate';
   category: string[];
-  location?: 'Abu Dhabi' | 'Al Ain' | 'Western Region';
+  location?: 'Abu Dhabi' | 'Dubai' | 'Al Ain' | 'Sharjah';
   image?: string;
   members: mongoose.Types.ObjectId[];
   memberCount: number;
@@ -13,6 +13,8 @@ export interface ICommunity extends Document {
   distance?: number; // For search functionality (in km)
   terrain?: string; // For search functionality
   isActive: boolean;
+  isPublic: boolean;
+  isFeatured: boolean;
   createdBy: mongoose.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
@@ -32,7 +34,7 @@ const CommunitySchema = new Schema(
     },
     type: {
       type: String,
-      enum: ['city', 'group', 'awareness'],
+      enum: ['Club', 'Shop', 'Women', 'Youth', 'Family', 'Corporate'],
       required: [true, 'Community type is required'],
     },
     category: {
@@ -42,7 +44,7 @@ const CommunitySchema = new Schema(
     },
     location: {
       type: String,
-      enum: ['Abu Dhabi', 'Al Ain', 'Western Region'],
+      enum: ['Abu Dhabi', 'Dubai', 'Al Ain', 'Sharjah'],
     },
     image: {
       type: String,
@@ -75,6 +77,14 @@ const CommunitySchema = new Schema(
       type: Boolean,
       default: true,
     },
+    isPublic: {
+      type: Boolean,
+      default: false,
+    },
+    isFeatured: {
+      type: Boolean,
+      default: false,
+    },
     createdBy: {
       type: Schema.Types.ObjectId,
       ref: 'users',
@@ -90,6 +100,8 @@ const CommunitySchema = new Schema(
 CommunitySchema.index({ type: 1, location: 1 });
 CommunitySchema.index({ category: 1 });
 CommunitySchema.index({ isActive: 1 });
+CommunitySchema.index({ isPublic: 1 });
+CommunitySchema.index({ isFeatured: 1 });
 CommunitySchema.index({ title: 'text', description: 'text', trackName: 'text', terrain: 'text' });
 
 // Update memberCount when members array changes

@@ -35,17 +35,17 @@ export const createCommunity = asyncHandler(async (req: AuthRequest, res: Respon
  * Public - with optional filters
  */
 export const getAllCommunities = asyncHandler(async (req: Request, res: Response) => {
-  const { type, location, category, search, page = 1, limit = 10, isActive } = req.query;
+  const { type, location, category, search, page = 1, limit = 10, isActive, isPublic, isFeatured } = req.query;
 
   const query: any = {};
 
   // Filter by type
-  if (type && ['city', 'group', 'awareness'].includes(type as string)) {
+  if (type && ['Club', 'Shop', 'Women', 'Youth', 'Family', 'Corporate'].includes(type as string)) {
     query.type = type;
   }
 
   // Filter by location
-  if (location && ['Abu Dhabi', 'Al Ain', 'Western Region'].includes(location as string)) {
+  if (location && ['Abu Dhabi', 'Dubai', 'Al Ain', 'Sharjah'].includes(location as string)) {
     query.location = location;
   }
 
@@ -57,6 +57,16 @@ export const getAllCommunities = asyncHandler(async (req: Request, res: Response
   // Filter by active status
   if (isActive !== undefined) {
     query.isActive = isActive === 'true';
+  }
+
+  // Filter by public status
+  if (isPublic !== undefined) {
+    query.isPublic = isPublic === 'true';
+  }
+
+  // Filter by featured status
+  if (isFeatured !== undefined) {
+    query.isFeatured = isFeatured === 'true';
   }
 
   // Text search
