@@ -5,6 +5,7 @@ import {
   generateTokens,
   verifyRefreshToken,
   generateAccessToken,
+  generateRefreshToken,
 } from '@/utils/jwt.util';
 import { sendSuccess } from '@/utils/response';
 import { asyncHandler } from '@/utils/async-handler';
@@ -169,6 +170,8 @@ export const registerUser = asyncHandler(
 /**
  * Refresh access token
  * POST /v1/auth/refresh
+ * Implements token rotation: issues new refresh token and revokes old one
+ * Also cleans up expired tokens from database
  */
 export const refreshAccessToken = asyncHandler(
   async (req: Request, res: Response) => {
@@ -201,7 +204,47 @@ export const refreshAccessToken = asyncHandler(
       role: user.role,
     });
 
-    sendSuccess(res, { accessToken }, 'Token refreshed successfully');
+    // Token rotation: Generate new refresh token
+    const newRefreshToken = generateRefreshToken({
+      id: user._id.toString(),
+      uid: user.firebaseUid,
+      phone: user.phone || '',
+      email: user.email || '',
+      role: user.role,
+    });
+
+    // Calculate expiry date for new refrsesh token (30 day)
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 30);
+
+    // Clean up expired tokens first
+    await User.findByIdAndUpdate(user._id, {
+      $pull: { refreshTokens: { expiresAt: { $lt: new Date() } } },
+    });
+
+    // Token rotation: Remove old refresh token and add new one
+    await User.findByIdAndUpdate(
+      user._id,
+      {
+        // Remove the old refresh token
+        $pull: { refreshTokens: { token: refreshToken } },
+        // Add new refresh token
+        $push: {
+          refreshTokens: {
+            token: newRefreshToken,
+            expiresAt,
+            createdAt: new Date(),
+          },
+        },
+      },
+      { new: true }
+    );
+
+    sendSuccess(
+      res,
+      { accessToken, refreshToken: newRefreshToken },
+      'Token refreshed successfully'
+    );
   }
 );
 
