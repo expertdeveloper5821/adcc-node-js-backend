@@ -213,28 +213,30 @@ export const refreshAccessToken = asyncHandler(
       role: user.role,
     });
 
-    // Calculate expiry date for new refrsesh token (30 day)
+    // Calculate expiry date for new refresh token (30 days)
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 30);
 
-    // Clean up expired tokens first
-    await User.findByIdAndUpdate(user._id, {
-      $pull: { refreshTokens: { expiresAt: { $lt: new Date() } } },
+    // Filter out expired tokens and the old refresh token, then add new one
+    const now = new Date();
+    const filteredTokens = user.refreshTokens.filter(
+      (token) =>
+        token.expiresAt >= now && token.token !== refreshToken
+    );
+
+    // Add new refresh token
+    filteredTokens.push({
+      token: newRefreshToken,
+      expiresAt,
+      createdAt: new Date(),
     });
 
-    // Token rotation: Remove old refresh token and add new one
+    // Update user with filtered tokens array (atomic operation)
     await User.findByIdAndUpdate(
       user._id,
       {
-        // Remove the old refresh token
-        $pull: { refreshTokens: { token: refreshToken } },
-        // Add new refresh token
-        $push: {
-          refreshTokens: {
-            token: newRefreshToken,
-            expiresAt,
-            createdAt: new Date(),
-          },
+        $set: {
+          refreshTokens: filteredTokens,
         },
       },
       { new: true }
