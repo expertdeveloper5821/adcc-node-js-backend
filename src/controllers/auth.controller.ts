@@ -40,7 +40,7 @@ export const verifyFirebaseAuth = asyncHandler(
 
       // Store refresh token in database
       const expiresAt = new Date();
-      expiresAt.setDate(expiresAt.getDate() + 30); // 30 days
+      expiresAt.setDate(expiresAt.getDate() + 3); // 3 days
 
       user.refreshTokens.push({
         token: tokens.refreshToken,
@@ -139,7 +139,7 @@ export const registerUser = asyncHandler(
 
     // Store refresh token
     const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + 30);
+    expiresAt.setDate(expiresAt.getDate() + 3); // 3 days
 
     user.refreshTokens.push({
       token: tokens.refreshToken,
@@ -213,9 +213,9 @@ export const refreshAccessToken = asyncHandler(
       role: user.role,
     });
 
-    // Calculate expiry date for new refresh token (30 days)
+    // Calculate expiry date for new refresh token (3 days)
     const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + 30);
+    expiresAt.setDate(expiresAt.getDate() + 3);
 
     // Filter out expired tokens and the old refresh token, then add new one
     const now = new Date();

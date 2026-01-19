@@ -27,11 +27,11 @@ const getRefreshSecret = (): string => {
 };
 
 const getJWTExpiresIn = (): string => {
-  return process.env.JWT_EXPIRES_IN || '15m';
+  return process.env.JWT_EXPIRES_IN || '5m';
 };
 
 const getRefreshExpiresIn = (): string => {
-  return process.env.REFRESH_TOKEN_EXPIRES_IN || '30d';
+  return process.env.REFRESH_TOKEN_EXPIRES_IN || '3d';
 };
 
 export const generateAccessToken = (payload: JWTPayload): string => {
