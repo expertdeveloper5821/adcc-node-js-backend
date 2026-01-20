@@ -12,6 +12,8 @@ import { asyncHandler } from '@/utils/async-handler';
 import { AppError } from '@/utils/app-error';
 import { AuthRequest } from '@/middleware/auth.middleware';
 
+
+
 /**
  * Verify Firebase authentication
  * POST /v1/auth/verify
@@ -29,6 +31,20 @@ export const verifyFirebaseAuth = asyncHandler(
     const user = await User.findOne({ firebaseUid: uid });
 
     if (user) {
+      // Clean up expired tokens first
+      const now = new Date();
+      user.refreshTokens = user.refreshTokens.filter(
+        (token) => token.expiresAt >= now
+      );
+
+      // Check if user has reached the maximum number of active devices
+      if (user.refreshTokens.length >= Number(process.env.MAX_REFRESH_TOKENS)) {
+        throw new AppError(
+          `Maximum number of devices (${process.env.MAX_REFRESH_TOKENS}) reached. Please sign out from other devices to continue.`,
+          403
+        );
+      }
+
       // Existing user - return tokens + user
       const tokens = generateTokens({
         id: user._id.toString(),
@@ -137,6 +153,7 @@ export const registerUser = asyncHandler(
       role: user.role,
     });
 
+    // For new users, they start with 0 tokens, so no need to check limit
     // Store refresh token
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 3); // 3 days
