@@ -1,9 +1,15 @@
 import { Request, Response } from 'express';
+import mongoose from 'mongoose';
 import Community from '@/models/community.model';
 import { sendSuccess } from '@/utils/response';
 import { asyncHandler } from '@/utils/async-handler';
 import { AppError } from '@/utils/app-error';
 import { AuthRequest } from '@/middleware/auth.middleware';
+import { communityMembershipService } from '@/services';
+
+interface JoinCommunityParams {
+  communityId: string;
+}
 
 /**
  * Create new community
@@ -108,7 +114,15 @@ export const getAllCommunities = asyncHandler(async (req: Request, res: Response
  * Public
  */
 export const getCommunityById = asyncHandler(async (req: Request, res: Response) => {
+ 
   const { id } = req.params;
+
+  if (Array.isArray(id) || !mongoose.Types.ObjectId.isValid(id)) {
+    return res.status(400).json({
+      success: false,
+      message: 'Invalid ID format'
+    });
+  }
 
   const community = await Community.findById(id)
     .populate('createdBy', 'fullName email')
@@ -118,7 +132,7 @@ export const getCommunityById = asyncHandler(async (req: Request, res: Response)
     throw new AppError('Community not found', 404);
   }
 
-  sendSuccess(res, community, 'Community retrieved successfully');
+  return sendSuccess(res, community, 'Community retrieved successfully');
 });
 
 /**
@@ -168,38 +182,21 @@ export const deleteCommunity = asyncHandler(async (req: AuthRequest, res: Respon
  * POST /v1/communities/:id/join
  * Authenticated users only
  */
-export const joinCommunity = asyncHandler(async (req: AuthRequest, res: Response) => {
-  const { id } = req.params;
+export const joinCommunity = asyncHandler(async (req: AuthRequest & { params: JoinCommunityParams }, res: Response) => {
+  const communityId = req.params.id;
   const userId = req.user?.id;
-
+  
   if (!userId) {
     throw new AppError('User not authenticated', 401);
   }
 
-  const community = await Community.findById(id);
+  const membership = await communityMembershipService.joinCommunity(userId, communityId);
 
-  if (!community) {
-    throw new AppError('Community not found', 404);
-  }
-
-  if (!community.isActive) {
-    throw new AppError('Community is not active', 400);
-  }
-
-  // Check if user is already a member
-  if (community.members.includes(userId as any)) {
-    throw new AppError('User is already a member of this community', 400);
-  }
-
-  // Add user to members
-  community.members.push(userId as any);
-  await community.save();
-
-  const updatedCommunity = await Community.findById(id)
+  const updatedCommunity = await Community.findById(communityId)
     .populate('createdBy', 'fullName email')
     .populate('members', 'fullName email');
 
-  sendSuccess(res, updatedCommunity, 'Successfully joined community');
+  sendSuccess(res, { community: updatedCommunity, membership }, 'Successfully joined community');
 });
 
 /**
@@ -215,28 +212,14 @@ export const leaveCommunity = asyncHandler(async (req: AuthRequest, res: Respons
     throw new AppError('User not authenticated', 401);
   }
 
-  const community = await Community.findById(id);
-
-  if (!community) {
-    throw new AppError('Community not found', 404);
-  }
-
-  // Check if user is a member
-  if (!community.members.includes(userId as any)) {
-    throw new AppError('User is not a member of this community', 400);
-  }
-
-  // Remove user from members
-  community.members = community.members.filter(
-    (memberId) => memberId.toString() !== userId
-  );
-  await community.save();
+  const membership = await communityMembershipService.leaveCommunity(userId, id);
 
   const updatedCommunity = await Community.findById(id)
     .populate('createdBy', 'fullName email')
     .populate('members', 'fullName email');
 
-  sendSuccess(res, updatedCommunity, 'Successfully left community');
+  sendSuccess(res, {community: updatedCommunity, membership }, 'Successfully left community');
+
 });
 
 /**
@@ -245,31 +228,58 @@ export const leaveCommunity = asyncHandler(async (req: AuthRequest, res: Respons
  * Public
  */
 export const getCommunityMembers = asyncHandler(async (req: Request, res: Response) => {
+  
   const { id } = req.params;
-  const { page = 1, limit = 20 } = req.query;
+  const { page = 1, limit = 10 } = req.query;
 
-  const community = await Community.findById(id).populate({
-    path: 'members',
-    select: 'fullName email age gender',
-    options: {
-      skip: (Number(page) - 1) * Number(limit),
-      limit: Number(limit),
-    },
-  });
+  const pageNum = Math.max(1, Number(page) || 1);
+  const limitNum = Math.max(1, Number(limit) || 10);
 
-  if (!community) {
-    throw new AppError('Community not found', 404);
-  }
+  const members = await communityMembershipService.getCommunityMembers(id, pageNum, limitNum);
 
-  sendSuccess(
-    res,
-    {
-      members: community.members,
-      total: community.memberCount,
-      page: Number(page),
-      limit: Number(limit),
-    },
-    'Community members retrieved successfully'
-  );
+  sendSuccess(res, members, 'Community members retrieved successfully');
 });
 
+
+/*
+* Get user community count
+*/
+export const getUserCommunityCount = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const userId = req.user?.id;
+  if (!userId) {
+    throw new AppError('User not authenticated', 401);
+  }
+  const count = await communityMembershipService.getUserCommunities(userId);
+  sendSuccess(res, { count }, 'User community count retrieved successfully');
+});
+
+
+/*
+* Get baned users in a community
+*/
+export const getBannedUsersInCommunity = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const { id } = req.params;
+  const userId = req.user?.id;
+
+  if (!userId) {
+    throw new AppError('User not authenticated', 401);
+  }
+
+  const bannedUsers = await communityMembershipService.getBannedMembers(id);
+  sendSuccess(res, bannedUsers, 'Banned users retrieved successfully');
+});
+
+/*
+* is member of community
+*/
+export const isMemberOfCommunity = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const { communityId } = req.params;
+  const userId = req.user?.id;
+
+  if (!userId) {
+    throw new AppError('User not authenticated', 401);
+  }
+  const memberships = await communityMembershipService.isMember(userId, communityId);
+  sendSuccess(res, { isMember: memberships }, 'Membership status retrieved successfully');
+  
+});
