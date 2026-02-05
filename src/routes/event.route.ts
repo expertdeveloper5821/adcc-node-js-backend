@@ -5,6 +5,12 @@ import {
   getEventById,
   updateEvent,
   deleteEvent,
+  joinEvent,
+  cancelRegistration,
+  getEventResults,
+  getEventResultsList,
+  addToCalendar
+
 } from '@/controllers/event.controller';
 import { validate } from '@/middleware/validate.middleware';
 import {
@@ -12,6 +18,9 @@ import {
   updateEventSchema,
   getEventsQuerySchema,
 } from '@/validators/event.validator';
+import { 
+  evenResultSchema
+ } from '@/validators/event-result.validator';
 import { authenticate } from '@/middleware/auth.middleware';
 import { isAdmin } from '@/middleware/role.middleware';
 
@@ -20,6 +29,11 @@ const router = express.Router();
 // Public routes
 router.get('/', validate(getEventsQuerySchema, 'query'), getAllEvents);
 router.get('/:id', getEventById);
+router.post('/:eventId/results', authenticate, getEventResults);
+router.get('/:eventId/results', getEventResultsList);
+router.post('/:eventId/joinEvent', authenticate, validate(evenResultSchema), joinEvent);
+router.post('/:eventId/cancel', authenticate, cancelRegistration);
+router.post('/:eventId/add-to-calendar', authenticate, addToCalendar);
 
 // Admin only routes
 router.post('/', authenticate, isAdmin, validate(createEventSchema), createEvent);
