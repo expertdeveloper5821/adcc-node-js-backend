@@ -309,3 +309,25 @@ export const getCurrentUser = asyncHandler(
   }
 );
 
+/**
+ * Guest login - for users who want to try the app without registration
+ * POST /v1/auth/guestLogin
+ * Returns JWT with guest role and isGuest flag
+ * No user record is created in database
+ */
+export const guestLogin = asyncHandler(
+  async (_req: AuthRequest, res: Response) => {
+    // Generate tokens with guest role
+    const tokens = generateTokens({
+      role: 'Guest',
+      isGuest: true,
+      type: 'Guest',
+    });
+    sendSuccess(
+      res,
+      { ...tokens },
+      'Guest login successful'
+    );
+  }
+);
+

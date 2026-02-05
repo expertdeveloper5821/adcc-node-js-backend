@@ -22,7 +22,27 @@ export const authenticate = (
     }
 
     const decoded = verifyAccessToken(token);
-    req.user = decoded;
+
+    if (decoded.type === 'Guest' || decoded.role === 'Guest') {
+      req.user = {
+        role: 'Guest',
+        isGuest: true,
+      };
+      return next();
+    }
+
+    if (!decoded.id) {
+      res.status(401).json({
+        success: false,
+        message: 'Invalid token payload',
+      });
+      return;
+    }
+
+    req.user = {
+        ...decoded,
+        isGuest: false,
+    };
 
     next();
   } catch (error: any) {

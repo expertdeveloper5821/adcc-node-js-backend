@@ -13,7 +13,7 @@ export interface IUser extends Document {
   email?: string;
   gender: 'Male' | 'Female';
   age: number;
-  role: 'Admin' | 'Vendor' | 'Member';
+  role: 'Admin' | 'Vendor' | 'Member' | 'Guest';
   isVerified: boolean;
   refreshTokens: IRefreshToken[];
   createdAt: Date;
