@@ -15,10 +15,44 @@ export const createEventSchema = z
     ),
     eventTime: z.string().min(1, 'Event time is required'),
     address: z.string().min(1, 'Event address is required'),
+    city: z.string().optional(),
+    zipCode: z.string().optional(),
     maxParticipants: z.number().int().min(0, 'Max participants cannot be negative').optional(),
     minAge: z.number().int().min(0, 'Min age cannot be negative').optional(),
     maxAge: z.number().int().min(0, 'Max age cannot be negative').optional(),
     youtubeLink: z.string().url('Invalid YouTube URL').optional().or(z.literal('')),
+    distance: z.number().min(0, 'Distance cannot be negative').optional(),
+    communityId: z.string().min(1, 'Community ID is required'),
+    trackId: z.string().min(1, 'Track ID is required'),
+    amenities: z
+      .array(
+        z.enum({
+          'water': 'water',
+          'parking': 'parking',
+          'toilat': 'toilat',
+          'medical': 'medical',
+        })
+      )
+      .optional(),
+    schedule: z
+      .array(
+        z.object({
+          time: z.string(),
+          title:z.string(),
+          description: z.string().optional(),
+          order: z.number().optional(),
+        })
+      )
+      .optional(),
+    eligibility: z
+      .object({
+        helmetRequired: z.boolean().optional(),
+        roadBikeOnly: z.boolean().optional(),
+        experinceLevel: z.enum(['beginner', 'intermediate', 'advanced', 'all']).optional(),
+        gender: z.enum(['male', 'female', 'other', 'all']).optional()
+      })
+      .optional(),
+
     status: z.enum(['upcoming', 'ongoing', 'completed', 'cancelled']).default('upcoming'),
   })
   .strict();
@@ -42,11 +76,45 @@ export const updateEventSchema = z
       .optional(),
     eventTime: z.string().min(1, 'Event time is required').optional(),
     address: z.string().min(1, 'Event address is required').optional(),
+    city: z.string().optional(),
+    zipCode: z.string().optional(),
     maxParticipants: z.number().int().min(0, 'Max participants cannot be negative').optional(),
     minAge: z.number().int().min(0, 'Min age cannot be negative').optional(),
     maxAge: z.number().int().min(0, 'Max age cannot be negative').optional(),
     youtubeLink: z.string().url('Invalid YouTube URL').optional().or(z.literal('')),
     status: z.enum(['upcoming', 'ongoing', 'completed', 'cancelled']).optional(),
+    distance: z.number().min(0, 'Distance cannot be negative').optional(),
+    communityId: z.string().min(1, 'Community ID is required').optional(),
+    trackId: z.string().min(1, 'Track ID is required').optional(),
+    amenities: z
+      .array(
+        z.enum({
+          'water': 'water',
+          'parking': 'parking',
+          'toilat': 'toilat',
+          'medical': 'medical',
+        })
+      )
+      .optional(),
+    schedule: z
+      .array(
+        z.object({
+          time: z.string(),
+          title:z.string(),
+          description: z.string().optional(),
+          order: z.number().optional(),
+        })
+      )
+      .optional(),
+    eligibility: z
+      .object({
+        helmetRequired: z.boolean().optional(),
+        roadBikeOnly: z.boolean().optional(),
+        experinceLevel: z.enum(['beginner', 'intermediate', 'advanced', 'all']).optional(),
+        gender: z.enum(['male', 'female', 'other', 'all']).optional()
+      })
+      .optional(),
+
   })
   .strict();
 
