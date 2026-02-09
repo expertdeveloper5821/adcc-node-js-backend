@@ -8,6 +8,7 @@ export interface ICommunity extends Document {
   location?: 'Abu Dhabi' | 'Dubai' | 'Al Ain' | 'Sharjah';
   image?: string;
   logo?: string;
+  gallery?: string[];
   members: mongoose.Types.ObjectId[];
   memberCount: number;
   trackName?: string; // For search functionality
@@ -54,6 +55,10 @@ const CommunitySchema = new Schema(
     logo: {
       type: String,
       trim: true,
+    },
+    gallery: {
+      type: [String],
+      default: [],
     },
     members: [
       {
