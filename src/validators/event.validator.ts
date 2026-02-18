@@ -28,9 +28,11 @@ export const createEventSchema = z
       .array(
         z.enum({
           'water': 'water',
+          'toilets': 'toilets',
           'parking': 'parking',
-          'toilat': 'toilat',
-          'medical': 'medical',
+          'lighting': 'lighting',
+          'medical support': 'medical support',
+          'bike service': 'bike service',
         })
       )
       .optional(),
@@ -53,7 +55,11 @@ export const createEventSchema = z
       })
       .optional(),
 
-    status: z.enum(['upcoming', 'ongoing', 'completed', 'cancelled']).default('upcoming'),
+    status: z.enum(['Draft', 'Open', 'Full', 'Completed', 'Archived']).default('Draft'),
+    slug: z.string().optional(),
+    difficulty: z.string().optional(),
+    endTime: z.string().optional(),
+    category: z.string().optional(),
   })
   .strict();
 
@@ -82,7 +88,7 @@ export const updateEventSchema = z
     minAge: z.number().int().min(0, 'Min age cannot be negative').optional(),
     maxAge: z.number().int().min(0, 'Max age cannot be negative').optional(),
     youtubeLink: z.string().url('Invalid YouTube URL').optional().or(z.literal('')),
-    status: z.enum(['upcoming', 'ongoing', 'completed', 'cancelled']).optional(),
+    status: z.enum(['Draft', 'Open', 'Full', 'Completed', 'Archived']).optional(),
     distance: z.number().min(0, 'Distance cannot be negative').optional(),
     communityId: z.string().min(1, 'Community ID is required').optional(),
     trackId: z.string().min(1, 'Track ID is required').optional(),
@@ -91,8 +97,11 @@ export const updateEventSchema = z
         z.enum({
           'water': 'water',
           'parking': 'parking',
-          'toilat': 'toilat',
+          'toilets': 'toilets',
           'medical': 'medical',
+          'lighting': 'lighting',
+          'medical support': 'medical support',
+          'bike service': 'bike service',
         })
       )
       .optional(),
@@ -114,12 +123,16 @@ export const updateEventSchema = z
         gender: z.enum(['male', 'female', 'other', 'all']).optional()
       })
       .optional(),
+    slug: z.string().optional(),
+    difficulty: z.string().optional(),
+    endTime: z.string().optional(),
+    category: z.string().optional(),
 
   })
   .strict();
 
 export const getEventsQuerySchema = z.object({
-  status: z.enum(['upcoming', 'ongoing', 'completed', 'cancelled']).optional(),
+  status: z.enum(['Draft', 'Open', 'Full', 'Completed', 'Archived']).optional(),
   page: z.string().regex(/^\d+$/).transform(Number).optional(),
   limit: z.string().regex(/^\d+$/).transform(Number).optional(),
 });

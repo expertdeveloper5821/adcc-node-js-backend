@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import Event from '@/models/event.model';
 import Track from '@/models/track.model';
+import Community from '@models/community.model';
 import { sendSuccess } from '@/utils/response';
 import { asyncHandler } from '@/utils/async-handler';
 import { AppError } from '@/utils/app-error';
@@ -83,7 +84,7 @@ export const updateTrack = asyncHandler(async (req: AuthRequest, res: Response) 
     ? req.params.trackId[0]
     : req.params.trackId;
     
-    console.log('track ID:', trackId);
+    // console.log('req.body:', req.body);
     const track = await Track.findByIdAndUpdate(trackId, req.body, { new: true });
     if (!track) {
          throw new AppError('Track not found', 404);
@@ -122,20 +123,11 @@ export const getTrackResults = asyncHandler(async (req: Request, res: Response) 
         throw new AppError('Invalid trackId', 400);
       }
 
-  const eventIdParam = Array.isArray(req.params.eventId)
-    ? req.params.eventId[0]
-    : req.params.eventId;
-
-    if (!mongoose.Types.ObjectId.isValid(eventIdParam)) {
-        throw new AppError('Invalid eventId', 400);
-      }
-
     
 
   const results = await Event.aggregate([
   {
     $match: {
-      _id: new mongoose.Types.ObjectId(eventIdParam),
       trackId: new mongoose.Types.ObjectId(trackIdParam),
     },
   },
@@ -162,7 +154,7 @@ export const getTrackResults = asyncHandler(async (req: Request, res: Response) 
 ]);
 
 
-  sendSuccess(res, results, 'Track results retrieved successfully', 200);
+  sendSuccess(res, results, 'Track related results retrieved successfully', 200);
 });
 
 
@@ -207,7 +199,7 @@ export const trackCommunityPhotos = asyncHandler(async (req: AuthRequest, res: R
 
 export const trackCommunityResults = asyncHandler(async (req: AuthRequest, res: Response) => {
   
-  console.log('Track event - Params:', req.params);
+  // console.log('Track event - Params:', req.params);
   const trackIdParam = Array.isArray(req.params.trackId)
     ? req.params.trackId[0]
     : req.params.trackId;
@@ -215,26 +207,11 @@ export const trackCommunityResults = asyncHandler(async (req: AuthRequest, res: 
     if (!mongoose.Types.ObjectId.isValid(trackIdParam)) {
         throw new AppError('Invalid trackId', 400);
       } 
-  const eventIdParam = Array.isArray(req.params.eventId)
-    ? req.params.eventId[0]
-    : req.params.eventId;
-    if (!mongoose.Types.ObjectId.isValid(eventIdParam)) {
-        throw new AppError('Invalid eventId', 400);
-      }
 
-  const communityIdParam = Array.isArray(req.params.Id)
-    ? req.params.Id[0]
-    : req.params.Id;
-    if (!mongoose.Types.ObjectId.isValid(communityIdParam)) {
-        throw new AppError('Invalid communityId', 400);
-      }
-
-  const results = await Event.aggregate([
+  const results = await Community.aggregate([
   {
     $match: {
-      _id: new mongoose.Types.ObjectId(eventIdParam),
-      trackId: new mongoose.Types.ObjectId(trackIdParam),
-      communityId: new mongoose.Types.ObjectId(communityIdParam),
+      trackId: new mongoose.Types.ObjectId(trackIdParam)
     },
   },
   {
@@ -259,6 +236,7 @@ export const trackCommunityResults = asyncHandler(async (req: AuthRequest, res: 
   },
 ]);
 
-    sendSuccess(res, results, 'Community track results retrieved successfully', 200);
+    sendSuccess(res, results, 'Track related community results retrieved successfully', 200);
 
 });
+

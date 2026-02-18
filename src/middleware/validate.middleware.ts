@@ -10,10 +10,19 @@ export const validate =
     const result = schema.safeParse(data);
 
     if (!result.success) {
-      const message = result.error.issues
-        .map((e) => e.message)
-        .join(', ');
-      return next(new AppError(message, 400));
+      const formattedErrors = result.error.issues.map((issue) => ({
+        field: issue.path.join('.'),
+        message: issue.message,
+        received: (issue as any).received,
+      }));
+      console.error('Validation Errors:', formattedErrors);
+
+      return next(
+        new AppError(
+          JSON.stringify(formattedErrors, null, 2),
+          400
+        )
+      );
     }
 
     // For query params, merge validated data back (don't overwrite completely)

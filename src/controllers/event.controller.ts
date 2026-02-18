@@ -52,6 +52,8 @@ export const getAllEvents = asyncHandler(async (req: Request, res: Response) => 
   // Get events
   const events = await Event.find(filter)
     .populate('createdBy', 'fullName email')
+    .populate('trackId', 'title')
+    .populate('communityId', 'title')
     .sort({ eventDate: 1, createdAt: -1 })
     .skip(skip)
     .limit(limitNum);
