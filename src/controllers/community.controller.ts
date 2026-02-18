@@ -104,7 +104,7 @@ export const getAllCommunities = asyncHandler(async (req: Request, res: Response
         pages: Math.ceil(total / limitNum),
       },
     },
-    'Communities retrieved successfully'
+    'Communities retrieved successfully', 201
   );
 });
 
@@ -132,7 +132,7 @@ export const getCommunityById = asyncHandler(async (req: Request, res: Response)
     throw new AppError('Community not found', 404);
   }
 
-  return sendSuccess(res, community, 'Community retrieved successfully');
+  return sendSuccess(res, community, 'Community retrieved successfully', 201);
 });
 
 /**
@@ -157,7 +157,7 @@ export const updateCommunity = asyncHandler(async (req: AuthRequest, res: Respon
     .populate('createdBy', 'fullName email')
     .populate('members', 'fullName email');
 
-  sendSuccess(res, updatedCommunity, 'Community updated successfully');
+  sendSuccess(res, updatedCommunity, 'Community updated successfully', 201);
 });
 
 /**
@@ -174,7 +174,7 @@ export const deleteCommunity = asyncHandler(async (req: AuthRequest, res: Respon
     throw new AppError('Community not found', 404);
   }
 
-  sendSuccess(res, null, 'Community deleted successfully');
+  sendSuccess(res, null, 'Community deleted successfully', 201);
 });
 
 /**
@@ -196,7 +196,7 @@ export const joinCommunity = asyncHandler(async (req: AuthRequest & { params: Jo
     .populate('createdBy', 'fullName email')
     .populate('members', 'fullName email');
 
-  sendSuccess(res, { community: updatedCommunity, membership }, 'Successfully joined community');
+  sendSuccess(res, { community: updatedCommunity, membership }, 'Successfully joined community', 201);
 });
 
 /**
@@ -218,7 +218,7 @@ export const leaveCommunity = asyncHandler(async (req: AuthRequest, res: Respons
     .populate('createdBy', 'fullName email')
     .populate('members', 'fullName email');
 
-  sendSuccess(res, {community: updatedCommunity, membership }, 'Successfully left community');
+  sendSuccess(res, {community: updatedCommunity, membership }, 'Successfully left community', 201);
 
 });
 
@@ -237,7 +237,7 @@ export const getCommunityMembers = asyncHandler(async (req: Request, res: Respon
 
   const members = await communityMembershipService.getCommunityMembers(id, pageNum, limitNum);
 
-  sendSuccess(res, members, 'Community members retrieved successfully');
+  sendSuccess(res, members, 'Community members retrieved successfully', 201);
 });
 
 
@@ -250,7 +250,7 @@ export const getUserCommunityCount = asyncHandler(async (req: AuthRequest, res: 
     throw new AppError('User not authenticated', 401);
   }
   const count = await communityMembershipService.getUserCommunities(userId);
-  sendSuccess(res, { count }, 'User community count retrieved successfully');
+  sendSuccess(res, { count }, 'User community count retrieved successfully', 201);
 });
 
 
@@ -266,7 +266,7 @@ export const getBannedUsersInCommunity = asyncHandler(async (req: AuthRequest, r
   }
 
   const bannedUsers = await communityMembershipService.getBannedMembers(id);
-  sendSuccess(res, bannedUsers, 'Banned users retrieved successfully');
+  sendSuccess(res, bannedUsers, 'Banned users retrieved successfully', 201);
 });
 
 /*
@@ -280,6 +280,139 @@ export const isMemberOfCommunity = asyncHandler(async (req: AuthRequest, res: Re
     throw new AppError('User not authenticated', 401);
   }
   const memberships = await communityMembershipService.isMember(userId, communityId);
-  sendSuccess(res, { isMember: memberships }, 'Membership status retrieved successfully');
+  sendSuccess(res, { isMember: memberships }, 'Membership status retrieved successfully', 201);
   
+});
+
+/**
+ * Add images to community gallery
+ * POST /v1/communities/:id/gallery
+ * Admin only
+ */
+export const addGalleryImages = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const { id } = req.params;
+  const { images } = req.body;
+
+  const community = await Community.findById(id);
+
+  if (!community) {
+    throw new AppError('Community not found', 404);
+  }
+
+  // Initialize gallery array if it doesn't exist
+  if (!community.gallery) {
+    community.gallery = [];
+  }
+
+  // Add new images, avoiding duplicates
+  const existingImages = new Set(community.gallery);
+  const newImages = images.filter((imageUrl: string) => !existingImages.has(imageUrl));
+  
+  if (newImages.length === 0) {
+    throw new AppError('All provided images already exist in the gallery', 400);
+  }
+
+  community.gallery = [...community.gallery, ...newImages];
+  await community.save();
+
+  const updatedCommunity = await Community.findById(id)
+    .populate('createdBy', 'fullName email')
+    .populate('members', 'fullName email');
+
+  if (!updatedCommunity) {
+    throw new AppError('Failed to retrieve updated community', 500);
+  }
+
+  sendSuccess(
+    res,
+    {
+      community: updatedCommunity,
+      addedImages: newImages,
+      totalImages: updatedCommunity.gallery?.length || 0,
+    },
+    `Successfully added ${newImages.length} image(s) to gallery`,
+    201
+  );
+});
+
+/**
+ * Remove images from community gallery
+ * DELETE /v1/communities/:id/gallery
+ * Admin only
+ */
+export const removeGalleryImages = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const { id } = req.params;
+  const { imageUrls } = req.body;
+
+  const community = await Community.findById(id);
+
+  if (!community) {
+    throw new AppError('Community not found', 404);
+  }
+
+  // Initialize gallery array if it doesn't exist
+  if (!community.gallery || community.gallery.length === 0) {
+    throw new AppError('Gallery is empty', 400);
+  }
+
+  // Remove images that exist in the gallery
+  const imagesToRemove = new Set(imageUrls);
+  const removedImages = community.gallery.filter((imageUrl) => imagesToRemove.has(imageUrl));
+  
+  community.gallery = community.gallery.filter((imageUrl) => !imagesToRemove.has(imageUrl));
+  
+  const removedCount = removedImages.length;
+
+  if (removedCount === 0) {
+    throw new AppError('None of the provided images were found in the gallery', 400);
+  }
+
+  await community.save();
+
+  const updatedCommunity = await Community.findById(id)
+    .populate('createdBy', 'fullName email')
+    .populate('members', 'fullName email');
+
+  if (!updatedCommunity) {
+    throw new AppError('Failed to retrieve updated community', 500);
+  }
+
+  sendSuccess(
+    res,
+    {
+      community: updatedCommunity,
+      removedImages,
+      removedCount,
+      totalImages: updatedCommunity.gallery?.length || 0,
+    },
+    `Successfully removed ${removedCount} image(s) from gallery`,
+    201
+  );
+});
+
+/**
+ * Get community gallery images
+ * GET /v1/communities/:id/gallery
+ * Public
+ */
+export const getGalleryImages = asyncHandler(async (req: Request, res: Response) => {
+  const { id } = req.params;
+
+  const community = await Community.findById(id).select('gallery title');
+
+  if (!community) {
+    throw new AppError('Community not found', 404);
+  }
+
+  sendSuccess(
+    res,
+    {
+      communityId: id,
+      communityTitle: community.title,
+      gallery: community.gallery || [],
+      imageCount: community.gallery?.length || 0,
+    },
+    'Gallery images retrieved successfully',
+    201
+  );
 });

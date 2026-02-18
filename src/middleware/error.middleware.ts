@@ -41,6 +41,12 @@ export const errorHandler = (err: Error, _req: Request, res: Response, _next: Ne
     message = 'Duplicate field value';
   }
 
+  // Payload too large error
+  if ((err as any).type === 'entity.too.large' || (err as any).name === 'PayloadTooLargeError') {
+    statusCode = 413;
+    message = 'Request payload too large. Maximum size is 50MB. Consider compressing images or reducing the number of images.';
+  }
+
   res.status(statusCode).json({
     success: false,
     message,
