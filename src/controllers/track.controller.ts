@@ -211,25 +211,13 @@ export const trackCommunityResults = asyncHandler(async (req: AuthRequest, res: 
   const results = await Community.aggregate([
   {
     $match: {
-      trackId: new mongoose.Types.ObjectId(trackIdParam)
-    },
-  },
-  {
-    $addFields: {
-      safeTime: { $ifNull: ['$time', Number.MAX_SAFE_INTEGER] },
-    },
-  },
-  { $sort: { safeTime: 1 } },
-  {
-    $setWindowFields: {
-      sortBy: { safeTime: 1 },
-      output: { rank: { $rank: {} } },  
+      trackId: { $elemMatch: { $eq: new mongoose.Types.ObjectId(trackIdParam) } }
     },
   },
   {
     $lookup: {
       from: 'users',
-      localField: 'userId',
+      localField: 'createdBy',
       foreignField: '_id',
       as: 'user',
     },

@@ -185,38 +185,39 @@ export const joinEvent = asyncHandler(async (req: AuthRequest, res: Response) =>
     throw new AppError('Event not found', 404);
   }
 
-  const existingRecord = await EventResult.findOne({
+  const eventJoin = await EventResult.findOne({
     eventId,
     userId,
   });
 
-  // 🟢 If record exists
-  if (existingRecord) {
-    // Already joined
-    if (existingRecord.status === 'joined') {
+  if (eventJoin) {
+    if (eventJoin.status === 'joined') {
       throw new AppError('User already joined the event', 400);
     }
 
-    // 🔁 Rejoin logic
-    existingRecord.status = 'joined';
-    await existingRecord.save();
+    eventJoin.status = 'joined';
+    await eventJoin.save();
 
     return sendSuccess(
       res,
-      existingRecord,
+      eventJoin,
       'User successfully rejoined the event',
       200
     );
   }
 
-  // 🆕 First time join
   const eventData = await EventResult.create({
     eventId,
     userId,
     status: 'joined',
   });
 
-  sendSuccess(res, eventData, 'User successfully joined the event', 201);
+  return sendSuccess(
+    res,
+    eventData,
+    'User successfully joined the event',
+    201
+  );
 });
 
 

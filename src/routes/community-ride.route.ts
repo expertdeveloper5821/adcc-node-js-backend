@@ -18,7 +18,7 @@ import { isAdmin } from '@/middleware/role.middleware';
 const router = express.Router();
 
 // Public routes
-router.get('/', validate(getCommunityRidesQuerySchema, 'query'), getAllCommunityRides);
+router.get('/', validate(getCommunityRidesQuerySchema), getAllCommunityRides);
 router.get('/:id', getCommunityRideById);
 
 // Admin only routes

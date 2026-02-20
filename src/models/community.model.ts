@@ -25,7 +25,7 @@ export interface ICommunity extends Document {
   createdBy: mongoose.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
-  trackId?: string;
+  trackId?: mongoose.Types.ObjectId[];
   manager?: string;
 }
 
@@ -110,7 +110,7 @@ const CommunitySchema = new Schema(
       default: true,
     },
     trackId: {
-      type: String,
+      type: [Schema.Types.ObjectId],
       ref: 'tracks',
     },
     isPublic: {

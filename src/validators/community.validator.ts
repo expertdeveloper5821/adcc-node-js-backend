@@ -1,4 +1,10 @@
 import { z } from 'zod';
+import mongoose from 'mongoose';
+
+export const objectIdSchema = z.string().refine(
+  (val) => mongoose.Types.ObjectId.isValid(val),
+  { message: 'Invalid MongoDB ObjectId' }
+);
 
 // Maximum image size: 2MB (original image size before base64 encoding)
 // Base64 encoding increases size by ~33% (4/3 ratio), so 2MB image ≈ 2.67MB in base64
@@ -64,7 +70,7 @@ export const createCommunitySchema = z
     manager: z.string().optional(),
     area: z.string().optional(),
     city: z.string().optional(),
-    trackId: z.string().default('null')
+    trackId: z.array(objectIdSchema).optional(),
   })
   .strict();
 
@@ -91,7 +97,7 @@ export const updateCommunitySchema = z
     manager: z.string().optional(),
     area: z.string().optional(),
     city: z.string().optional(),
-    trackId: z.string().default('null')
+    trackId: z.array(objectIdSchema).optional(),
   })
   .strict();
 

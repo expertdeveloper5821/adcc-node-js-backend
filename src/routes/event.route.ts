@@ -19,7 +19,7 @@ import {
   getEventsQuerySchema,
 } from '@/validators/event.validator';
 import { 
-  evenResultSchema
+  joinEventSchema
  } from '@/validators/event-result.validator';
 import { authenticate } from '@/middleware/auth.middleware';
 import { isAdmin } from '@/middleware/role.middleware';
@@ -27,11 +27,11 @@ import { isAdmin } from '@/middleware/role.middleware';
 const router = express.Router();
 
 // Public routes
-router.get('/', validate(getEventsQuerySchema, 'query'), getAllEvents);
+router.get('/', validate(getEventsQuerySchema), getAllEvents);
 router.get('/:id', getEventById);
 router.post('/:eventId/results', authenticate, getEventResults);
 router.get('/:eventId/results', getEventResultsList);
-router.post('/:eventId/joinEvent', authenticate, validate(evenResultSchema), joinEvent);
+router.post('/:eventId/joinEvent', authenticate, validate(joinEventSchema), joinEvent);
 router.post('/:eventId/cancel', authenticate, cancelRegistration);
 router.post('/:eventId/add-to-calendar', authenticate, addToCalendar);
 

@@ -1,35 +1,40 @@
-// src/middleware/validate.middleware.ts
 import { Request, Response, NextFunction } from 'express';
 import { ZodType } from 'zod';
 import { AppError } from '../utils/app-error';
 
 export const validate =
-  (schema: ZodType, source: 'body' | 'query' = 'body') =>
+  (schema: ZodType) =>
   (req: Request, _res: Response, next: NextFunction): void => {
-    const data = source === 'query' ? req.query : req.body;
+
+    let data: any = req.body;
+
+    // If no body, fallback to params
+    if (!data || Object.keys(data).length === 0) {
+      if (Object.keys(req.params).length > 0) {
+        data = req.params;
+      } else {
+        data = req.query;
+      }
+    }
+
     const result = schema.safeParse(data);
 
     if (!result.success) {
       const formattedErrors = result.error.issues.map((issue) => ({
         field: issue.path.join('.'),
         message: issue.message,
-        received: (issue as any).received,
       }));
-      console.error('Validation Errors:', formattedErrors);
 
-      return next(
-        new AppError(
-          JSON.stringify(formattedErrors, null, 2),
-          400
-        )
-      );
+      return next(new AppError(JSON.stringify(formattedErrors, null, 2), 400));
     }
 
-    // For query params, merge validated data back (don't overwrite completely)
-    if (source === 'query' && result.data) {
-      Object.assign(req.query, result.data);
-    } else if (source === 'body') {
+    // Assign validated data back
+    if (data === req.body) {
       req.body = result.data;
+    } else if (data === req.params) {
+      Object.assign(req.params, result.data);
+    } else {
+      Object.assign(req.query, result.data);
     }
 
     next();
