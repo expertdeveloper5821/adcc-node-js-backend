@@ -45,10 +45,8 @@ export const createCommunitySchema = z
   .object({
     title: z.string().min(1, 'Community title is required'),
     description: z.string().min(1, 'Community description is required'),
-    type: z.enum(['Club', 'Shop', 'Women', 'Youth', 'Family', 'Corporate'], {
-      message: 'Type must be one of: Club, Shop, Women, Youth, Family, Corporate',
-    }),
-    category: z.array(z.string().trim()).min(1, 'At least one category is required'),
+    type: z.array(z.string().trim()).optional(),
+    category: z.string().optional(),
     location: z.enum(['Abu Dhabi', 'Dubai', 'Al Ain', 'Sharjah']).optional(),
     image: z.string().optional(),
     logo: z.string().optional(),
@@ -59,6 +57,14 @@ export const createCommunitySchema = z
     isActive: z.boolean().default(true),
     isPublic: z.boolean().default(false),
     isFeatured: z.boolean().default(false),
+    foundedYear: z.number().optional(),
+    members: z.string().optional(),
+    memberCount: z.number().optional(),
+    slug: z.string().optional(),
+    manager: z.string().optional(),
+    area: z.string().optional(),
+    city: z.string().optional(),
+    trackId: z.string().default('null')
   })
   .strict();
 
@@ -66,8 +72,8 @@ export const updateCommunitySchema = z
   .object({
     title: z.string().min(1, 'Community title is required').optional(),
     description: z.string().min(1, 'Community description is required').optional(),
-    type: z.enum(['Club', 'Shop', 'Women', 'Youth', 'Family', 'Corporate']).optional(),
-    category: z.array(z.string().trim()).optional(),
+    type: z.array(z.string().trim()).optional(),
+    category: z.string().optional(),
     location: z.enum(['Abu Dhabi', 'Dubai', 'Al Ain', 'Sharjah']).optional(),
     image: z.string().optional(),
     logo: z.string().optional(),
@@ -77,7 +83,15 @@ export const updateCommunitySchema = z
     terrain: z.string().optional(),
     isActive: z.boolean().optional(),
     isPublic: z.boolean().optional(),
-    isFeatured: z.boolean().optional(),
+    isFeatured: z.boolean().default(false),
+    foundedYear: z.number().optional(),
+    members: z.string().optional(),
+    memberCount: z.number().optional(),
+    slug: z.string().optional(),
+    manager: z.string().optional(),
+    area: z.string().optional(),
+    city: z.string().optional(),
+    trackId: z.string().default('null')
   })
   .strict();
 

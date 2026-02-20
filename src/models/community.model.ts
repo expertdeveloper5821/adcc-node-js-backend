@@ -2,24 +2,31 @@ import mongoose, { Schema, Document } from 'mongoose';
 
 export interface ICommunity extends Document {
   title: string;
+  slug: string;
   description: string;
-  type: 'Club' | 'Shop' | 'Women' | 'Youth' | 'Family' | 'Corporate';
-  category: string[];
+  type: string[];
+  category: string;
   location?: 'Abu Dhabi' | 'Dubai' | 'Al Ain' | 'Sharjah';
+  area?: string;
+  city?: string;
   image?: string;
   logo?: string;
   gallery?: string[];
-  members: mongoose.Types.ObjectId[];
-  memberCount: number;
+  members?: mongoose.Types.ObjectId[];
+  memberCount?: number;
   trackName?: string; // For search functionality
   distance?: number; // For search functionality (in km)
   terrain?: string; // For search functionality
   isActive: boolean;
   isPublic: boolean;
   isFeatured: boolean;
+  foundedYear: number;
+  tackId?: string;
   createdBy: mongoose.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
+  trackId?: string;
+  manager?: string;
 }
 
 const CommunitySchema = new Schema(
@@ -29,24 +36,35 @@ const CommunitySchema = new Schema(
       required: [true, 'Community title is required'],
       trim: true,
     },
+    slug: {
+      type: String,
+      trim: true,
+    },
     description: {
       type: String,
       required: [true, 'Community description is required'],
       trim: true,
     },
     type: {
-      type: String,
-      enum: ['Club', 'Shop', 'Women', 'Youth', 'Family', 'Corporate'],
-      required: [true, 'Community type is required'],
-    },
-    category: {
       type: [String],
       default: [],
-      required: [true, 'Community category is required'],
+      required: [true, 'Community-type is required'],
+    },
+    category: {
+      type: String,
+      trim: true,
     },
     location: {
       type: String,
       enum: ['Abu Dhabi', 'Dubai', 'Al Ain', 'Sharjah'],
+    },
+    area: {
+      type: String,
+      trim: true,
+    },
+    city: {
+      type: String,
+      trim: true,
     },
     image: {
       type: String,
@@ -71,7 +89,11 @@ const CommunitySchema = new Schema(
       default: 0,
       min: [0, 'Member count cannot be negative'],
     },
-    trackName: {
+    tackId: {
+      type: String,
+      trim: true,
+    },
+    manager: {
       type: String,
       trim: true,
     },
@@ -87,8 +109,16 @@ const CommunitySchema = new Schema(
       type: Boolean,
       default: true,
     },
+    trackId: {
+      type: String,
+      ref: 'tracks',
+    },
     isPublic: {
       type: Boolean,
+      default: false,
+    },
+    foundedYear: {
+      type: Number,
       default: false,
     },
     isFeatured: {
@@ -104,6 +134,7 @@ const CommunitySchema = new Schema(
   {
     timestamps: true,
   }
+  
 );
 
 // Indexes for search and filtering
