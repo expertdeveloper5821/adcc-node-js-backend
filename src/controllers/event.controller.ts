@@ -171,7 +171,7 @@ export const getEventResults = asyncHandler(async (req: AuthRequest, res: Respon
 * Join Event 
 */
 export const joinEvent = asyncHandler(async (req: AuthRequest, res: Response) => {
-  const eventId  = Array.isArray(req.params.eventId)
+  const eventId = Array.isArray(req.params.eventId)
     ? req.params.eventId[0]
     : req.params.eventId;
 
@@ -179,30 +179,47 @@ export const joinEvent = asyncHandler(async (req: AuthRequest, res: Response) =>
   if (!userId) {
     throw new AppError('User not authenticated', 401);
   }
-  
-  // console.log('Joining event:', eventId);
+
   const event = await Event.findById(eventId);
-  // console.log('Event found:', event);
   if (!event) {
     throw new AppError('Event not found', 404);
   }
-  
+
   const eventJoin = await EventResult.findOne({
     eventId,
     userId,
   });
+
   if (eventJoin) {
-    throw new AppError('User already joined the event', 400);
+    if (eventJoin.status === 'joined') {
+      throw new AppError('User already joined the event', 400);
+    }
+
+    eventJoin.status = 'joined';
+    await eventJoin.save();
+
+    return sendSuccess(
+      res,
+      eventJoin,
+      'User successfully rejoined the event',
+      200
+    );
   }
+
   const eventData = await EventResult.create({
     eventId,
     userId,
-    status: 'joined'
-
+    status: 'joined',
   });
 
-  sendSuccess(res, eventData, 'User successfully joined the event', 201);
-})
+  return sendSuccess(
+    res,
+    eventData,
+    'User successfully joined the event',
+    201
+  );
+});
+
 
 /*
 * Get event results list
@@ -293,8 +310,8 @@ export const getEventResultsList = asyncHandler(async (req: Request, res: Respon
  * Cancel event participation
  */
 export const cancelRegistration = asyncHandler(async (req: AuthRequest, res: Response) => {
-  console.log('bodyResponse:', req.body);
-  console.log('paramResponse:', req.params);
+  // console.log('bodyResponse:', req.body);
+  // console.log('paramResponse:', req.params);
   const eventId  = req.params.eventId;
   const reason = req.body.reason || 'No reason provided';
   

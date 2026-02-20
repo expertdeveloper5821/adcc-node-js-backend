@@ -28,7 +28,7 @@ import { isAdmin } from '@/middleware/role.middleware';
 const router = express.Router();
 
 // Public routes
-router.get('/', validate(getCommunitiesQuerySchema, 'query'), getAllCommunities);
+router.get('/', validate(getCommunitiesQuerySchema), getAllCommunities);
 router.get('/:id', getCommunityById);
 router.get('/:id/gallery', getGalleryImages);
 
