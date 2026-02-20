@@ -14,10 +14,18 @@ export interface IEventSchedule {
   order?: number;
 }
 
-export interface IEventAmenity {
-  name: string;
-  description?: string;
+export type IEventAmenity =
+  | 'water'
+  | 'parking'
+  | 'toilets'
+  | 'lighting'
+  | 'medical support'
+  | 'bike service';
+
+export interface IEvent {
+  amenities?: IEventAmenity[];
 }
+
 
 export interface IEvent extends Document {
   communityId: mongoose.Types.ObjectId;
@@ -37,13 +45,23 @@ export interface IEvent extends Document {
   distance?: number; // in kilometers
   amenities?: IEventAmenity[];
   schedule?: IEventSchedule[];
+  categories?: 'Race' | 'Community Ride' | 'Training & Clinics' | 'Awareness Rides' | 'Family & Kids' | 'Corporate Events' | 'National Events';
   eligibility?: IEventEligibility;
   youtubeLink?: string;
+  category?: string;
   currentParticipants: number;
-  status: 'upcoming' | 'ongoing' | 'completed' | 'cancelled';
+  status: 'Open' | 'Draft' | 'Full' | 'Completed' | 'Archived';
   createdBy: mongoose.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
+  rewards: {
+    points: number;
+    badgeName: string;
+    badgeImage?: string;
+  };
+  slug?: string;
+  endTime?: string;
+  difficulty?: string;
 }
 
 const EventSchema = new Schema(
@@ -51,12 +69,14 @@ const EventSchema = new Schema(
     communityId: {
       type: Schema.Types.ObjectId,
       ref: 'communities',
-      required: [true, 'Community ID is required'],
+      default: null,
+      // required: [true, 'Community ID is required'],
     },
     trackId: {
       type: Schema.Types.ObjectId,
-      ref: 'tracks',
-      required: [true, 'Track ID is required'],
+      ref: 'track',
+      default: null,
+      // required: [true, 'Track ID is required'],
     },
     title: {
       type: String,
@@ -104,7 +124,7 @@ const EventSchema = new Schema(
     amenities: [
       {
         type: String,
-        enum: ['water', 'toilets', 'medical', 'parking' ],
+        enum: ['water', 'parking', 'toilets', 'lighting', 'medical support', 'bike service' ],
       },
     ],
     schedule: [
@@ -148,6 +168,10 @@ const EventSchema = new Schema(
       type: String,
       trim: true,
     },
+    category: {
+      type: String,
+      trim: true,
+    },
     currentParticipants: {
       type: Number,
       default: 0,
@@ -155,8 +179,16 @@ const EventSchema = new Schema(
     },
     status: {
       type: String,
-      enum: ['upcoming', 'ongoing', 'completed', 'cancelled'],
+      enum: ['Draft', 'Open', 'Full', 'Completed', 'Archived'],
       default: 'upcoming',
+    },
+    difficulty: {
+      type: String,
+      trim: true,
+    },
+    slug: {
+      type: String,
+      trim: true,
     },
     createdBy: {
       type: Schema.Types.ObjectId,

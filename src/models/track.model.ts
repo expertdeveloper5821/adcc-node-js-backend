@@ -1,9 +1,20 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
 
+export type FacilityType =
+  | 'water'
+  | 'toilets'
+  | 'parking'
+  | 'lights'
+  | 'cafes'
+  | 'bikeRental'
+  | 'firstAid'
+  | 'changingRooms';
+
 export interface ITrackFacility {
-  facilities?: ('Water' | 'Toilets' | 'Parking' | 'Lights')[];
+  facilities?: FacilityType[];
 }
+
 
 export interface ITrack extends Document {
   title: string;
@@ -16,10 +27,24 @@ export interface ITrack extends Document {
   longitude?: number;
   distance: number;
   elevation: string;
-  type: 'loop' | 'road' | 'mixed' | 'out-and-back' | 'point-to-point';
+  trackType: 'circuit' | 'road' | 'costal' | 'desert' | 'urban';
   avgtime: string; // in minutes
   pace: string;
   facilities?: ITrackFacility[];
+  estimatedTime?: string;
+  loopOptions?: number[];
+  difficulty?: string;
+  category?: string;
+  surfaceType: 'asphalt' | 'concrete' | 'mixed';
+  status: 'open' | 'limited' | 'closed';
+  slug?: string;
+  country?: string;
+  safetyNotes?: string;
+  helmetRequired?: boolean;
+  area?: string;
+  displayPriority?: number;
+  nightRidingAllowed?: boolean;
+  visibility?: string;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -37,9 +62,9 @@ const TrackSchema = new Schema(
     trackFile: { type: String, trim: true },
     distance: { type: Number, required: [true, 'Track distance is required'], min: 0 },
     elevation: { type: String, required: [true, 'Elevation gain is required'], min: 0 },
-    type: {
+    trackType: {
       type: String,
-        enum: ['loop', 'road', 'out-and-back', 'point-to-point'],
+        enum: ['circuit', 'road', 'costal', 'desert', 'urban'],
         required: [true, 'Track type is required'],
     },
     avgtime: { type: String, required: [true, 'Average time is required'], min: 0 },
@@ -49,6 +74,23 @@ const TrackSchema = new Schema(
         enum: [ 'water', 'toilets', 'parking', 'lights' ],
         default: [],
       },
+    status: { type: String },
+    surfaceType: { type: String },
+    safetyNotes: { type: String },
+    helmetRequired: { type: Boolean },
+    visibility: { type: String },
+    slug: { type: String },
+    estimatedTime: { type: String },
+    country: { type: String },
+    difficulty: { type: String },
+    category: { type: String },
+    displayPriority: { type: Number },
+    loopOptions: {
+      type: [Number],
+      default: [],
+    },
+    nightRidingAllowed: { type: Boolean },
+    area: { type: String },
     createdBy: {
       type: Schema.Types.ObjectId,
       ref: 'users',

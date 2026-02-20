@@ -21,14 +21,14 @@ const router = express.Router();
 
 router.get('/', getAllTracks);
 router.get('/:trackId', getTrackById);
-router.get('/:trackId/events/:eventId/results', getTrackResults);  // Track-related event results
+router.get('/:trackId/events/results', getTrackResults);  // Track-related event results
 router.get('/:trackId/events/:eventId/communities/:Id/photos', trackCommunityPhotos); // Track-related event results with photos for a community
-router.get('/:trackId/events/:eventId/communities/:Id/results', trackCommunityResults); // Track-related event results with photos for a community
+router.get('/:trackId/communities/results', trackCommunityResults); // Track-related event results with photos for a community
 
 
 // Admin only routes
 router.post('/', authenticate, isAdmin, validate(createTrackSchema), createTrack);
-router.put('/:trackId', authenticate, isAdmin, validate(updateTrackSchema) , updateTrack);
+router.patch('/:trackId', authenticate, isAdmin, validate(updateTrackSchema) , updateTrack);
 router.delete('/:trackId', authenticate, isAdmin, deleteTrack);
 
 

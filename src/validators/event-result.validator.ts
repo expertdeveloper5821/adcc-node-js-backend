@@ -24,5 +24,11 @@ export const evenResultSchema = z
   })
   .strict();
 
+  export const joinEventSchema = z.object({
+  eventId: z.string().min(1),
+});
+
+
 export type CreateEventResultInput = z.infer<typeof evenResultSchema>;
 export type UpdateEventResultInput = z.infer<typeof updateEventResultSchema>;
+export type JoinEventSchemaInput = z.infer<typeof joinEventSchema>;

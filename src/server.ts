@@ -28,8 +28,9 @@ app.use(cors({
 }));
 app.use(compression());
 app.use(morgan('dev'));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// Increase body size limit to handle base64 images (50MB)
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Health check
 app.get('/health', (_req, res) => {
