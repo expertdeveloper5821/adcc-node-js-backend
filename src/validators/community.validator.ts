@@ -70,7 +70,7 @@ export const createCommunitySchema = z
     manager: z.string().optional(),
     area: z.string().optional(),
     city: z.string().optional(),
-    trackId: z.array(objectIdSchema).optional(),
+    trackId: objectIdSchema.optional(),
   })
   .strict();
 
@@ -97,7 +97,7 @@ export const updateCommunitySchema = z
     manager: z.string().optional(),
     area: z.string().optional(),
     city: z.string().optional(),
-    trackId: z.array(objectIdSchema).optional(),
+    trackId: objectIdSchema.optional(),
   })
   .strict();
 
