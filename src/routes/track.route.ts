@@ -33,9 +33,9 @@ router.get('/:trackId/communities/results', trackCommunityResults); // Track-rel
 router.post('/', authenticate, isAdmin, validate(createTrackSchema), createTrack);
 router.patch('/:trackId', authenticate, isAdmin, validate(updateTrackSchema) , updateTrack);
 router.delete('/:trackId', authenticate, isAdmin, deleteTrack);
-router.delete('/:trackId/gallery', authenticate, isAdmin, deleteGalleryImage);
-router.patch('/:trackId/archive', authenticate, isAdmin, archiveTrack);
-router.patch('/tracks/:trackId/disable', authenticate, isAdmin, disableTrack);
-router.patch('/tracks/:trackId/enable', authenticate, isAdmin, enableTrack);
+router.delete('/:trackId/gallery', authenticate, deleteGalleryImage);
+router.patch('/:trackId/archive', authenticate, archiveTrack);
+router.patch('/tracks/:trackId/disable', authenticate, disableTrack);
+router.patch('/tracks/:trackId/enable', authenticate, enableTrack);
 
 export default router;

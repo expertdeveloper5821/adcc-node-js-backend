@@ -37,7 +37,7 @@ router.post('/:eventId/joinEvent', authenticate, validate(joinEventSchema), join
 router.post('/:eventId/cancel', authenticate, cancelRegistration);
 router.post('/:eventId/add-to-calendar', authenticate, addToCalendar);
 router.get('/:eventId/member-status', authenticate, getMemberEventStatus);
-router.delete('/:eventId/gallery', authenticate, isAdmin, deleteGalleryImage);
+router.delete('/:eventId/gallery', authenticate, deleteGalleryImage);
 
 
 // Admin only routes
