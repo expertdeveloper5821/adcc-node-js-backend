@@ -38,7 +38,7 @@ router.patch(
   updateCommunityRide
 );
 router.delete('/:id', authenticate, isAdmin, deleteCommunityRide);
-router.get('/:id/member-status', authenticate, isAdmin, communityMember);
+router.get('/:id/member-status', authenticate, communityMember);
 
 export default router;
 
