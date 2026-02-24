@@ -131,3 +131,39 @@ export const deleteCommunityRide = asyncHandler(async (req: AuthRequest, res: Re
   sendSuccess(res, null, 'Community ride deleted successfully');
 });
 
+
+/**
+ * Community Member Join-Status ride
+ * Member Join-Status /v1/community-rides/:id
+ * Admin only
+ */
+export const communityMember = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const { id: communityId } = req.params;
+    const userId = req.user?.id;
+
+    if (!userId) {
+      throw new AppError("User not authenticated", 401);
+    }
+
+    const membership = await CommunityRide.findOne({
+      userId,
+      communityId,
+      status: "active",
+    });
+
+    if (!membership) {
+      throw new AppError(
+        "You are not a member of this community",
+        403
+      );
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        isMember: true,
+      },
+    });
+  }
+);
