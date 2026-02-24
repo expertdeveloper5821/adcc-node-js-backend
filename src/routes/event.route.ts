@@ -9,7 +9,8 @@ import {
   cancelRegistration,
   getEventResults,
   getEventResultsList,
-  addToCalendar
+  addToCalendar,
+  getMemberEventStatus
 
 } from '@/controllers/event.controller';
 import { validate } from '@/middleware/validate.middleware';
@@ -34,6 +35,7 @@ router.get('/:eventId/results', getEventResultsList);
 router.post('/:eventId/joinEvent', authenticate, validate(joinEventSchema), joinEvent);
 router.post('/:eventId/cancel', authenticate, cancelRegistration);
 router.post('/:eventId/add-to-calendar', authenticate, addToCalendar);
+router.get('/:eventId/member-status', authenticate, getMemberEventStatus);
 
 // Admin only routes
 router.post('/', authenticate, isAdmin, validate(createEventSchema), createEvent);

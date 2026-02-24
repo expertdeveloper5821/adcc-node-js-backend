@@ -110,6 +110,55 @@ export const deleteTrack = asyncHandler(async (req: AuthRequest, res: Response) 
     return sendSuccess(res, null, 'Track deleted successfully', 201);
 });
 
+
+/**
+ * Disable track
+ * Disable /v1/tracks/:id
+ * Admin only
+ * */
+export const disableTrack = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const { trackId } = req.params;
+
+    const track = await Track.findByIdAndUpdate(
+      trackId,
+      { status: 'disabled' },
+      { new: true }
+    );
+
+    if (!track) {
+      throw new AppError('Track not found', 404);
+    }
+
+    return sendSuccess(res, track, 'Track disabled successfully', 200);
+  }
+);
+
+/**
+ * Enable track
+ * Enable /v1/tracks/:id
+ * Admin only
+ * */
+
+export const enableTrack = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const { trackId } = req.params;
+
+    const track = await Track.findByIdAndUpdate(
+      trackId,
+      { status: 'active' },
+      { new: true }
+    );
+
+    if (!track) {
+      throw new AppError('Track not found', 404);
+    }
+
+    return sendSuccess(res, track, 'Track enabled successfully', 200);
+  }
+);
+
+
 /**
  * Track realted events resuts
  * */
@@ -228,3 +277,47 @@ export const trackCommunityResults = asyncHandler(async (req: AuthRequest, res: 
 
 });
 
+export const archiveTrack = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    console.log('archive-params',req.params);
+    const { trackId } = req.params;
+    const track = await Track.findByIdAndUpdate(
+      trackId,
+      { status: 'archived' },
+      { new: true }
+    );
+
+    if (!track) {
+      throw new AppError('Track not found', 404);
+    }
+
+    return sendSuccess(res, track, 'Track archived successfully', 200);
+  }
+);
+
+export const deleteGalleryImage = async (req, res) => {
+  try {
+    const { eventId } = req.params;
+    const { image } = req.body;
+
+    const event = await Event.findById(eventId);
+    if (!event) {
+      return res.status(404).json({ message: "Event not found" });
+    }
+
+    event.galleryImages = event.galleryImages.filter(
+      (img) => img !== image
+    );
+
+    await event.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Gallery image deleted",
+      galleryImages: event.galleryImages,
+    });
+
+  } catch (error) {
+    res.status(500).json({ message: "Server error" });
+  }
+};
