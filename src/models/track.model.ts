@@ -28,15 +28,15 @@ export interface ITrack extends Document {
   distance: number;
   elevation: string;
   trackType: 'circuit' | 'road' | 'costal' | 'desert' | 'urban';
-  avgtime: string; // in minutes
-  pace: string;
+  avgtime?: string; // in minutes
+  pace?: string;
   facilities?: ITrackFacility[];
   estimatedTime?: string;
   loopOptions?: number[];
   difficulty?: string;
   category?: string;
   surfaceType: 'asphalt' | 'concrete' | 'mixed';
-  status: 'open' | 'limited' | 'closed';
+  status: 'open' | 'limited' | 'closed' | 'archived' | 'disabled';
   slug?: string;
   country?: string;
   safetyNotes?: string;
@@ -45,6 +45,7 @@ export interface ITrack extends Document {
   displayPriority?: number;
   nightRidingAllowed?: boolean;
   visibility?: string;
+  galleryImages?: string[];
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -67,8 +68,8 @@ const TrackSchema = new Schema(
         enum: ['circuit', 'road', 'costal', 'desert', 'urban'],
         required: [true, 'Track type is required'],
     },
-    avgtime: { type: String, required: [true, 'Average time is required'], min: 0 },
-    pace: { type: String, required: [true, 'Pace is required'], trim: true },
+    avgtime: { type: String },
+    pace: { type: String, trim: true },
     facilities: {
         type: [String],
         enum: [ 'water', 'toilets', 'parking', 'lights' ],
@@ -91,6 +92,10 @@ const TrackSchema = new Schema(
     },
     nightRidingAllowed: { type: Boolean },
     area: { type: String },
+    galleryImages: {
+      type: [String],
+      default: [],
+    },
     createdBy: {
       type: Schema.Types.ObjectId,
       ref: 'users',
