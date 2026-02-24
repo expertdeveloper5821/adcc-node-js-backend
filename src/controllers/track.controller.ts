@@ -295,29 +295,40 @@ export const archiveTrack = asyncHandler(
   }
 );
 
-export const deleteGalleryImage = async (req, res) => {
+export const deleteGalleryImage = asyncHandler(async (req: AuthRequest, res: Response) => {
   try {
-    const { eventId } = req.params;
-    const { image } = req.body;
+    const { trackId } = req.params;
+    const { imageUrl } = req.body;
 
-    const event = await Event.findById(eventId);
-    if (!event) {
-      return res.status(404).json({ message: "Event not found" });
+    const track = await Track.findById(trackId);
+    if (!track) {
+      return res.status(404).json({ message: "Track not found" });
     }
 
-    event.galleryImages = event.galleryImages.filter(
-      (img) => img !== image
+    if (!imageUrl) {
+      throw new AppError('Image URL is required', 400);
+    }
+
+    if (!track.galleryImages || track.galleryImages.length === 0) {
+      throw new AppError('No gallery images found', 400);
+    }
+
+    track.galleryImages = track.galleryImages.filter(
+      (img) => img !== imageUrl
     );
 
-    await event.save();
+    await track.save();
 
     res.status(200).json({
       success: true,
       message: "Gallery image deleted",
-      galleryImages: event.galleryImages,
+      galleryImages: track.galleryImages,
     });
+    return;
 
   } catch (error) {
     res.status(500).json({ message: "Server error" });
+    return;
   }
-};
+});
+

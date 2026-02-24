@@ -373,7 +373,7 @@ export const cancelRegistration = asyncHandler(async (req: AuthRequest, res: Res
   });
   await event.save();
 
-  sendSuccess(res, event, 'Event participation cancelled successfully heree', 201);
+  sendSuccess(res, event, 'Event participation cancelled successfully', 201);
 });
 
 
@@ -436,25 +436,25 @@ export const getMemberEventStatus = asyncHandler(async (req: AuthRequest, res: R
   const userId = req.user?.id;
 
   if (!userId) {
-    throw new AppError('User not authenticated', 401);
+    throw new AppError("User not authenticated", 401);
   }
 
   // Check if event exists
   const event = await Event.findById(eventId);
   if (!event) {
-    throw new AppError('Event not found', 404);
+    throw new AppError("Event not found", 404);
   }
 
   // Check user's participation status
   const eventResult = await EventResult.findOne({ eventId, userId });
 
-  let status = 'not_joined';
+  let status = "not_joined";
   let participationDetails = null;
 
   if (eventResult) {
     status = eventResult.status; // 'joined', 'cancelled', 'completed'
     participationDetails = {
-      joinedAt: eventResult.createdAt,
+      joinedAt: eventResult.createdAt?.toISOString(),
       status: eventResult.status,
       distance: eventResult.distance,
       time: eventResult.time,
@@ -475,7 +475,45 @@ export const getMemberEventStatus = asyncHandler(async (req: AuthRequest, res: R
         status: event.status,
       }
     },
-    'Member event status retrieved successfully',
+    "Member event status retrieved successfully",
     200
   );
+});
+
+
+export const deleteGalleryImage = asyncHandler(async (req: AuthRequest, res: Response) => {
+  try {
+    const { eventId } = req.params;
+    const { imageUrl } = req.body;
+
+    const event = await Event.findById(eventId);
+    if (!event) {
+      return res.status(404).json({ message: "Event not found" });
+    }
+
+    if (!imageUrl) {
+      throw new AppError('Image URL is required', 400);
+    }
+
+    if (!event.galleryImages || event.galleryImages.length === 0) {
+      throw new AppError('No gallery images found', 400);
+    }
+    
+    event.galleryImages = event.galleryImages.filter(
+      (img) => img !== imageUrl
+    );
+
+    await event.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Gallery image deleted",
+      galleryImages: event.galleryImages,
+    });
+    return;
+
+  } catch (error) {
+    res.status(500).json({ message: "Server error" });
+    return;
+  }
 });
