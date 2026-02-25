@@ -1,5 +1,7 @@
 import { Request, Response } from 'express';
 import CommunityRide from '@/models/community-ride.model';
+import Community from '@/models/community.model';
+import CommunityMembership from '@/models/communityMembership.model';
 import { sendSuccess } from '@/utils/response';
 import { asyncHandler } from '@/utils/async-handler';
 import { AppError } from '@/utils/app-error';
@@ -137,7 +139,7 @@ export const deleteCommunityRide = asyncHandler(async (req: AuthRequest, res: Re
  * Member Join-Status /v1/community-rides/:id
  * Admin only
  */
-export const communityMember = asyncHandler(
+export const communityMemberStatus = asyncHandler(
   async (req: AuthRequest, res: Response) => {
     const { id: communityId } = req.params;
     const userId = req.user?.id;
@@ -146,23 +148,56 @@ export const communityMember = asyncHandler(
       throw new AppError("User not authenticated", 401);
     }
 
-    const membership = await CommunityRide.findOne({
+
+    // Fetch full community details
+    const community = await Community.findById(communityId);
+    if (!community) {
+      throw new AppError("Community not found", 404);
+    }
+
+    const membership = await CommunityMembership.findOne({
       userId,
       communityId,
-      status: "active",
     });
 
-    if (!membership) {
-      throw new AppError(
-        "You are not a member of this community",
-        403
-      );
+    let status = "not_joined";
+    let membershipDetails = null;
+
+    if (membership) {
+      status = membership.status; // active / left / banned
+
+      if (membership.status === "active") {
+        status = "joined";
+      }
+
+      membershipDetails = {
+        role: membership.role,
+        joinedAt: membership.joinedAt,
+      };
     }
 
     return res.status(200).json({
       success: true,
+      message: "Community membership status retrieved successfully",
       data: {
-        isMember: true,
+        communityId,
+        userId,
+        status,
+        membershipDetails,
+        community: {
+          id: community._id,
+          title: community.title,
+          type: community.type,
+          category: community.category,
+          location: community.location,
+          area: community.area,
+          city: community.city,
+          image: community.image,
+          logo: community.logo,
+          memberCount: community.memberCount,
+          trackName: community.trackName,
+          isActive: community.isActive
+        },
       },
     });
   }
