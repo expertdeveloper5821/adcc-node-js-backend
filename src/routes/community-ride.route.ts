@@ -5,7 +5,7 @@ import {
   getCommunityRideById,
   updateCommunityRide,
   deleteCommunityRide,
-  communityMember
+  communityMemberStatus
 } from '@/controllers/community-ride.controller';
 import { validate } from '@/middleware/validate.middleware';
 import {
@@ -38,7 +38,7 @@ router.patch(
   updateCommunityRide
 );
 router.delete('/:id', authenticate, isAdmin, deleteCommunityRide);
-router.get('/:id/member-status', authenticate, communityMember);
+router.get('/:id/member-status', authenticate, communityMemberStatus);
 
 export default router;
 
