@@ -20,6 +20,13 @@ export interface IUser extends Document {
   updatedAt: Date;
 }
 
+// Add to user.model.ts
+export interface IGuestSession extends Document {
+  sessionId: string;
+  actions: string[]; // Track what guest did
+  expiresAt: Date;
+}
+
 const RefreshTokenSchema = new Schema({
   token: {
     type: String,

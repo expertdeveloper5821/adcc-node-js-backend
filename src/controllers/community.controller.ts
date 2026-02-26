@@ -185,9 +185,14 @@ export const deleteCommunity = asyncHandler(async (req: AuthRequest, res: Respon
 export const joinCommunity = asyncHandler(async (req: AuthRequest & { params: JoinCommunityParams }, res: Response) => {
   const communityId = req.params.id;
   const userId = req.user?.id;
+  const isGuest = req.user?.isGuest;
   
   if (!userId) {
     throw new AppError('User not authenticated', 401);
+  }
+
+  if (isGuest) {
+    throw new AppError('Please register to join communities', 403);
   }
 
   const membership = await communityMembershipService.joinCommunity(userId, communityId);
