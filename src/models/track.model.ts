@@ -20,6 +20,7 @@ export interface ITrack extends Document {
   title: string;
   description: string;
   image?: string;
+  coverImage?: string;
   city: string;
   address?: string;
   zipcode?: string;
@@ -55,6 +56,7 @@ const TrackSchema = new Schema(
     title: { type: String, required: [true, 'Track title is required'], trim: true },
     description: { type: String, required: [true, 'Track description is required'], trim: true },
     image: { type: String, trim: true },
+    coverImage: { type: String, trim: true },
     city: { type: String, trim: true },
     address: { type: String, trim: true },
     zipcode: { type: String, trim: true },

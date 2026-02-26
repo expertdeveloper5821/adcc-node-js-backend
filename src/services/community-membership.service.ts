@@ -8,31 +8,59 @@ export class CommunityMembershipService {
    */
 
   async joinCommunity(userId: string, communityId: any) {
+    // convert strings to ObjectId where needed for arrays
+    if (!userId) {
+      throw new AppError('User not authenticated', 401);
+    }
 
     const community = await Community.findById(communityId);
     if (!community) {
-    throw new AppError('Community not found', 404);
+      throw new AppError('Community not found', 404);
     }
 
-    const alreadyMember = await CommunityMembership.findOne({userId, communityId});
-    
-    if (alreadyMember) {
-        if(alreadyMember.status === 'active') {
-            throw new AppError('User is already a member of the community', 400);
-        }
+    const alreadyMember = await CommunityMembership.findOne({ userId, communityId });
 
+    if (alreadyMember) {
+      // toggle off if active
+      if (alreadyMember.status === 'active') {
+        alreadyMember.status = 'inactive';
+        await alreadyMember.save();
+      
+
+        // atomically pull from members array (skip validation)
+        await Community.findByIdAndUpdate(communityId, { $pull: { members: userId } });
+
+        return alreadyMember.populate('userId', 'fullName email');
+      }
+
+      // reactivate if inactive
+      if (alreadyMember.status === 'inactive') {
         alreadyMember.status = 'active';
         await alreadyMember.save();
-        return alreadyMember;
+
+        // atomically add to members set
+        await Community.findByIdAndUpdate(communityId, { $addToSet: { members: userId } });
+
+        return alreadyMember.populate('userId', 'fullName email');
+      }
+
+      // banned users cannot toggle
+      if (alreadyMember.status === 'banned') {
+        throw new AppError('Banned users cannot join or leave the community', 400);
+      }
     }
 
     const membership = await CommunityMembership.create({
-        userId,
-        communityId,
-        role: 'member',
-        status: 'active'
-    })
-    return membership;
+      userId,
+      communityId,
+      role: 'member',
+      status: 'active',
+    });
+
+    // atomically add new member (in case document was modified externally)
+    await Community.findByIdAndUpdate(communityId, { $addToSet: { members: userId } });
+
+    return membership.populate('userId', 'fullName email');
 }
 
  /**
@@ -41,50 +69,74 @@ export class CommunityMembershipService {
   * */
 
   async leaveCommunity(userId: string, communityId: any) {
+  if (!userId) {
+    throw new AppError('User not authenticated', 401);
+  }
 
-    const membership = await CommunityMembership.findOne({
-        userId, communityId
-    });
+  const membership = await CommunityMembership.findOne({
+    userId,
+    communityId,
+  });
 
-    if(!membership) {
-        throw new AppError('User is not a member of community', 404);
-    }
+  if (!membership) {
+    throw new AppError('User is not a member of community', 404);
+  }
 
-    if(membership.status === 'banned') {
-        throw new AppError('Banned users cannot leave the community', 400);
-    }
+  if (membership.status !== 'inactive') {
     membership.status = 'inactive';
     await membership.save();
-    return membership;
+
+    await Community.findByIdAndUpdate(
+      communityId,
+      { $pull: { members: userId } }
+    );
+  }
+
+  // ✅ Always return same structure
+  const populatedMembership = await membership.populate('userId', 'name email');
+
+  const community = await Community.findById(communityId)
+    .select('title city category')  
+    .populate('createdBy', 'fullName email')
+    .populate('members', 'fullName email');
+
+  return {
+    membership: populatedMembership,
+    community,
+  };
 }
 
 
     /*
     * Get community members
     */
-   async getCommunityMembers(communityId: any, page: number = 1, limit: number = 10) {
+  async getCommunityMembers( id: string, page: number = 1, limit: number = 10 ) {
     
     const skip = (page - 1) * limit;
 
-    const members = await CommunityMembership.find({ communityId, status: 'active' })
-      .skip(skip)
-      .limit(limit)
-      .sort({ joinedAt: -1 })
-      .populate('userId', 'fullName email'); // Populate user details
+    const filter = { communityId: id };
 
-      if(!members) {
-        throw new AppError('No members found for this community', 404);
-      }
+    const [members, totalMembers] = await Promise.all([
+      CommunityMembership.find(filter)
+        .select('userId role status joinedAt') 
+        .populate('userId', 'fullName email')
+        .sort({ joinedAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
 
-      const totalMembers = await CommunityMembership.countDocuments({ communityId, status: 'active' });
-      
+      CommunityMembership.countDocuments(filter),
+    ]);
+
     return {
       members,
-      totalMembers,
-        currentPage: page,
+      pagination: {
+        total: totalMembers,
+        page,
+        limit,
         pages: Math.ceil(totalMembers / limit),
+      },
     };
-    
   }
 
   /*
