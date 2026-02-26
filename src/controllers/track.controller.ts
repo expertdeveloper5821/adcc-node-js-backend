@@ -110,6 +110,55 @@ export const deleteTrack = asyncHandler(async (req: AuthRequest, res: Response) 
     return sendSuccess(res, null, 'Track deleted successfully', 201);
 });
 
+
+/**
+ * Disable track
+ * Disable /v1/tracks/:id
+ * Admin only
+ * */
+export const disableTrack = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const { trackId } = req.params;
+
+    const track = await Track.findByIdAndUpdate(
+      trackId,
+      { status: 'disabled' },
+      { new: true }
+    );
+
+    if (!track) {
+      throw new AppError('Track not found', 404);
+    }
+
+    return sendSuccess(res, track, 'Track disabled successfully', 200);
+  }
+);
+
+/**
+ * Enable track
+ * Enable /v1/tracks/:id
+ * Admin only
+ * */
+
+export const enableTrack = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const { trackId } = req.params;
+
+    const track = await Track.findByIdAndUpdate(
+      trackId,
+      { status: 'active' },
+      { new: true }
+    );
+
+    if (!track) {
+      throw new AppError('Track not found', 404);
+    }
+
+    return sendSuccess(res, track, 'Track enabled successfully', 200);
+  }
+);
+
+
 /**
  * Track realted events resuts
  * */
@@ -226,5 +275,60 @@ export const trackCommunityResults = asyncHandler(async (req: AuthRequest, res: 
 
     sendSuccess(res, results, 'Track related community results retrieved successfully', 200);
 
+});
+
+export const archiveTrack = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    console.log('archive-params',req.params);
+    const { trackId } = req.params;
+    const track = await Track.findByIdAndUpdate(
+      trackId,
+      { status: 'archived' },
+      { new: true }
+    );
+
+    if (!track) {
+      throw new AppError('Track not found', 404);
+    }
+
+    return sendSuccess(res, track, 'Track archived successfully', 200);
+  }
+);
+
+export const deleteGalleryImage = asyncHandler(async (req: AuthRequest, res: Response) => {
+  try {
+    const { trackId } = req.params;
+    const { imageUrl } = req.body;
+
+    const track = await Track.findById(trackId);
+    if (!track) {
+      return res.status(404).json({ message: "Track not found" });
+    }
+
+    if (!imageUrl) {
+      throw new AppError('Image URL is required', 400);
+    }
+
+    if (!track.galleryImages || track.galleryImages.length === 0) {
+      throw new AppError('No gallery images found', 400);
+    }
+
+    track.galleryImages = track.galleryImages.filter(
+      (img) => img !== imageUrl
+    );
+
+    await track.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Gallery image deleted",
+      galleryImages: track.galleryImages,
+    });
+    return;
+
+  } catch (error) {
+    res.status(500).json({ message: "Server error" });
+    return;
+  }
 });
 

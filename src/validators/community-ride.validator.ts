@@ -17,7 +17,7 @@ export const createCommunityRideSchema = z
     maxParticipants: z.number().int().min(0, 'Max participants cannot be negative').optional(),
     minAge: z.number().int().min(0, 'Min age cannot be negative').optional(),
     maxAge: z.number().int().min(0, 'Max age cannot be negative').optional(),
-    status: z.enum(['upcoming', 'ongoing', 'completed', 'cancelled']).default('upcoming'),
+    status: z.enum(['active', 'left', 'banned']).default('active'),
   })
   .strict();
 
@@ -42,12 +42,12 @@ export const updateCommunityRideSchema = z
     maxParticipants: z.number().int().min(0, 'Max participants cannot be negative').optional(),
     minAge: z.number().int().min(0, 'Min age cannot be negative').optional(),
     maxAge: z.number().int().min(0, 'Max age cannot be negative').optional(),
-    status: z.enum(['upcoming', 'ongoing', 'completed', 'cancelled']).optional(),
+    status: z.enum(['active', 'left', 'banned']).optional(),
   })
   .strict();
 
 export const getCommunityRidesQuerySchema = z.object({
-  status: z.enum(['upcoming', 'ongoing', 'completed', 'cancelled']).optional(),
+  status: z.enum(['active', 'left', 'banned']).optional(),
   page: z.string().regex(/^\d+$/).transform(Number).optional(),
   limit: z.string().regex(/^\d+$/).transform(Number).optional(),
 });

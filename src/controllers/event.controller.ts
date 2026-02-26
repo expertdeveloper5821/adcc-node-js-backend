@@ -230,7 +230,7 @@ export const getEventResultsList = asyncHandler(async (req: Request, res: Respon
   const eventIdParam = Array.isArray(req.params.eventId)
     ? req.params.eventId[0]
     : req.params.eventId;
-
+  // console.log('body',req.params);
   if (!mongoose.Types.ObjectId.isValid(eventIdParam)) {
     throw new AppError('Invalid eventId', 400);
   }
@@ -241,16 +241,46 @@ export const getEventResultsList = asyncHandler(async (req: Request, res: Respon
       eventId: new mongoose.Types.ObjectId(eventIdParam),
     },
   },
-  {
-    $addFields: {
-      eventTimeInSeconds: { 
-        $add: [
-          { $multiply: [{ $toInt: { $substr: ['$time', 0, 2] } }, 3600] },
-          { $multiply: [{ $toInt: { $substr: ['$time', 3, 2] } }, 60] }
-        ]
+    {
+      $addFields: {
+        eventTimeInSeconds: {
+          $cond: {
+            if: { $and: [{ $ne: ["$time", null] }, { $ne: ["$time", ""] }] },
+            then: {
+              $add: [
+                {
+                  $multiply: [
+                    {
+                      $convert: {
+                        input: { $substr: ["$time", 0, 2] },
+                        to: "int",
+                        onError: 0,
+                        onNull: 0
+                      }
+                    },
+                    3600
+                  ]
+                },
+                {
+                  $multiply: [
+                    {
+                      $convert: {
+                        input: { $substr: ["$time", 3, 2] },
+                        to: "int",
+                        onError: 0,
+                        onNull: 0
+                      }
+                    },
+                    60
+                  ]
+                }
+              ]
+            },
+            else: 0
+          }
+        }
       }
-    }
-  },
+    },
   { $sort: { eventTimeInSeconds: 1 } },
   {
     $setWindowFields: {
@@ -343,7 +373,7 @@ export const cancelRegistration = asyncHandler(async (req: AuthRequest, res: Res
   });
   await event.save();
 
-  sendSuccess(res, event, 'Event participation cancelled successfully heree', 201);
+  sendSuccess(res, event, 'Event participation cancelled successfully', 201);
 });
 
 
@@ -394,4 +424,96 @@ export const cancelRegistration = asyncHandler(async (req: AuthRequest, res: Res
     'Calendar link generated',
     200
   );
+});
+
+/**
+ * Get member event status
+ * GET /v1/events/:eventId/member-status
+ * Returns whether the authenticated user has joined the event and their status
+ */
+export const getMemberEventStatus = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const eventId = req.params.eventId;
+  const userId = req.user?.id;
+
+  if (!userId) {
+    throw new AppError("User not authenticated", 401);
+  }
+
+  // Check if event exists
+  const event = await Event.findById(eventId);
+  if (!event) {
+    throw new AppError("Event not found", 404);
+  }
+
+  // Check user's participation status
+  const eventResult = await EventResult.findOne({ eventId, userId });
+
+  let status = "not_joined";
+  let participationDetails = null;
+
+  if (eventResult) {
+    status = eventResult.status; // 'joined', 'cancelled', 'completed'
+    participationDetails = {
+      joinedAt: eventResult.createdAt?.toISOString(),
+      status: eventResult.status,
+      distance: eventResult.distance,
+      time: eventResult.time,
+      reason: eventResult.reason,
+    };
+  }
+
+  sendSuccess(
+    res,
+    {
+      eventId,
+      userId,
+      status,
+      participationDetails,
+      event: {
+        title: event.title,
+        eventDate: event.eventDate,
+        status: event.status,
+      }
+    },
+    "Member event status retrieved successfully",
+    200
+  );
+});
+
+
+export const deleteGalleryImage = asyncHandler(async (req: AuthRequest, res: Response) => {
+  try {
+    const { eventId } = req.params;
+    const { imageUrl } = req.body;
+
+    const event = await Event.findById(eventId);
+    if (!event) {
+      return res.status(404).json({ message: "Event not found" });
+    }
+
+    if (!imageUrl) {
+      throw new AppError('Image URL is required', 400);
+    }
+
+    if (!event.galleryImages || event.galleryImages.length === 0) {
+      throw new AppError('No gallery images found', 400);
+    }
+    
+    event.galleryImages = event.galleryImages.filter(
+      (img) => img !== imageUrl
+    );
+
+    await event.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Gallery image deleted",
+      galleryImages: event.galleryImages,
+    });
+    return;
+
+  } catch (error) {
+    res.status(500).json({ message: "Server error" });
+    return;
+  }
 });

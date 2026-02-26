@@ -1,6 +1,8 @@
 import { Request, Response } from 'express';
 import mongoose from 'mongoose';
 import Community from '@/models/community.model';
+import Event from '@/models/event.model';
+import CommunityMembership from '@/models/communityMembership.model';
 import { sendSuccess } from '@/utils/response';
 import { asyncHandler } from '@/utils/async-handler';
 import { AppError } from '@/utils/app-error';
@@ -86,17 +88,36 @@ export const getAllCommunities = asyncHandler(async (req: Request, res: Response
 
   const communities = await Community.find(query)
     .populate('createdBy', 'fullName email')
-    .populate('members', 'fullName email')
+    // members array is not populated here to reduce payload; use memberCount instead
     .sort(search ? { score: { $meta: 'textScore' } } : { createdAt: -1 })
     .skip(skip)
     .limit(limitNum);
 
   const total = await Community.countDocuments(query);
 
+  // attach upcoming event counts for each community
+  const now = new Date();
+  const communitiesWithCounts = await Promise.all(
+    communities.map(async (comm) => {
+      const upcomingEvents = await Event.countDocuments({
+        communityId: comm._id,
+        eventDate: { $gte: now },
+      });
+      const memberCount = await CommunityMembership.countDocuments({
+        communityId: comm._id,
+        status: 'active',
+      });
+      const commObj: any = comm.toObject();
+      commObj.upcomingEventCount = upcomingEvents;
+      commObj.memberCount = memberCount;
+      return commObj;
+    })
+  );
+
   sendSuccess(
     res,
     {
-      communities,
+      communities: communitiesWithCounts,
       pagination: {
         page: pageNum,
         limit: limitNum,
@@ -132,7 +153,22 @@ export const getCommunityById = asyncHandler(async (req: Request, res: Response)
     throw new AppError('Community not found', 404);
   }
 
-  return sendSuccess(res, community, 'Community retrieved successfully', 201);
+  // include upcoming event count and accurate member count from membership collection
+  const now = new Date();
+  const upcomingEvents = await Event.countDocuments({
+    communityId: community._id,
+    eventDate: { $gte: now },
+  });
+  const memberCount = await CommunityMembership.countDocuments({
+    communityId: community._id,
+    status: 'active',
+  });
+
+  const communityObj: any = community.toObject();
+  communityObj.upcomingEventCount = upcomingEvents;
+  communityObj.memberCount = memberCount;
+
+  return sendSuccess(res, communityObj, 'Community retrieved successfully', 201);
 });
 
 /**
@@ -197,11 +233,14 @@ export const joinCommunity = asyncHandler(async (req: AuthRequest & { params: Jo
 
   const membership = await communityMembershipService.joinCommunity(userId, communityId);
 
-  const updatedCommunity = await Community.findById(communityId)
-    .populate('createdBy', 'fullName email')
-    .populate('members', 'fullName email');
+  const communityDoc = await Community.findById(communityId).select('title location type');
 
-  sendSuccess(res, { community: updatedCommunity, membership }, 'Successfully joined community', 201);
+  // message based on resulting status
+  const message = membership.status === 'active' ?
+    'Successfully joined community' :
+    'Successfully left community';
+
+  sendSuccess(res, { community: communityDoc, membership }, message, 201);
 });
 
 /**
@@ -209,33 +248,32 @@ export const joinCommunity = asyncHandler(async (req: AuthRequest & { params: Jo
  * POST /v1/communities/:id/leave
  * Authenticated users only
  */
-export const leaveCommunity = asyncHandler(async (req: AuthRequest, res: Response) => {
-  const { id } = req.params;
-  const userId = req.user?.id;
+export const leaveCommunity = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const { id } = req.params;
+    const userId = req.user?.id;
 
-  if (!userId) {
-    throw new AppError('User not authenticated', 401);
+    if (!userId) {
+      throw new AppError('User not authenticated', 401);
+    }
+
+    const result = await communityMembershipService.leaveCommunity(userId, id);
+
+    sendSuccess(res, result, 'Successfully left community', 200);
   }
-
-  const membership = await communityMembershipService.leaveCommunity(userId, id);
-
-  const updatedCommunity = await Community.findById(id)
-    .populate('createdBy', 'fullName email')
-    .populate('members', 'fullName email');
-
-  sendSuccess(res, {community: updatedCommunity, membership }, 'Successfully left community', 201);
-
-});
+);
 
 /**
  * Get community members
  * GET /v1/communities/:id/members
  * Public
  */
-export const getCommunityMembers = asyncHandler(async (req: Request, res: Response) => {
+export const getCommunityMembers = asyncHandler(async (req: AuthRequest, res: Response) => {
   
-  const { id } = req.params;
+  const id = req.params.id as string;
+  
   const { page = 1, limit = 10 } = req.query;
+
 
   const pageNum = Math.max(1, Number(page) || 1);
   const limitNum = Math.max(1, Number(limit) || 10);

@@ -11,7 +11,7 @@ export interface ICommunityRide extends Document {
   minAge?: number;
   maxAge?: number;
   currentParticipants: number;
-  status: 'upcoming' | 'ongoing' | 'completed' | 'cancelled';
+  status: 'active' | 'left' | 'banned';
   createdBy: mongoose.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
@@ -66,8 +66,8 @@ const CommunityRideSchema = new Schema(
     },
     status: {
       type: String,
-      enum: ['upcoming', 'ongoing', 'completed', 'cancelled'],
-      default: 'upcoming',
+      enum: ['active', 'left', 'banned'],
+      default: 'active',
     },
     createdBy: {
       type: Schema.Types.ObjectId,

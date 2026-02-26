@@ -60,6 +60,9 @@ export const createEventSchema = z
     difficulty: z.string().optional(),
     endTime: z.string().optional(),
     category: z.string().optional(),
+    isFeatured: z.boolean().default(false),
+    allowCancellation: z.boolean().default(false),
+    galleryImages: z.array(z.string().optional())
   })
   .strict();
 
@@ -127,6 +130,9 @@ export const updateEventSchema = z
     difficulty: z.string().optional(),
     endTime: z.string().optional(),
     category: z.string().optional(),
+    isFeatured: z.boolean().default(false),
+    allowCancellation: z.boolean().default(false),
+    galleryImages: z.array(z.string().optional())
 
   })
   .strict();

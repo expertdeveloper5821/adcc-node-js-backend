@@ -62,6 +62,9 @@ export interface IEvent extends Document {
   slug?: string;
   endTime?: string;
   difficulty?: string;
+  isFeatured?: boolean;
+  allowCancellation?: boolean;
+  galleryImages?: string[];
 }
 
 const EventSchema = new Schema(
@@ -182,12 +185,24 @@ const EventSchema = new Schema(
       enum: ['Draft', 'Open', 'Full', 'Completed', 'Archived'],
       default: 'upcoming',
     },
+    galleryImages: {
+      type: [String],
+      default: [],
+    },
     difficulty: {
       type: String,
       trim: true,
     },
     slug: {
       type: String,
+      trim: true,
+    },
+    isFeatured:{
+      type: Boolean,
+      trim: true,
+    },
+    allowCancellation:{
+      type: Boolean,
       trim: true,
     },
     createdBy: {

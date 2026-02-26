@@ -14,22 +14,28 @@ import {
     deleteTrack,
     getTrackResults,
     trackCommunityPhotos,
-    trackCommunityResults
+    trackCommunityResults,
+    archiveTrack,
+    disableTrack,
+    enableTrack,
+    deleteGalleryImage
 } from '@/controllers/track.controller';
 
 const router = express.Router();
 
-router.get('/', getAllTracks);
-router.get('/:trackId', getTrackById);
-router.get('/:trackId/events/results', getTrackResults);  // Track-related event results
-router.get('/:trackId/events/:eventId/communities/:Id/photos', trackCommunityPhotos); // Track-related event results with photos for a community
-router.get('/:trackId/communities/results', trackCommunityResults); // Track-related event results with photos for a community
-
+router.get('/', authenticate, getAllTracks);
+router.get('/:trackId', authenticate, getTrackById);
+router.get('/:trackId/events/results', authenticate, getTrackResults);  // Track-related event results
+router.get('/:trackId/events/:eventId/communities/:Id/photos', authenticate, trackCommunityPhotos); // Track-related event results with photos for a community
+router.get('/:trackId/communities/results', authenticate, trackCommunityResults); // Track-related event results with photos for a community
 
 // Admin only routes
 router.post('/', authenticate, isAdmin, validate(createTrackSchema), createTrack);
 router.patch('/:trackId', authenticate, isAdmin, validate(updateTrackSchema) , updateTrack);
 router.delete('/:trackId', authenticate, isAdmin, deleteTrack);
-
+router.delete('/:trackId/gallery', authenticate, deleteGalleryImage);
+router.patch('/:trackId/archive', authenticate, archiveTrack);
+router.patch('/tracks/:trackId/disable', authenticate, disableTrack);
+router.patch('/tracks/:trackId/enable', authenticate, enableTrack);
 
 export default router;
