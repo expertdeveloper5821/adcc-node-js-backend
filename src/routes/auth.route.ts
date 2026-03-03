@@ -5,6 +5,7 @@ import {
   refreshAccessToken,
   logout,
   getCurrentUser,
+  getCurrentUserStats,
   createGuestSession,
 } from '@/controllers/auth.controller';
 import { validate } from '@/middleware/validate.middleware';
@@ -16,6 +17,7 @@ import {
   createGuestSchema,
 } from '@/validators/auth.validator';
 import { authenticate } from '@/middleware/auth.middleware';
+import { requireMember } from '@/middleware/role.middleware';
 
 const router = express.Router();
 
@@ -32,6 +34,7 @@ router.post('/refresh', validate(refreshTokenSchema), refreshAccessToken);
 
 // Protected routes
 router.post('/logout', authenticate, validate(logoutSchema), logout);
+router.get('/me/stats', authenticate, requireMember, getCurrentUserStats);
 router.get('/me', authenticate, getCurrentUser);
 
 export default router;

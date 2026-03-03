@@ -5,6 +5,12 @@ import { sendSuccess } from '@/utils/response';
 import { asyncHandler } from '@/utils/async-handler';
 import { AppError } from '@/utils/app-error';
 import { AuthRequest } from '@/middleware/auth.middleware';
+import {
+  isRideCategory,
+  incrementStatsOnJoin,
+  decrementStatsOnCancel,
+  addDistanceOnComplete,
+} from '@/services/user-stats.service';
 import dayjs from 'dayjs';
 import mongoose from 'mongoose';
 
@@ -155,13 +161,16 @@ export const getEventResults = asyncHandler(async (req: AuthRequest, res: Respon
   if (eventResults.time) {
     throw new AppError('Result already submitted', 400);
   }
+  const distanceKm = Number(req.body.distance) || 0;
   eventResults.set({
-    distance: req.body.distance,
+    distance: distanceKm,
     time: req.body.time,
     status: 'completed',
   });
 
   await eventResults.save();
+
+  await addDistanceOnComplete(userId, distanceKm);
 
   sendSuccess(res, eventResults, 'Event results submitted successfully', 201);
 });
@@ -198,6 +207,8 @@ export const joinEvent = asyncHandler(async (req: AuthRequest, res: Response) =>
     eventJoin.status = 'joined';
     await eventJoin.save();
 
+    await incrementStatsOnJoin(userId, isRideCategory(event.category));
+
     return sendSuccess(
       res,
       eventJoin,
@@ -211,6 +222,8 @@ export const joinEvent = asyncHandler(async (req: AuthRequest, res: Response) =>
     userId,
     status: 'joined',
   });
+
+  await incrementStatsOnJoin(userId, isRideCategory(event.category));
 
   return sendSuccess(
     res,
@@ -356,25 +369,29 @@ export const cancelRegistration = asyncHandler(async (req: AuthRequest, res: Res
     throw new AppError('Cancellation reason is required', 400);
   }
 
-  const event = await EventResult.findOne({ eventId, userId });
-  if (!event) {
+  const eventResult = await EventResult.findOne({ eventId, userId });
+  if (!eventResult) {
     throw new AppError('User has not joined this event', 400);
   }
 
-  if (event.status === 'cancelled') {
+  if (eventResult.status === 'cancelled') {
     throw new AppError('Event already cancelled', 400);
   }
 
-  if (event.status === 'completed') {
+  if (eventResult.status === 'completed') {
     throw new AppError('Cannot cancel a completed event', 400);
   }
-  event.set({
+
+  const eventDoc = await Event.findById(eventId).select('category').lean();
+  eventResult.set({
     reason,
     status: 'cancelled',
   });
-  await event.save();
+  await eventResult.save();
 
-  sendSuccess(res, event, 'Event participation cancelled successfully', 201);
+  await decrementStatsOnCancel(userId, isRideCategory(eventDoc?.category));
+
+  sendSuccess(res, eventResult, 'Event participation cancelled successfully', 201);
 });
 
 

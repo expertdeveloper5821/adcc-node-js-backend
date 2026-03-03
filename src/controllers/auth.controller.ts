@@ -1,7 +1,10 @@
 import { Request, Response } from 'express';
 import crypto from 'node:crypto';
+import mongoose from 'mongoose';
 import User from '@/models/user.model';
+import EventResult from '@/models/eventResult.model';
 import { verifyFirebaseToken } from '@/services/firebase.service';
+import { RIDE_CATEGORIES } from '@/services/user-stats.service';
 import {
   generateTokens,
   verifyRefreshToken,
@@ -340,6 +343,97 @@ export const logout = asyncHandler(async (req: AuthRequest, res: Response) => {
 
   sendSuccess(res, null, 'Logged out successfully');
 });
+
+/**
+ * Get current user stats (distance, rides, events participated)
+ * GET /v1/auth/me/stats
+ * Requires member (guest gets 403).
+ * Reads from materialized User.stats; runs aggregation once for legacy users and backfills.
+ */
+export const getCurrentUserStats = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const userId = req.user?.id;
+    if (!userId) {
+      throw new AppError('User not authenticated', 401);
+    }
+
+    const user = await User.findById(userId).select('stats').lean();
+    if (!user) {
+      throw new AppError('User not found', 404);
+    }
+
+    const s = user.stats;
+    const hasMaterializedStats =
+      s &&
+      typeof s.totalDistanceKm === 'number' &&
+      typeof s.totalRides === 'number' &&
+      typeof s.totalEventsParticipated === 'number';
+
+    if (hasMaterializedStats) {
+      sendSuccess(res, { ...s }, 'User stats retrieved successfully');
+      return;
+    }
+
+    const objectIdUserId = new mongoose.Types.ObjectId(userId);
+    const results = await EventResult.aggregate([
+      {
+        $match: {
+          userId: objectIdUserId,
+          status: { $in: ['joined', 'completed'] },
+        },
+      },
+      {
+        $lookup: {
+          from: 'events',
+          localField: 'eventId',
+          foreignField: '_id',
+          as: 'event',
+        },
+      },
+      { $unwind: { path: '$event', preserveNullAndEmptyArrays: false } },
+      {
+        $group: {
+          _id: null,
+          totalDistanceKm: {
+            $sum: {
+              $cond: [
+                { $eq: ['$status', 'completed'] },
+                { $ifNull: ['$distance', 0] },
+                0,
+              ],
+            },
+          },
+          totalEventsParticipated: { $sum: 1 },
+          totalRides: {
+            $sum: {
+              $cond: [
+                { $in: ['$event.category', RIDE_CATEGORIES] },
+                1,
+                0,
+              ],
+            },
+          },
+        },
+      },
+    ]);
+
+    const stats = results[0]
+      ? {
+          totalDistanceKm: Number(results[0].totalDistanceKm ?? 0),
+          totalRides: Number(results[0].totalRides ?? 0),
+          totalEventsParticipated: Number(results[0].totalEventsParticipated ?? 0),
+        }
+      : {
+          totalDistanceKm: 0,
+          totalRides: 0,
+          totalEventsParticipated: 0,
+        };
+
+    await User.findByIdAndUpdate(userId, { $set: { stats } });
+
+    sendSuccess(res, stats, 'User stats retrieved successfully');
+  }
+);
 
 /**
  * Get current user
