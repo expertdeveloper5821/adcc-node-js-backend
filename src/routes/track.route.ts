@@ -1,7 +1,7 @@
 import express from 'express';
 import { validate } from '@/middleware/validate.middleware';
 import { authenticate } from '@/middleware/auth.middleware';
-import { isAdmin } from '@/middleware/role.middleware';
+import { isAdmin, requireMember } from '@/middleware/role.middleware';
 import {  
     createTrackSchema,
     updateTrackSchema
@@ -23,19 +23,20 @@ import {
 
 const router = express.Router();
 
+// Public routes – guest-accessible (no auth required)
 router.get('/', getAllTracks);
 router.get('/:trackId', getTrackById);
-router.get('/:trackId/events/results', getTrackResults);  // Track-related event results
-router.get('/:trackId/events/:eventId/communities/:Id/photos', trackCommunityPhotos); // Track-related event results with photos for a community
-router.get('/:trackId/communities/results', trackCommunityResults); // Track-related event results with photos for a community
+router.get('/:trackId/events/results', getTrackResults);
+router.get('/:trackId/events/:eventId/communities/:Id/photos', trackCommunityPhotos);
+router.get('/:trackId/communities/results', trackCommunityResults);
 
 // Admin only routes
 router.post('/', authenticate, isAdmin, validate(createTrackSchema), createTrack);
 router.patch('/:trackId', authenticate, isAdmin, validate(updateTrackSchema) , updateTrack);
 router.delete('/:trackId', authenticate, isAdmin, deleteTrack);
-router.delete('/:trackId/gallery', authenticate, deleteGalleryImage);
-router.patch('/:trackId/archive', authenticate, archiveTrack);
-router.patch('/tracks/:trackId/disable', authenticate, disableTrack);
-router.patch('/tracks/:trackId/enable', authenticate, enableTrack);
+router.delete('/:trackId/gallery', authenticate, requireMember, deleteGalleryImage);
+router.patch('/:trackId/archive', authenticate, requireMember, archiveTrack);
+router.patch('/tracks/:trackId/disable', authenticate, requireMember, disableTrack);
+router.patch('/tracks/:trackId/enable', authenticate, requireMember, enableTrack);
 
 export default router;

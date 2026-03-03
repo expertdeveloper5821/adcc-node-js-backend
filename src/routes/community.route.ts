@@ -23,22 +23,21 @@ import {
   removeGalleryImagesSchema,
 } from '@/validators/community.validator';
 import { authenticate } from '@/middleware/auth.middleware';
-import { isAdmin } from '@/middleware/role.middleware';
+import { isAdmin, requireMember } from '@/middleware/role.middleware';
 
 const router = express.Router();
 
-// Public routes
+// Public routes – guest-accessible (no auth required)
 router.get('/', validate(getCommunitiesQuerySchema), getAllCommunities);
 router.get('/:id', getCommunityById);
 router.get('/:id/gallery', getGalleryImages);
-
+router.get('/:id/communityMembers', getCommunityMembers);
 
 // Authenticated routes
-router.get('/:id/communityMembers',  getCommunityMembers);
-router.post('/:id/join', authenticate, joinCommunity);
-router.post('/:id/leave', authenticate, leaveCommunity);
-router.get('/:id/bannedMembers',authenticate, getBannedUsersInCommunity);
-router.post('/:id/isMemberOfCommunity', authenticate, isMemberOfCommunity);
+router.post('/:id/join', authenticate, requireMember, joinCommunity);
+router.post('/:id/leave', authenticate, requireMember, leaveCommunity);
+router.get('/:id/bannedMembers', authenticate, requireMember, getBannedUsersInCommunity);
+router.post('/:id/isMemberOfCommunity', authenticate, requireMember, isMemberOfCommunity);
 
 // Admin only routes
 router.post('/', authenticate, isAdmin, validate(createCommunitySchema), createCommunity);

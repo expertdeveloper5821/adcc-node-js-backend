@@ -34,7 +34,7 @@ export const createEvent = asyncHandler(async (req: AuthRequest, res: Response) 
 /**
  * Get all events
  * GET /v1/events
- * Public - with optional filters
+ * Public – guest-accessible. Optional query filters and pagination.
  */
 export const getAllEvents = asyncHandler(async (req: Request, res: Response) => {
   const { status, page = 1, limit = 10 } = req.query;
@@ -79,7 +79,7 @@ export const getAllEvents = asyncHandler(async (req: Request, res: Response) => 
 /**
  * Get event by ID
  * GET /v1/events/:id
- * Public
+ * Public – guest-accessible.
  */
 export const getEventById = asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params;
@@ -221,10 +221,11 @@ export const joinEvent = asyncHandler(async (req: AuthRequest, res: Response) =>
 });
 
 
-/*
-* Get event results list
-*/
-
+/**
+ * Get event results list
+ * GET /v1/events/:eventId/results
+ * Public – guest-accessible.
+ */
 export const getEventResultsList = asyncHandler(async (req: Request, res: Response) => {
   
   const eventIdParam = Array.isArray(req.params.eventId)

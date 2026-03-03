@@ -40,7 +40,7 @@ export const createCommunity = asyncHandler(async (req: AuthRequest, res: Respon
 /**
  * Get all communities
  * GET /v1/communities
- * Public - with optional filters
+ * Public – guest-accessible. Optional query filters and pagination.
  */
 export const getAllCommunities = asyncHandler(async (req: Request, res: Response) => {
   const { type, location, category, search, page = 1, limit = 10, isActive, isPublic, isFeatured } = req.query;
@@ -132,7 +132,7 @@ export const getAllCommunities = asyncHandler(async (req: Request, res: Response
 /**
  * Get community by ID
  * GET /v1/communities/:id
- * Public
+ * Public – guest-accessible.
  */
 export const getCommunityById = asyncHandler(async (req: Request, res: Response) => {
  
@@ -260,8 +260,8 @@ export const leaveCommunity = asyncHandler(
 
 /**
  * Get community members
- * GET /v1/communities/:id/members
- * Public
+ * GET /v1/communities/:id/communityMembers
+ * Public – guest-accessible.
  */
 export const getCommunityMembers = asyncHandler(async (req: AuthRequest, res: Response) => {
   
@@ -431,7 +431,7 @@ export const removeGalleryImages = asyncHandler(async (req: AuthRequest, res: Re
 /**
  * Get community gallery images
  * GET /v1/communities/:id/gallery
- * Public
+ * Public – guest-accessible.
  */
 export const getGalleryImages = asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params;

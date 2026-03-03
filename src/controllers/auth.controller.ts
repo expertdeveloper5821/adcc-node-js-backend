@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import crypto from 'node:crypto';
 import User from '@/models/user.model';
 import { verifyFirebaseToken } from '@/services/firebase.service';
 import {
@@ -12,7 +13,41 @@ import { asyncHandler } from '@/utils/async-handler';
 import { AppError } from '@/utils/app-error';
 import { AuthRequest } from '@/middleware/auth.middleware';
 
+/** Guest role and ID prefix - guest users are stateless (no DB record) */
+const GUEST_ROLE = 'Guest';
+const GUEST_ID_PREFIX = 'guest_';
 
+function isGuestPayload(id?: string, role?: string): boolean {
+  return role === GUEST_ROLE && typeof id === 'string' && id.startsWith(GUEST_ID_PREFIX);
+}
+
+/**
+ * Create guest session (stateless)
+ * POST /v1/auth/guest
+ * Issues JWT with role Guest; no DB write. For "Continue as Guest" flows.
+ */
+export const createGuestSession = asyncHandler(
+  async (_req: Request, res: Response) => {
+    const guestId = GUEST_ID_PREFIX + crypto.randomUUID();
+    const tokens = generateTokens({
+      id: guestId,
+      role: GUEST_ROLE,
+    });
+
+    sendSuccess(
+      res,
+      {
+        user: {
+          id: guestId,
+          role: GUEST_ROLE,
+          isGuest: true,
+        },
+        ...tokens,
+      },
+      'Guest session created'
+    );
+  }
+);
 
 /**
  * Verify Firebase authentication
@@ -201,6 +236,20 @@ export const refreshAccessToken = asyncHandler(
       throw new AppError('Invalid refresh token', 401);
     }
 
+    // Guest refresh: stateless; no DB lookup
+    if (isGuestPayload(decoded.id, decoded.role)) {
+      const tokens = generateTokens({
+        id: decoded.id,
+        role: GUEST_ROLE,
+      });
+      sendSuccess(
+        res,
+        { accessToken: tokens.accessToken, refreshToken: tokens.refreshToken },
+        'Token refreshed successfully'
+      );
+      return;
+    }
+
     // Check if refresh token exists in database
     const user = await User.findOne({
       _id: decoded.id,
@@ -270,16 +319,21 @@ export const refreshAccessToken = asyncHandler(
 /**
  * Logout - Revoke refresh token
  * POST /v1/auth/logout
+ * For Guest: no-op (no DB state to revoke).
  */
 export const logout = asyncHandler(async (req: AuthRequest, res: Response) => {
-  const { refreshToken } = req.body;
   const userId = req.user?.id;
 
   if (!userId) {
     throw new AppError('User not authenticated', 401);
   }
 
-  // Remove refresh token from database
+  if (isGuestPayload(userId, req.user?.role)) {
+    sendSuccess(res, null, 'Logged out successfully');
+    return;
+  }
+
+  const { refreshToken } = req.body;
   await User.findByIdAndUpdate(userId, {
     $pull: { refreshTokens: { token: refreshToken } },
   });
@@ -290,6 +344,7 @@ export const logout = asyncHandler(async (req: AuthRequest, res: Response) => {
 /**
  * Get current user
  * GET /v1/auth/me
+ * For Guest: returns minimal profile from JWT (no DB).
  */
 export const getCurrentUser = asyncHandler(
   async (req: AuthRequest, res: Response) => {
@@ -297,6 +352,19 @@ export const getCurrentUser = asyncHandler(
 
     if (!userId) {
       throw new AppError('User not authenticated', 401);
+    }
+
+    if (isGuestPayload(userId, req.user?.role)) {
+      sendSuccess(
+        res,
+        {
+          id: userId,
+          role: GUEST_ROLE,
+          isGuest: true,
+        },
+        'User profile retrieved successfully'
+      );
+      return;
     }
 
     const user = await User.findById(userId).select('-refreshTokens -__v');

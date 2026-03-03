@@ -5,6 +5,7 @@ import {
   refreshAccessToken,
   logout,
   getCurrentUser,
+  createGuestSession,
 } from '@/controllers/auth.controller';
 import { validate } from '@/middleware/validate.middleware';
 import {
@@ -12,6 +13,7 @@ import {
   registerUserSchema,
   refreshTokenSchema,
   logoutSchema,
+  createGuestSchema,
 } from '@/validators/auth.validator';
 import { authenticate } from '@/middleware/auth.middleware';
 
@@ -19,6 +21,7 @@ const router = express.Router();
 
 // Public routes
 router.post('/verify', validate(verifyFirebaseAuthSchema), verifyFirebaseAuth);
+router.post('/guest', validate(createGuestSchema), createGuestSession);
 router.post(
   '/register',
   authenticate,

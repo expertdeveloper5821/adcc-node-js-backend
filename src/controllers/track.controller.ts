@@ -30,11 +30,11 @@ export const createTrack = asyncHandler(async (req: AuthRequest, res: Response) 
 });
 
 /**
- * Get all events
- * GET /v1/events
- * Public - with optional filters
- * */
-    export const getAllTracks = asyncHandler(async (req: Request, res: Response) => {
+ * Get all tracks
+ * GET /v1/tracks
+ * Public – guest-accessible. Optional query filters and pagination.
+ */
+export const getAllTracks = asyncHandler(async (req: Request, res: Response) => {
     const { status, city, type, page = 1, limit = 10 } = req.query;
     
     const query: any = {};
@@ -58,9 +58,9 @@ export const createTrack = asyncHandler(async (req: AuthRequest, res: Response) 
 
 /**
  * Get track by ID
- * GET /v1/tracks/:id
- * Public
- * */
+ * GET /v1/tracks/:trackId
+ * Public – guest-accessible.
+ */
 export const getTrackById = asyncHandler(async (req: Request, res: Response) => {
 
     const trackId = Array.isArray(req.params.trackId)
@@ -160,8 +160,10 @@ export const enableTrack = asyncHandler(
 
 
 /**
- * Track realted events resuts
- * */
+ * Get track-related event results
+ * GET /v1/tracks/:trackId/events/results
+ * Public – guest-accessible.
+ */
 export const getTrackResults = asyncHandler(async (req: Request, res: Response) => {
 
   const trackIdParam = Array.isArray(req.params.trackId)
@@ -208,8 +210,10 @@ export const getTrackResults = asyncHandler(async (req: Request, res: Response) 
 
 
 /**
- * Track related community photos for an event
- * */
+ * Get track community photos for an event
+ * GET /v1/tracks/:trackId/events/:eventId/communities/:Id/photos
+ * Public – guest-accessible.
+ */
 export const trackCommunityPhotos = asyncHandler(async (req: AuthRequest, res: Response) => {
   const trackIdParam = Array.isArray(req.params.trackId)
     ? req.params.trackId[0]
@@ -243,9 +247,10 @@ export const trackCommunityPhotos = asyncHandler(async (req: AuthRequest, res: R
 });
 
 /**
- * Track related community results for an event
- * */
-
+ * Get track-related community results
+ * GET /v1/tracks/:trackId/communities/results
+ * Public – guest-accessible.
+ */
 export const trackCommunityResults = asyncHandler(async (req: AuthRequest, res: Response) => {
   
   // console.log('Track event - Params:', req.params);
