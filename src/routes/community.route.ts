@@ -13,12 +13,15 @@ import {
   addGalleryImages,
   removeGalleryImages,
   getGalleryImages,
+  featureCommunity,
+  getFeaturedCommunities,
 } from '@/controllers/community.controller';
 import { validate } from '@/middleware/validate.middleware';
 import {
   createCommunitySchema,
   updateCommunitySchema,
   getCommunitiesQuerySchema,
+  featureCommunitySchema,
   addGalleryImagesSchema,
   removeGalleryImagesSchema,
 } from '@/validators/community.validator';
@@ -29,6 +32,8 @@ const router = express.Router();
 
 // Public routes
 router.get('/', validate(getCommunitiesQuerySchema), getAllCommunities);
+// featured list for homepage
+router.get('/featured', validate(getCommunitiesQuerySchema), getFeaturedCommunities);
 router.get('/:id', getCommunityById);
 router.get('/:id/gallery', getGalleryImages);
 
@@ -46,6 +51,9 @@ router.patch('/:id', authenticate, isAdmin, validate(updateCommunitySchema), upd
 router.delete('/:id', authenticate, isAdmin, deleteCommunity);
 router.post('/:id/gallery', authenticate, isAdmin, validate(addGalleryImagesSchema), addGalleryImages);
 router.delete('/:id/gallery', authenticate, isAdmin, validate(removeGalleryImagesSchema), removeGalleryImages);
+
+// admin controls for featuring
+router.patch('/:id/feature', authenticate, isAdmin, validate(featureCommunitySchema), featureCommunity);
 // router.patch('/:id/members/:userId/role', authenticate, updateMemberRole);
 // router.patch('/:id/members/:userId/ban', authenticate, banMember);
 

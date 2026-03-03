@@ -101,6 +101,12 @@ export const updateCommunitySchema = z
   })
   .strict();
 
+export const featureCommunitySchema = z
+  .object({
+    isFeatured: z.boolean(),
+  })
+  .strict();
+
 export const getCommunitiesQuerySchema = z.object({
   type: z.enum(['Club', 'Shop', 'Women', 'Youth', 'Family', 'Corporate']).optional(),
   location: z.enum(['Abu Dhabi', 'Dubai', 'Al Ain', 'Sharjah']).optional(),
@@ -150,4 +156,5 @@ export type UpdateCommunityInput = z.infer<typeof updateCommunitySchema>;
 export type GetCommunitiesQueryInput = z.infer<typeof getCommunitiesQuerySchema>;
 export type AddGalleryImagesInput = z.infer<typeof addGalleryImagesSchema>;
 export type RemoveGalleryImagesInput = z.infer<typeof removeGalleryImagesSchema>;
+export type FeatureCommunityInput = z.infer<typeof featureCommunitySchema>;
 

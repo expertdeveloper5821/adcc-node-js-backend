@@ -197,7 +197,114 @@ export const updateCommunity = asyncHandler(async (req: AuthRequest, res: Respon
 });
 
 /**
- * Delete community
+ * Set or unset featured status for a community
+ * PATCH /v1/communities/:id/feature
+ * Admin only
+ */
+ export const featureCommunity = asyncHandler(async (req: AuthRequest, res: Response) => {
+   const { id } = req.params;
+   const { isFeatured } = req.body as { isFeatured: boolean };
+
+   const community = await Community.findById(id);
+   if (!community) {
+     throw new AppError('Community not found', 404);
+   }
+
+   community.isFeatured = isFeatured;
+   await community.save();
+
+   const updatedCommunity = await Community.findById(id)
+     .populate('createdBy', 'fullName email')
+     .populate('members', 'fullName email');
+
+   sendSuccess(res, updatedCommunity, `Community ${isFeatured ? 'marked as' : 'removed from'} featured`, 200);
+ });
+
+/**
+ * Get communities highlighted for homepage
+ * GET /v1/communities/featured
+ * Public
+ */
+ export const getFeaturedCommunities = asyncHandler(async (req: Request, res: Response) => {
+   const {
+     type,
+     location,
+     category,
+     search,
+     page = 1,
+     limit = 10,
+     isActive,
+     isPublic,
+   } = req.query as any;
+
+   const query: any = { isFeatured: true };
+
+   if (type && ['Club', 'Shop', 'Women', 'Youth', 'Family', 'Corporate'].includes(type as string)) {
+     query.type = type;
+   }
+   if (location && ['Abu Dhabi', 'Dubai', 'Al Ain', 'Sharjah'].includes(location as string)) {
+     query.location = location;
+   }
+   if (category) {
+     query.category = { $in: [category] };
+   }
+   if (isActive !== undefined) {
+     query.isActive = isActive === 'true';
+   }
+   if (isPublic !== undefined) {
+     query.isPublic = isPublic === 'true';
+   }
+   if (search && typeof search === 'string') {
+     query.$text = { $search: search };
+   }
+
+   const pageNum = Number(page);
+   const limitNum = Number(limit);
+   const skip = (pageNum - 1) * limitNum;
+
+   const communities = await Community.find(query)
+     .populate('createdBy', 'fullName email')
+     .sort(search ? { score: { $meta: 'textScore' } } : { createdAt: -1 })
+     .skip(skip)
+     .limit(limitNum);
+
+   const total = await Community.countDocuments(query);
+
+   const now = new Date();
+   const communitiesWithCounts = await Promise.all(
+     communities.map(async (comm) => {
+       const upcomingEvents = await Event.countDocuments({
+         communityId: comm._id,
+         eventDate: { $gte: now },
+       });
+       const memberCount = await CommunityMembership.countDocuments({
+         communityId: comm._id,
+         status: 'active',
+       });
+       const commObj: any = comm.toObject();
+       commObj.upcomingEventCount = upcomingEvents;
+       commObj.memberCount = memberCount;
+       return commObj;
+     })
+   );
+
+   sendSuccess(
+     res,
+     {
+       communities: communitiesWithCounts,
+       pagination: {
+         page: pageNum,
+         limit: limitNum,
+         total,
+         pages: Math.ceil(total / limitNum),
+       },
+     },
+     'Featured communities retrieved successfully',
+     200
+   );
+ });
+ 
+ /* Delete community
  * DELETE /v1/communities/:id
  * Admin only
  */
