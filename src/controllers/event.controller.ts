@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { t } from "@/utils/i18n";
 import Event from '@/models/event.model';
 import EventResult from '@/models/eventResult.model';
 import { sendSuccess } from '@/utils/response';
@@ -14,10 +15,11 @@ import mongoose from 'mongoose';
  * Admin only
  */
 export const createEvent = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const lang = (req as any).lang;
   const userId = req.user?.id;
 
   if (!userId) {
-    throw new AppError('User not authenticated', 401);
+    throw new AppError(t(lang, "auth.unauthorized"), 401);
   }
 
   const eventData = {
@@ -28,7 +30,7 @@ export const createEvent = asyncHandler(async (req: AuthRequest, res: Response) 
 
   const event = await Event.create(eventData);
 
-  sendSuccess(res, event, 'Event created successfully', 201);
+  sendSuccess(res, event, t(lang, "event.created"), 201);
 });
 
 /**
@@ -37,6 +39,7 @@ export const createEvent = asyncHandler(async (req: AuthRequest, res: Response) 
  * Public - with optional filters
  */
 export const getAllEvents = asyncHandler(async (req: Request, res: Response) => {
+  const lang = (req as any).lang;
   const { status, page = 1, limit = 10 } = req.query;
 
   // Build filter object
@@ -72,7 +75,7 @@ export const getAllEvents = asyncHandler(async (req: Request, res: Response) => 
         pages: Math.ceil(total / limitNum),
       },
     },
-    'Events retrieved successfully', 201
+    t(lang, "event.allEvents"), 201
   );
 });
 
@@ -82,15 +85,16 @@ export const getAllEvents = asyncHandler(async (req: Request, res: Response) => 
  * Public
  */
 export const getEventById = asyncHandler(async (req: Request, res: Response) => {
+  const lang = (req as any).lang;
   const { id } = req.params;
 
   const event = await Event.findById(id).populate('createdBy', 'fullName email');
 
   if (!event) {
-    throw new AppError('Event not found', 404);
+    throw new AppError(t(lang, "event.not_found"), 404);
   }
 
-  sendSuccess(res, event, 'Event retrieved successfully', 201);
+  sendSuccess(res, event, t(lang, "event.eventDetails"), 201);
 });
 
 /**
@@ -99,6 +103,7 @@ export const getEventById = asyncHandler(async (req: Request, res: Response) => 
  * Admin only
  */
 export const updateEvent = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const lang = (req as any).lang;
   const { id } = req.params;
   const updateData = { ...req.body };
 
@@ -113,10 +118,10 @@ export const updateEvent = asyncHandler(async (req: AuthRequest, res: Response) 
   }).populate('createdBy', 'fullName email');
 
   if (!event) {
-    throw new AppError('Event not found', 404);
+    throw new AppError(t(lang, "event.not_found"), 404);
   }
 
-  sendSuccess(res, event, 'Event updated successfully', 201);
+  sendSuccess(res, event, t(lang, "event.updated"), 201);
 });
 
 /**
@@ -125,15 +130,16 @@ export const updateEvent = asyncHandler(async (req: AuthRequest, res: Response) 
  * Admin only
  */
 export const deleteEvent = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const lang = (req as any).lang;
   const { id } = req.params;
 
   const event = await Event.findByIdAndDelete(id);
 
   if (!event) {
-    throw new AppError('Event not found', 404);
+    throw new AppError(t(lang, "event.not_found"), 404);
   }
 
-  sendSuccess(res, null, 'Event deleted successfully', 201);
+  sendSuccess(res, null, t(lang, "event.deleted"), 201);
 });
 
 /*
@@ -141,15 +147,16 @@ export const deleteEvent = asyncHandler(async (req: AuthRequest, res: Response) 
 */
 
 export const getEventResults = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const lang = (req as any).lang;
   const { eventId } = req.params;
   const userId = req.user?.id;
   
   if (!userId) {
-    throw new AppError('User not authenticated', 401);
+    throw new AppError(t(lang, "auth.unauthorized"), 401);
   }
   const eventResults = await EventResult.findOne({ eventId, userId });
   if (!eventResults) {
-    throw new AppError('User has not joined this event', 400);
+    throw new AppError(t(lang, "event.not_member"), 400);
   }
 
   if (eventResults.time) {
@@ -163,7 +170,7 @@ export const getEventResults = asyncHandler(async (req: AuthRequest, res: Respon
 
   await eventResults.save();
 
-  sendSuccess(res, eventResults, 'Event results submitted successfully', 201);
+  sendSuccess(res, eventResults, t(lang, "event.submitted"), 201);
 });
 
 
@@ -171,18 +178,19 @@ export const getEventResults = asyncHandler(async (req: AuthRequest, res: Respon
 * Join Event 
 */
 export const joinEvent = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const lang = (req as any).lang;
   const eventId = Array.isArray(req.params.eventId)
     ? req.params.eventId[0]
     : req.params.eventId;
 
   const userId = req.user?.id;
   if (!userId) {
-    throw new AppError('User not authenticated', 401);
+    throw new AppError(t(lang, "auth.unauthorized"), 401);
   }
 
   const event = await Event.findById(eventId);
   if (!event) {
-    throw new AppError('Event not found', 404);
+    throw new AppError(t(lang, "event.not_found"), 404);
   }
 
   const eventJoin = await EventResult.findOne({
@@ -192,7 +200,7 @@ export const joinEvent = asyncHandler(async (req: AuthRequest, res: Response) =>
 
   if (eventJoin) {
     if (eventJoin.status === 'joined') {
-      throw new AppError('User already joined the event', 400);
+      throw new AppError(t(lang, "event.already_joined"), 400);
     }
 
     eventJoin.status = 'joined';
@@ -201,7 +209,7 @@ export const joinEvent = asyncHandler(async (req: AuthRequest, res: Response) =>
     return sendSuccess(
       res,
       eventJoin,
-      'User successfully rejoined the event',
+      t(lang, "event.rejoinEvent"),
       200
     );
   }
@@ -215,7 +223,7 @@ export const joinEvent = asyncHandler(async (req: AuthRequest, res: Response) =>
   return sendSuccess(
     res,
     eventData,
-    'User successfully joined the event',
+    t(lang, "event.joinEvent"),
     201
   );
 });
@@ -341,31 +349,31 @@ export const getEventResultsList = asyncHandler(async (req: Request, res: Respon
  */
 export const cancelRegistration = asyncHandler(async (req: AuthRequest, res: Response) => {
   // console.log('bodyResponse:', req.body);
-  // console.log('paramResponse:', req.params);
+  const lang = (req as any).lang;
   const eventId  = req.params.eventId;
   const reason = req.body.reason || 'No reason provided';
   
   
   const userId = req.user?.id;
   if (!userId) {
-    throw new AppError('User not authenticated', 401);
+    throw new AppError(t(lang, "auth.unauthorized"), 401);
   }
 
   if (!reason || reason.trim().length === 0) {
-    throw new AppError('Cancellation reason is required', 400);
+    throw new AppError(t(lang, "event.reason_required"), 400);
   }
 
   const event = await EventResult.findOne({ eventId, userId });
   if (!event) {
-    throw new AppError('User has not joined this event', 400);
+    throw new AppError(t(lang, "event.not_member"), 400);
   }
 
   if (event.status === 'cancelled') {
-    throw new AppError('Event already cancelled', 400);
+    throw new AppError(t(lang, "event.cancelledEvent"), 400);
   }
 
   if (event.status === 'completed') {
-    throw new AppError('Cannot cancel a completed event', 400);
+    throw new AppError(t(lang, "event.completed"), 400);
   }
   event.set({
     reason,
@@ -373,7 +381,7 @@ export const cancelRegistration = asyncHandler(async (req: AuthRequest, res: Res
   });
   await event.save();
 
-  sendSuccess(res, event, 'Event participation cancelled successfully', 201);
+  sendSuccess(res, event, t(lang, "event.participationCancelled"), 201);
 });
 
 
@@ -384,12 +392,12 @@ export const cancelRegistration = asyncHandler(async (req: AuthRequest, res: Res
 
  export const addToCalendar = asyncHandler(async (req: AuthRequest, res: Response) => {
   
-  console.log('Add to calendar request params:', req.params);
+  const lang = (req as any).lang;
   const eventId = req.params.eventId;
   const userId = req.params.userId;
 
   if (!userId) {
-    throw new AppError('User not authenticated', 401);
+    throw new AppError(t(lang, "auth.unauthorized"), 401);
   }
 
   const event = await Event.findById(eventId);
@@ -432,17 +440,19 @@ export const cancelRegistration = asyncHandler(async (req: AuthRequest, res: Res
  * Returns whether the authenticated user has joined the event and their status
  */
 export const getMemberEventStatus = asyncHandler(async (req: AuthRequest, res: Response) => {
+
+  const lang = (req as any).lang;
   const eventId = req.params.eventId;
   const userId = req.user?.id;
 
   if (!userId) {
-    throw new AppError("User not authenticated", 401);
+    throw new AppError(t(lang, "auth.unauthorized"), 401);
   }
 
   // Check if event exists
   const event = await Event.findById(eventId);
   if (!event) {
-    throw new AppError("Event not found", 404);
+    throw new AppError(t(lang, "event.not_found"), 404);
   }
 
   // Check user's participation status
@@ -475,7 +485,7 @@ export const getMemberEventStatus = asyncHandler(async (req: AuthRequest, res: R
         status: event.status,
       }
     },
-    "Member event status retrieved successfully",
+    t(lang, "event.status_retrieved"),
     200
   );
 });
@@ -483,20 +493,21 @@ export const getMemberEventStatus = asyncHandler(async (req: AuthRequest, res: R
 
 export const deleteGalleryImage = asyncHandler(async (req: AuthRequest, res: Response) => {
   try {
+    const lang = (req as any).lang;
     const { eventId } = req.params;
     const { imageUrl } = req.body;
 
     const event = await Event.findById(eventId);
     if (!event) {
-      return res.status(404).json({ message: "Event not found" });
+      return res.status(404).json({ message: t(lang, "event.not_found") });
     }
 
     if (!imageUrl) {
-      throw new AppError('Image URL is required', 400);
+      throw new AppError(t(lang, "image.required"), 400);
     }
 
     if (!event.galleryImages || event.galleryImages.length === 0) {
-      throw new AppError('No gallery images found', 400);
+      throw new AppError(t(lang, "image.not_found"), 400);
     }
     
     event.galleryImages = event.galleryImages.filter(
@@ -507,7 +518,7 @@ export const deleteGalleryImage = asyncHandler(async (req: AuthRequest, res: Res
 
     res.status(200).json({
       success: true,
-      message: "Gallery image deleted",
+      message: t(lang, "image.delted"),
       galleryImages: event.galleryImages,
     });
     return;

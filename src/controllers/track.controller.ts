@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { t } from "@/utils/i18n";
 import Event from '@/models/event.model';
 import Track from '@/models/track.model';
 import Community from '@models/community.model';
@@ -15,10 +16,11 @@ import mongoose from 'mongoose';
  * Admin only
  */
 export const createTrack = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const lang = (req as any).lang;
   const userId = req.user?.id;
-  console.log(userId);
+  // console.log(userId);
     if (!userId) {
-    throw new AppError('User not authenticated', 401);
+    throw new AppError(t(lang, "auth.unauthorized"), 401);
     }
     const teackData = {
     ...req.body,
@@ -26,7 +28,7 @@ export const createTrack = asyncHandler(async (req: AuthRequest, res: Response) 
     createdBy: userId,
     };
     const event = await Track.create(teackData);
-    sendSuccess(res, event, 'Track created successfully', 201);
+    sendSuccess(res, event, t(lang, "track.created"), 201);
 });
 
 /**
@@ -35,6 +37,7 @@ export const createTrack = asyncHandler(async (req: AuthRequest, res: Response) 
  * Public - with optional filters
  * */
     export const getAllTracks = asyncHandler(async (req: Request, res: Response) => {
+      const lang = (req as any).lang;
     const { status, city, type, page = 1, limit = 10 } = req.query;
     
     const query: any = {};
@@ -53,7 +56,7 @@ export const createTrack = asyncHandler(async (req: AuthRequest, res: Response) 
     .limit(limitNum);
     // Get total count
     const total = await Track.countDocuments(query);
-    sendSuccess(res, { tracks, total, page: pageNum, limit: limitNum }, 'Tracks retrieved successfully');
+    sendSuccess(res, { tracks, total, page: pageNum, limit: limitNum }, t(lang, "track.allTracks"), 200);
 });
 
 /**
@@ -62,6 +65,7 @@ export const createTrack = asyncHandler(async (req: AuthRequest, res: Response) 
  * Public
  * */
 export const getTrackById = asyncHandler(async (req: Request, res: Response) => {
+    const lang = (req as any).lang;
 
     const trackId = Array.isArray(req.params.trackId)
     ? req.params.trackId[0]
@@ -69,9 +73,9 @@ export const getTrackById = asyncHandler(async (req: Request, res: Response) => 
 
     const track = await Track.findById(trackId);
     if (!track) {
-        throw new AppError('Track not found', 404);
+        throw new AppError(t(lang, "auth.unauthorized") , 404);
     }
-    return sendSuccess(res, track, 'Track retrieved successfully', 201);
+    return sendSuccess(res, track, t(lang, "track.trackDetails"), 201);
 });
 
 /**
@@ -80,6 +84,7 @@ export const getTrackById = asyncHandler(async (req: Request, res: Response) => 
  * Admin only
  * */
 export const updateTrack = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const lang = (req as any).lang;
   const trackId = Array.isArray(req.params.trackId)
     ? req.params.trackId[0]
     : req.params.trackId;
@@ -87,10 +92,10 @@ export const updateTrack = asyncHandler(async (req: AuthRequest, res: Response) 
     // console.log('req.body:', req.body);
     const track = await Track.findByIdAndUpdate(trackId, req.body, { new: true });
     if (!track) {
-         throw new AppError('Track not found', 404);
+         throw new AppError(t(lang, "auth.unauthorized"), 404);
     }
 
-    return sendSuccess(res, track, 'Track updated successfully', 201);
+    return sendSuccess(res, track, t(lang, "track.updated"), 201);
 });
 
 /**
@@ -99,15 +104,16 @@ export const updateTrack = asyncHandler(async (req: AuthRequest, res: Response) 
  * Admin only
  * */
 export const deleteTrack = asyncHandler(async (req: AuthRequest, res: Response) => {
+    const lang = (req as any).lang;
     const trackId = Array.isArray(req.params.id)
     ? req.params.id[0]
     : req.params.id;
 
     const track = await Track.findByIdAndDelete(trackId);
     if (!track) {
-            throw new AppError('Track not found', 404);
+            throw new AppError(t(lang, "auth.unauthorized"), 404);
     }
-    return sendSuccess(res, null, 'Track deleted successfully', 201);
+    return sendSuccess(res, null, t(lang, "track.deleted"), 201);
 });
 
 
@@ -118,6 +124,7 @@ export const deleteTrack = asyncHandler(async (req: AuthRequest, res: Response) 
  * */
 export const disableTrack = asyncHandler(
   async (req: AuthRequest, res: Response) => {
+    const lang = (req as any).lang;
     const { trackId } = req.params;
 
     const track = await Track.findByIdAndUpdate(
@@ -127,10 +134,10 @@ export const disableTrack = asyncHandler(
     );
 
     if (!track) {
-      throw new AppError('Track not found', 404);
+      throw new AppError(t(lang, "auth.unauthorized"), 404);
     }
 
-    return sendSuccess(res, track, 'Track disabled successfully', 200);
+    return sendSuccess(res, track, t(lang, "track.disabled"), 200);
   }
 );
 
@@ -142,6 +149,7 @@ export const disableTrack = asyncHandler(
 
 export const enableTrack = asyncHandler(
   async (req: AuthRequest, res: Response) => {
+    const lang = (req as any).lang;
     const { trackId } = req.params;
 
     const track = await Track.findByIdAndUpdate(
@@ -151,10 +159,10 @@ export const enableTrack = asyncHandler(
     );
 
     if (!track) {
-      throw new AppError('Track not found', 404);
+      throw new AppError(t(lang, "auth.unauthorized"), 404);
     }
 
-    return sendSuccess(res, track, 'Track enabled successfully', 200);
+    return sendSuccess(res, track, t(lang, "track.enabled"), 200);
   }
 );
 
@@ -163,13 +171,14 @@ export const enableTrack = asyncHandler(
  * Track realted events resuts
  * */
 export const getTrackResults = asyncHandler(async (req: Request, res: Response) => {
+  const lang = (req as any).lang;
 
   const trackIdParam = Array.isArray(req.params.trackId)
     ? req.params.trackId[0]
     : req.params.trackId;
 
     if (!mongoose.Types.ObjectId.isValid(trackIdParam)) {
-        throw new AppError('Invalid trackId', 400);
+        throw new AppError(t(lang, "track.not_found"), 400);
       }
 
     
@@ -203,7 +212,7 @@ export const getTrackResults = asyncHandler(async (req: Request, res: Response) 
 ]);
 
 
-  sendSuccess(res, results, 'Track related results retrieved successfully', 200);
+  sendSuccess(res, results, t(lang, "track.trackResult"), 200);
 });
 
 
@@ -211,25 +220,26 @@ export const getTrackResults = asyncHandler(async (req: Request, res: Response) 
  * Track related community photos for an event
  * */
 export const trackCommunityPhotos = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const lang = (req as any).lang;
   const trackIdParam = Array.isArray(req.params.trackId)
     ? req.params.trackId[0]
     : req.params.trackId;
     if (!mongoose.Types.ObjectId.isValid(trackIdParam)) {
-        throw new AppError('Invalid trackId', 400);
+        throw new AppError(t(lang, "track.not_found"), 400);
       }
 
   const eventIdParam = Array.isArray(req.params.eventId)
     ? req.params.eventId[0]
     : req.params.eventId;
     if (!mongoose.Types.ObjectId.isValid(eventIdParam)) {
-        throw new AppError('Invalid eventId', 400);
+        throw new AppError(t(lang, "event.not_found"), 400);
       }
 
   const communityIdParam = Array.isArray(req.params.Id)
     ? req.params.Id[0]
     : req.params.Id;
     if (!mongoose.Types.ObjectId.isValid(communityIdParam)) {
-        throw new AppError('Invalid communityId', 400);
+        throw new AppError(t(lang, "community.not_found"), 400);
       }
 
   const photos = await Event.findOne({
@@ -238,7 +248,7 @@ export const trackCommunityPhotos = asyncHandler(async (req: AuthRequest, res: R
     communityId: new mongoose.Types.ObjectId(communityIdParam),
   }).select('communityPhotos');
 
-  sendSuccess(res, photos, 'Community photos retrieved successfully', 200);
+  sendSuccess(res, photos, t(lang, "community.community_photos"), 200);
 
 });
 
@@ -248,13 +258,13 @@ export const trackCommunityPhotos = asyncHandler(async (req: AuthRequest, res: R
 
 export const trackCommunityResults = asyncHandler(async (req: AuthRequest, res: Response) => {
   
-  // console.log('Track event - Params:', req.params);
+  const lang = (req as any).lang;
   const trackIdParam = Array.isArray(req.params.trackId)
     ? req.params.trackId[0]
     : req.params.trackId;
 
     if (!mongoose.Types.ObjectId.isValid(trackIdParam)) {
-        throw new AppError('Invalid trackId', 400);
+        throw new AppError(t(lang, "track.not_found"), 400);
       } 
 
   const results = await Community.aggregate([
@@ -273,13 +283,14 @@ export const trackCommunityResults = asyncHandler(async (req: AuthRequest, res: 
   },
 ]);
 
-    sendSuccess(res, results, 'Track related community results retrieved successfully', 200);
+    sendSuccess(res, results, t(lang, "track.communityResult"), 200);
 
 });
 
 export const archiveTrack = asyncHandler(
   async (req: AuthRequest, res: Response) => {
-    console.log('archive-params',req.params);
+    const lang = (req as any).lang;
+    // console.log('archive-params',req.params);
     const { trackId } = req.params;
     const track = await Track.findByIdAndUpdate(
       trackId,
@@ -288,29 +299,30 @@ export const archiveTrack = asyncHandler(
     );
 
     if (!track) {
-      throw new AppError('Track not found', 404);
+      throw new AppError(t(lang, "track.not_found"), 404);
     }
 
-    return sendSuccess(res, track, 'Track archived successfully', 200);
+    return sendSuccess(res, track, t(lang, "track.archived"), 200);
   }
 );
 
 export const deleteGalleryImage = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const lang = (req as any).lang;
   try {
     const { trackId } = req.params;
     const { imageUrl } = req.body;
 
     const track = await Track.findById(trackId);
     if (!track) {
-      return res.status(404).json({ message: "Track not found" });
+      return res.status(404).json({ message: t(lang, "track.not_found") });
     }
 
     if (!imageUrl) {
-      throw new AppError('Image URL is required', 400);
+      throw new AppError(t(lang, "image.required"), 400);
     }
 
     if (!track.galleryImages || track.galleryImages.length === 0) {
-      throw new AppError('No gallery images found', 400);
+      throw new AppError(t(lang, "image.not_found"), 400);
     }
 
     track.galleryImages = track.galleryImages.filter(
@@ -321,7 +333,7 @@ export const deleteGalleryImage = asyncHandler(async (req: AuthRequest, res: Res
 
     res.status(200).json({
       success: true,
-      message: "Gallery image deleted",
+      message: t(lang, "image.delted"),
       galleryImages: track.galleryImages,
     });
     return;

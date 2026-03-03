@@ -12,6 +12,7 @@ import { connectDB } from './data/database';
 import routes from './routes';
 import { errorHandler } from './middleware/error.middleware';
 import { notFound } from './middleware/not-found.middleware';
+import { languageMiddleware } from './middleware/language.middleware';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -32,6 +33,9 @@ app.use(morgan('dev'));
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
+// Language middleware - MUST be before routes
+app.use(languageMiddleware);
+
 // Health check
 app.get('/health', (_req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
@@ -39,6 +43,7 @@ app.get('/health', (_req, res) => {
 
 // Route
 app.use(`/${API_VERSION}`, routes);
+
 // Error handling
 app.use(notFound as any);
 app.use(errorHandler as any);
