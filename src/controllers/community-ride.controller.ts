@@ -155,6 +155,7 @@ export const updateCommunityRide = asyncHandler(async (req: AuthRequest, res: Re
  * Admin only
  */
 export const deleteCommunityRide = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const lang = ((req as any).lang || 'en') as SupportedLanguage;
   const { id } = req.params;
 
   const ride = await CommunityRide.findByIdAndDelete(id);

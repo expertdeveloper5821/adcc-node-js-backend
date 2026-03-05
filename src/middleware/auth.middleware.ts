@@ -32,7 +32,7 @@ export const authenticate = (
       return next();
     }
 
-    if (!decoded.id) {
+    if (!decoded.id && !decoded.uid) {
       res.status(401).json({
         success: false,
         message: 'Invalid token payload',
