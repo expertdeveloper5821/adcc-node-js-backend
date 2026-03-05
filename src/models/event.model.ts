@@ -10,7 +10,9 @@ export interface IEventEligibility {
 export interface IEventSchedule {
   time: string;
   title: string;
+  titleAr?: string;
   description?: string;
+  descriptionAr?: string;
   order?: number;
 }
 
@@ -28,15 +30,18 @@ export interface IEvent {
 
 
 export interface IEvent extends Document {
-  communityId: mongoose.Types.ObjectId;
-  trackId: mongoose.Types.ObjectId;
+  communityId?: mongoose.Types.ObjectId;
+  trackId?: mongoose.Types.ObjectId;
   title: string;
+  titleAr?: string;
   description: string;
+  descriptionAr?: string;
   mainImage?: string;
   eventImage?: string;
   eventDate: Date;
   eventTime: string;
   address: string;
+  addressAr?: string;
   city?: string;
   zipCode?: string;
   maxParticipants?: number; // 0 means unlimited
@@ -65,6 +70,8 @@ export interface IEvent extends Document {
   isFeatured?: boolean;
   allowCancellation?: boolean;
   galleryImages?: string[];
+  resultsPublished?: boolean;
+  resultsPublishedAt?: Date | null;
 }
 
 const EventSchema = new Schema(
@@ -72,13 +79,13 @@ const EventSchema = new Schema(
     communityId: {
       type: Schema.Types.ObjectId,
       ref: 'communities',
-      default: null,
+      // default: null,
       // required: [true, 'Community ID is required'],
     },
     trackId: {
       type: Schema.Types.ObjectId,
       ref: 'track',
-      default: null,
+      // default: null,
       // required: [true, 'Track ID is required'],
     },
     title: {
@@ -86,9 +93,17 @@ const EventSchema = new Schema(
       required: [true, 'Event title is required'],
       trim: true,
     },
+    titleAr: {
+      type: String,
+      trim: true,
+    },
     description: {
       type: String,
       required: [true, 'Event description is required'],
+      trim: true,
+    },
+    descriptionAr: {
+      type: String,
       trim: true,
     },
     mainImage: {
@@ -110,6 +125,10 @@ const EventSchema = new Schema(
     address: {
       type: String,
       required: [true, 'Event address is required'],
+      trim: true,
+    },
+    addressAr: {
+      type: String,
       trim: true,
     },
     city: {
@@ -134,7 +153,9 @@ const EventSchema = new Schema(
       {
         time: { type: String, required: true },
         title: { type: String, required: true },
+        titleAr: { type: String },
         description: { type: String },
+        descriptionAr: { type: String },
         order: { type: Number },
       },
     ],
@@ -204,6 +225,14 @@ const EventSchema = new Schema(
     allowCancellation:{
       type: Boolean,
       trim: true,
+    },
+    resultsPublished: {
+      type: Boolean,
+      default: false,
+    },
+    resultsPublishedAt: {
+      type: Date,
+      default: null,
     },
     createdBy: {
       type: Schema.Types.ObjectId,

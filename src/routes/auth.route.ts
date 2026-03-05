@@ -5,6 +5,7 @@ import {
   refreshAccessToken,
   logout,
   getCurrentUser,
+  guestLogin
 } from '@/controllers/auth.controller';
 import { validate } from '@/middleware/validate.middleware';
 import {
@@ -26,6 +27,7 @@ router.post(
   registerUser
 );
 router.post('/refresh', validate(refreshTokenSchema), refreshAccessToken);
+router.post('/guestLogin', guestLogin);
 
 // Protected routes
 router.post('/logout', authenticate, validate(logoutSchema), logout);

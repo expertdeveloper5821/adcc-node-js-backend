@@ -1,0 +1,209 @@
+{
+  "community": {
+      "not_found": "المجتمع غير موجود",
+      "created": "تم إنشاء المجتمع بنجاح",
+      "updated": "تم تحديث المجتمع بنجاح",
+      "deleted": "تم حذف المجتمع بنجاح",
+      "community_photos": "تم استرجاع صور المجتمع بنجاح",
+      "status_retrieved": "تم استرجاع حالة العضوية بنجاح",
+      "not_member": "أنت لست عضوًا في هذا المجتمع",
+      "all_communities": "تم استرجاع المجتمعات بنجاح",
+      "details_retrieved": "تم استرجاع تفاصيل المجتمع بنجاح",
+        "joined": "تم الانضمام إلى المجتمع بنجاح",
+        "leave": "تم مغادرة المجتمع بنجاح",
+        "memberCount": "تم استرجاع عدد أعضاء المجتمع بنجاح",
+        "memberRetrieved": "تم استرجاع أعضاء المجتمع بنجاح",
+        "bannedUsers": "تم استرجاع المستخدمين المحظورين في المجتمع بنجاح",
+        "gallery_added": "تمت إضافة {{count}} صورة(صور) إلى المعرض بنجاح",
+        "gallery_removed": "تمت إزالة {{count}} صورة(صور) من المعرض بنجاح",
+        "gallery_retrieved": "تم استرجاع صور المعرض بنجاح",
+        "gallery_all_exist": "كل الصور المقدمة موجودة بالفعل في المعرض",
+        "gallery_empty": "المعرض خالي",
+        "gallery_none_found": "لم يتم العثور على أي من الصور المقدمة في المعرض "
+  },
+  "auth": {
+    "unauthorized": "المستخدم غير مصرح له"
+  },
+  "guest": {
+    "access_denied": "المستخدمون الضيوف غير مسموح لهم بأداء هذا الإجراء"
+  },
+    "image": {
+        "required": "رابط الصورة مطلوب",
+        "invalid": "رابط الصورة غير صالح",
+        "not_found": "الصورة غير موجودة",
+        "delted": "تم حذف الصورة بنجاح",
+        "upload_failed": "فشل تحميل الصورة"
+    },
+  "track": {
+    "created": "تم إنشاء المسار بنجاح",
+    "not_found": "المسار غير موجود",
+    "updated": "تم تحديث المسار بنجاح",
+    "deleted": "تم حذف المسار بنجاح",
+    "disabled": "تم تعطيل المسار بنجاح",
+    "enabled": "تم تمكين المسار بنجاح",
+    "archived": "تم أرشفة المسار بنجاح",
+    "allTracks": "تم استرجاع المسارات بنجاح",
+    "trackDetails": "تم استرجاع تفاصيل المسار بنجاح",
+    "trackResult": "تم استرجاع نتائج المسار بنجاح",
+    "communityResult": "تم استرجاع نتائج المجتمع المتعلقة بالمسار بنجاح"
+  },
+    "event":{
+        "not_found": "الحدث غير موجود",
+        "created": "تم إنشاء الحدث بنجاح",
+        "updated": "تم تحديث الحدث بنجاح",
+        "deleted": "تم حذف الحدث بنجاح",
+        "allEvents": "تم استرجاع الأحداث بنجاح",
+        "eventDetails": "تم استرجاع تفاصيل الحدث بنجاح",
+        "not_member": "المستخدم لم ينضم إلى هذا الحدث",
+        "submitted": "تم تقديم نتائج الحدث بنجاح",
+        "already_joined": "المستخدم قد انضم بالفعل إلى هذا الحدث",
+        "joinEvent": "انضم المستخدم إلى الحدث بنجاح",
+        "rejoinEvent": "عاد المستخدم للانضمام إلى الحدث بنجاح",
+        "reason_required": "السبب مطلوب لمغادرة الحدث",
+        "cancelledEvent": "تم إلغاء الحدث بالفعل",
+        "completed": "تم إكمال الحدث بالفعل",
+        "participationCancelled": "تم إلغاء مشاركة الحدث بنجاح",
+        "status_retrieved": "تم استرجاع حالة المشاركة في الحدث بنجاح",
+        "results_saved": "تم حفظ النتائج بنجاح",
+        "results_published": "تم نشر النتائج بنجاح",
+        "results_required_for_publish": "يجب إدخال نتيجة مكتملة واحدة على الأقل قبل النشر",
+        "results_not_published": "النتائج غير منشورة بعد"
+    },
+    "statuses": {
+      "open": "مفتول",
+      "draft": "مسودة",
+      "full": "ممتلء",
+      "completed": "مكتمل",
+      "archived": "مؤرشف",
+      "limited": "محدود",
+      "closed": "مغلق",
+      "disabled": "معطل",
+      "active": "نشط",
+      "left": "غادر",
+      "banned": "محظور"
+    },
+    "communityTypes": {
+      "club": "نادي",
+      "shop": "متجر",
+      "city": "مدينة",
+      "group": "مجموعة",
+      "purpose": "غرض",
+      "women": "نساء",
+      "youth": "شباب",
+      "family": "عائلة",
+      "corporate": "شركات",
+      "racingPerformance": "السباق والأداء",
+      "leisureSocial": "الترفيه والاجتماعي",
+      "advocacyAwareness": "الدعوة والوعي",
+      "familyKids": "العائلة والأطفال",
+      "corporateEvents": "الأحداث الشركات",
+      "nationalEvents": "الأحداث الوطنية",
+      "familyLeisure": "العائلة والترفيه",
+      "groupCommunities": "المجتمعات الجماعية",
+      "cityCommunities": "المجتمعات الحضرية",
+      "specialInterest": "الاهتمام الخاص",
+      "awarenessCharity": "الوعي والخيرية",
+      "trainingClinics": "ورش التدريب والعيادات",
+      "awarenessRides": "ركوب الوعي",
+      "women(sherides)": "نساء (شيريدز)"
+    },
+    "locations": {
+      "abuDhabi": "أبوظبي",
+      "dubai": "دبي",
+      "alAin": "العين",
+      "sharjah": "الشارقة"
+    },
+    "amenities": {
+      "water": "ماء",
+      "parking": "موقف سيارات",
+      "toilets": "دورات المياه",
+      "lighting": "إضاءة",
+      "medicalSupport": "الدعم الطبي",
+      "bikeService": "خدمة الدراجات",
+      "cafes": "مقاهي",
+      "bikeRental": "تأجير الدراجات",
+      "firstAid": "الإسعافات الأولية",
+      "changingRooms": "غرف تبديل الملابس",
+      "lights": "أضواء"
+    },
+    "trackTypes": {
+      "circuit": "دائري",
+      "road": "طريق",
+      "costal": "ساحلي",
+      "desert": "صحراوي",
+      "urban": "حضري"
+    },
+    "surfaceTypes": {
+      "asphalt": "رصيف",
+      "concrete": "خرسانة",
+      "mixed": "مختلط"
+    },
+    "experienceLevels": {
+      "beginner": "مبتدئ",
+      "intermediate": "متوسط",
+      "advanced": "متقدم",
+      "all": "جميع المستويات"
+    },
+    "genders": {
+      "male": "ذكر",
+      "female": "أنثى",
+      "other": "آخر",
+      "all": "الكل"
+    },
+    "eventCategories": {
+      "race": "سباق",
+      "communityRide": "ركوب المجتمع",
+      "trainingClinics": "ورش التدريب والعيادات",
+      "awarenessRides": "ركوب الوعي",
+      "familyKids": "العائلة والأطفال",
+      "corporateEvents": "الأحداث الشركات",
+      "nationalEvents": "الأحداث الوطنية"
+    },
+    "categories": {
+      "special": "خاص",
+      "city": "مدينة",
+      "group": "مجموعة",
+      "purpose": "غرض",
+      "type": "نوع"
+    },
+    "difficulties": {
+      "easy": "سهل",
+      "medium": "متوسط",
+      "hard": "صعب",
+      "Beginner": "مبتدئ",
+      "Intermediate": "متوسط",
+      "Advanced": "متقدم"
+    },
+    "countries": {
+      "uae": "الإمارات العربية المتحدة",
+      "KSA": "المملكة العربية السعودية",
+      "Qatar": "قطر",
+      "Bahrain": "البحرين",
+      "Oman": "عمان",
+      "Kuwait": "الكويت"
+    },
+    "visibilities": {
+      "public": "عام",
+      "private": "خاص"
+    },
+    "fieldLabels": {
+      "title": "العنوان",
+      "description": "الوصف",
+      "details": "التفاصيل",
+      "status": "الحالة",
+      "featured": "مميز",
+      "members": "الأعضاء",
+      "list": "قائمة",
+      "gallery": "المعرض",
+      "post": "منشور",
+      "cycling": "ركوب الدراجات",
+      "routes": "المسارات",
+      "city": "المدينة",
+      "location": "الموقع",
+      "type": "النوع",
+      "difficulty": "الصعوبة",
+      "country": "البلد",
+      "visibility": "الرؤية",
+      "category": "الفئة"
+    }
+}

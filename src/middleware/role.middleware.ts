@@ -10,6 +10,16 @@ export const isAdmin = async (
   res: Response,
   next: NextFunction
 ): Promise<void> => {
+
+  // Guests cannot be admins
+  if (req.user?.isGuest) {
+    res.status(403).json({
+      success: false,
+      message: 'Admin access required',
+    });
+    return;
+  }
+  
   try {
     const userId = req.user?.id;
 
@@ -141,3 +151,31 @@ export const isAdminOrVendor = async (
   }
 };
 
+
+
+// In role.middleware.ts - Add new middleware
+// export const allowGuests = (
+//   req: AuthRequest,
+//   res: Response,
+//   next: NextFunction
+// ): void => {
+//   // Allow both authenticated users and guests
+//   next();
+// };
+
+
+export const authenticatedOnly = (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): void => {
+  // Only authenticated users (not guests)
+  if (req.user?.isGuest) {
+    res.status(403).json({
+      success: false,
+      message: 'This action requires user registration',
+    });
+    return;
+  }
+  next();
+};

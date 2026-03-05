@@ -1,0 +1,215 @@
+{
+  "community": {
+      "not_found": "Community not found",
+      "created": "Community created successfully",
+      "updated": "Community updated successfully",
+      "deleted": "Community deleted successfully",
+      "not_member": "You are not a member of this community",
+      "status_retrieved": "Community membership status retrieved successfully",
+      "all_communities": "Communities retrieved successfully",
+      "community_photos": "Community photos retrieved successfully",
+      "details_retrieved": "Community details retrieved successfully",
+      "joined": "Successfully joined community",
+      "leave": "Successfully left community",
+      "memberRetrieved": "Community members retrieved successfully",
+      "memberCount": "Community member count retrieved successfully",
+      "bannedUsers": "Banned users in community retrieved successfully",
+      "gallery_added": "Successfully added {{count}} image(s) to gallery",
+      "gallery_removed": "Successfully removed {{count}} image(s) from gallery",
+      "gallery_retrieved": "Gallery images retrieved successfully",
+      "gallery_all_exist": "All provided images already exist in the gallery",
+      "gallery_empty": "Gallery is empty",
+      "gallery_none_found": "None of the provided images were found in the gallery"
+  },
+  "auth": {
+    "unauthorized": "User not authenticated"
+  },
+  "guest": {
+    "access_denied": "Guest users are not allowed to perform this action"
+  },
+  "image": {
+    "required": "Image URL is required",
+    "invalid": "Invalid image URL",
+    "not_found": "Image not found",
+    "delted": "Image deleted successfully",
+    "upload_failed": "Image upload failed"
+
+  },
+    "track": {
+        "created": "Track created successfully",
+        "not_found": "Track not found",
+        "updated": "Track updated successfully",
+        "deleted": "Track deleted successfully",
+        "disabled": "Track disabled successfully",
+        "enabled": "Track enabled successfully",
+        "archived": "Track archived successfully",
+        "allTracks": "Tracks retrieved successfully",
+        "trackDetails": "Track details retrieved successfully",
+        "trackResult": "Track related results retrieved successfully",
+        "communityResult": "Track related community results retrieved successfully"
+    },
+    "event":{
+        "not_found": "Event not found",
+        "created": "Event created successfully",
+        "updated": "Event updated successfully",
+        "deleted": "Event deleted successfully",
+        "allEvents": "Events retrieved successfully",
+        "eventDetails": "Event details retrieved successfully",
+        "not_member": "User has not joined this event",
+        "submitted": "Event results submitted successfully",
+        "already_joined": "User has already joined this event",
+        "joinEvent": "User joined the event successfully",
+        "rejoinEvent": "User rejoined the event successfully",
+        "reason_required": "Reason is required to leave the event",
+        "cancelledEvent": "Event cancelled already",
+        "completed": "Event completed already",
+        "participationCancelled": "Event participation cancelled successfully",
+        "status_retrieved": "Event participation status retrieved successfully",
+        "participants_retrieved": "Event participants retrieved successfully",
+        "participant_updated": "Participant status updated successfully",
+        "bulk_checkin_success": "Participants checked in successfully",
+        "bulk_noshow_success": "Participants marked as no-show successfully",
+        "results_saved": "Results saved successfully",
+        "results_published": "Results published successfully",
+        "results_required_for_publish": "At least one completed result is required before publishing",
+        "results_not_published": "Results are not published yet"
+    },
+    "statuses": {
+      "open": "Open",
+      "draft": "Draft",
+      "full": "Full",
+      "completed": "Completed",
+      "archived": "Archived",
+      "limited": "Limited",
+      "closed": "Closed",
+      "disabled": "Disabled",
+      "active": "Active",
+      "left": "Left",
+      "banned": "Banned"
+    },
+    "communityTypes": {
+      "club": "Club",
+      "city": "City",
+      "group": "Group",
+      "purpose": "Purpose",
+      "special": "Special",
+      "shop": "Shop",
+      "women": "Women",
+      "youth": "Youth",
+      "family": "Family",
+      "corporate": "Corporate",
+      "racingPerformance": "Racing & Performance",
+      "leisureSocial": "Leisure & Social",
+      "advocacyAwareness": "Advocacy & Awareness",
+      "familyKids": "Family & Kids",
+      "corporateEvents": "Corporate Events",
+      "nationalEvents": "National Events",
+      "familyLeisure": "Family & Leisure",
+      "groupCommunities": "Group Communities",
+      "cityCommunities": "City Communities",
+      "specialInterest": "Special Interest",
+      "awarenessCharity": "Awareness & Charity",
+      "trainingClinics": "Training & Clinics"
+    },
+    "locations": {
+      "abuDhabi": "Abu Dhabi",
+      "dubai": "Dubai",
+      "alAin": "Al Ain",
+      "sharjah": "Sharjah"
+    },
+    "amenities": {
+      "water": "Water",
+      "parking": "Parking",
+      "toilets": "Toilets",
+      "lighting": "Lighting",
+      "medicalSupport": "Medical Support",
+      "bikeService": "Bike Service",
+      "cafes": "Cafes",
+      "bikeRental": "Bike Rental",
+      "firstAid": "First Aid",
+      "changingRooms": "Changing Rooms",
+      "lights": "Lights",
+      "women(sherides)": "women(sherides)"
+    },
+    "trackTypes": {
+      "circuit": "Circuit",
+      "road": "Road",
+      "costal": "Coastal",
+      "desert": "Desert",
+      "urban": "Urban"
+    },
+    "surfaceTypes": {
+      "asphalt": "Asphalt",
+      "concrete": "Concrete",
+      "mixed": "Mixed"
+    },
+    "experienceLevels": {
+      "beginner": "Beginner",
+      "intermediate": "Intermediate",
+      "advanced": "Advanced",
+      "all": "All Levels"
+    },
+    "genders": {
+      "male": "Male",
+      "female": "Female",
+      "other": "Other",
+      "all": "All"
+    },
+    "eventCategories": {
+      "race": "Race",
+      "communityRide": "Community Ride",
+      "trainingClinics": "Training & Clinics",
+      "awarenessRides": "Awareness Rides",
+      "familyKids": "Family & Kids",
+      "corporateEvents": "Corporate Events",
+      "nationalEvents": "National Events"
+    },
+    "categories": {
+      "special": "Special",
+      "city": "City",
+      "group": "Group",
+      "purpose": "Purpose",
+      "type": "Type"
+    },
+    "difficulties": {
+      "easy": "Easy",
+      "medium": "Medium",
+      "hard": "Hard",
+      "Beginner": "Beginner",
+      "Intermediate": "Intermediate",
+      "Advanced": "Advanced"
+    },
+    "countries": {
+      "uae": "United Arab Emirates",
+      "SAUDI_ARABIA": "Saudi Arabia",
+      "QATAR": "Qatar",
+      "OMAN": "Oman",
+      "BAHRAIN": "Bahrain",
+      "KUWAIT": "Kuwait",
+      "Oman": "Oman"
+    },
+    "visibilities": {
+      "public": "Public",
+      "private": "Private"
+    },
+    "fieldLabels": {
+      "title": "Title",
+      "description": "Description",
+      "details": "Details",
+      "status": "Status",
+      "featured": "Featured",
+      "members": "Members",
+      "list": "List",
+      "gallery": "Gallery",
+      "post": "Post",
+      "cycling": "Cycling",
+      "routes": "Routes",
+      "city": "City",
+      "location": "Location",
+      "type": "Type",
+      "difficulty": "Difficulty",
+      "country": "Country",
+      "visibility": "Visibility",
+      "category": "Category"
+    }
+}

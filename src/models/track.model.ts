@@ -18,7 +18,9 @@ export interface ITrackFacility {
 
 export interface ITrack extends Document {
   title: string;
+  titleAr?: string;
   description: string;
+  descriptionAr?: string;
   image?: string;
   coverImage?: string;
   city: string;
@@ -54,7 +56,9 @@ export interface ITrack extends Document {
 const TrackSchema = new Schema(
   {
     title: { type: String, required: [true, 'Track title is required'], trim: true },
+    titleAr: { type: String, trim: true },
     description: { type: String, required: [true, 'Track description is required'], trim: true },
+    descriptionAr: { type: String, trim: true },
     image: { type: String, trim: true },
     coverImage: { type: String, trim: true },
     city: { type: String, trim: true },
