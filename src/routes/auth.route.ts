@@ -9,7 +9,7 @@ import {
   getMyJoinedCommunities,
   getMyJoinedEvents,
   getMyActiveParticipations,
-  createGuestSession,
+  guestLogin
 } from '@/controllers/auth.controller';
 import { validate } from '@/middleware/validate.middleware';
 import {
@@ -17,16 +17,14 @@ import {
   registerUserSchema,
   refreshTokenSchema,
   logoutSchema,
-  createGuestSchema,
 } from '@/validators/auth.validator';
 import { authenticate } from '@/middleware/auth.middleware';
-import { requireMember } from '@/middleware/role.middleware';
 
 const router = express.Router();
 
 // Public routes
 router.post('/verify', validate(verifyFirebaseAuthSchema), verifyFirebaseAuth);
-router.post('/guest', validate(createGuestSchema), createGuestSession);
+
 router.post(
   '/register',
   authenticate,
@@ -34,13 +32,14 @@ router.post(
   registerUser
 );
 router.post('/refresh', validate(refreshTokenSchema), refreshAccessToken);
+router.post('/guestLogin', guestLogin);
 
 // Protected routes
 router.post('/logout', authenticate, validate(logoutSchema), logout);
-router.get('/me/stats', authenticate, requireMember, getCurrentUserStats);
-router.get('/me/joined-communities', authenticate, requireMember, getMyJoinedCommunities);
-router.get('/me/joined-events', authenticate, requireMember, getMyJoinedEvents);
-router.get('/me/active-participations', authenticate, requireMember, getMyActiveParticipations);
+router.get('/me/stats', authenticate, getCurrentUserStats);
+router.get('/me/joined-communities', authenticate, getMyJoinedCommunities);
+router.get('/me/joined-events', authenticate, getMyJoinedEvents);
+router.get('/me/active-participations', authenticate,getMyActiveParticipations);
 router.get('/me', authenticate, getCurrentUser);
 
 export default router;

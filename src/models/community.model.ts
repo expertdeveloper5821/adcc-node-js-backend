@@ -2,8 +2,10 @@ import mongoose, { Schema, Document } from 'mongoose';
 
 export interface ICommunity extends Document {
   title: string;
+  titleAr?: string;
   slug: string;
   description: string;
+  descriptionAr?: string;
   type: string[];
   category: string;
   location?: 'Abu Dhabi' | 'Dubai' | 'Al Ain' | 'Sharjah';
@@ -33,6 +35,10 @@ const CommunitySchema = new Schema(
       required: [true, 'Community title is required'],
       trim: true,
     },
+    titleAr: {
+      type: String,
+      trim: true,
+    },
     slug: {
       type: String,
       trim: true,
@@ -40,6 +46,10 @@ const CommunitySchema = new Schema(
     description: {
       type: String,
       required: [true, 'Community description is required'],
+      trim: true,
+    },
+    descriptionAr: {
+      type: String,
       trim: true,
     },
     type: {
@@ -108,7 +118,17 @@ const CommunitySchema = new Schema(
     },
     trackId: {
       type: Schema.Types.ObjectId,
-      ref: 'tracks',
+      ref: 'track',
+      set: (value: unknown) => {
+        if (value === null || value === undefined) return undefined;
+        if (typeof value === 'string') {
+          const normalized = value.trim().toLowerCase();
+          if (!normalized || normalized === 'null' || normalized === 'undefined') {
+            return undefined;
+          }
+        }
+        return value;
+      },
     },
     isPublic: {
       type: Boolean,

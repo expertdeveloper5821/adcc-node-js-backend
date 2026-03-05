@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import mongoose from 'mongoose';
+import { t } from "@/utils/i18n";
 import Community from '@/models/community.model';
 import Event from '@/models/event.model';
 import CommunityMembership from '@/models/communityMembership.model';
@@ -8,10 +9,34 @@ import { asyncHandler } from '@/utils/async-handler';
 import { AppError } from '@/utils/app-error';
 import { AuthRequest } from '@/middleware/auth.middleware';
 import { communityMembershipService } from '@/services';
+import { localizeDocumentFields, SupportedLanguage, localizeCommunityStatic } from '@/utils/localization';
 
 interface JoinCommunityParams {
   communityId: string;
 }
+
+const COMMUNITY_LOCALIZED_FIELDS = {
+  title: 'titleAr',
+  description: 'descriptionAr',
+};
+
+const localizeCommunity = (community: Record<string, any>, lang: SupportedLanguage) => {
+  const localized = localizeDocumentFields(community, lang, COMMUNITY_LOCALIZED_FIELDS);
+  localizeCommunityStatic(localized, lang);
+  return localized;
+};
+
+const normalizeOptionalTrackId = (value: unknown): string | undefined => {
+  if (value === null || value === undefined) return undefined;
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase();
+    if (!normalized || normalized === 'null' || normalized === 'undefined') {
+      return undefined;
+    }
+    return value;
+  }
+  return String(value);
+};
 
 /**
  * Create new community
@@ -19,22 +44,27 @@ interface JoinCommunityParams {
  * Admin only
  */
 export const createCommunity = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const lang = ((req as any).lang || 'en') as SupportedLanguage;
   const userId = req.user?.id;
 
   if (!userId) {
-    throw new AppError('User not authenticated', 401);
+    throw new AppError(t(lang, "auth.unauthorized"), 401);
   }
 
   const communityData = {
     ...req.body,
+    titleAr: req.body.titleAr || req.body.title,
+    descriptionAr: req.body.descriptionAr || req.body.description,
+    trackId: normalizeOptionalTrackId(req.body.trackId),
     createdBy: userId,
     members: [], // Start with no members
     memberCount: 0,
   };
 
   const community = await Community.create(communityData);
+  const localizedCommunity = localizeCommunity(community.toObject(), lang);
 
-  sendSuccess(res, community, 'Community created successfully', 201);
+  sendSuccess(res, localizedCommunity, t(lang,"community.created"), 201);
 });
 
 /**
@@ -42,7 +72,8 @@ export const createCommunity = asyncHandler(async (req: AuthRequest, res: Respon
  * GET /v1/communities
  * Public – guest-accessible. Optional query filters and pagination.
  */
-export const getAllCommunities = asyncHandler(async (req: Request, res: Response) => {
+export const getAllCommunities = asyncHandler(async (req: Request, res: Response ) => {
+  const lang = ((req as any).lang || 'en') as SupportedLanguage;
   const { type, location, category, search, page = 1, limit = 10, isActive, isPublic, isFeatured } = req.query;
 
   const query: any = {};
@@ -88,6 +119,7 @@ export const getAllCommunities = asyncHandler(async (req: Request, res: Response
 
   const communities = await Community.find(query)
     .populate('createdBy', 'fullName email')
+    .populate('trackId', 'title titleAr')
     // members array is not populated here to reduce payload; use memberCount instead
     .sort(search ? { score: { $meta: 'textScore' } } : { createdAt: -1 })
     .skip(skip)
@@ -110,7 +142,7 @@ export const getAllCommunities = asyncHandler(async (req: Request, res: Response
       const commObj: any = comm.toObject();
       commObj.upcomingEventCount = upcomingEvents;
       commObj.memberCount = memberCount;
-      return commObj;
+      return localizeCommunity(commObj, lang);
     })
   );
 
@@ -125,7 +157,7 @@ export const getAllCommunities = asyncHandler(async (req: Request, res: Response
         pages: Math.ceil(total / limitNum),
       },
     },
-    'Communities retrieved successfully', 201
+    t(lang, "community.all_communities"), 200
   );
 });
 
@@ -135,7 +167,7 @@ export const getAllCommunities = asyncHandler(async (req: Request, res: Response
  * Public – guest-accessible.
  */
 export const getCommunityById = asyncHandler(async (req: Request, res: Response) => {
- 
+  const lang = ((req as any).lang || 'en') as SupportedLanguage;
   const { id } = req.params;
 
   if (Array.isArray(id) || !mongoose.Types.ObjectId.isValid(id)) {
@@ -147,10 +179,11 @@ export const getCommunityById = asyncHandler(async (req: Request, res: Response)
 
   const community = await Community.findById(id)
     .populate('createdBy', 'fullName email')
+    .populate('trackId', 'title titleAr')
     .populate('members', 'fullName email age gender');
 
   if (!community) {
-    throw new AppError('Community not found', 404);
+    throw new AppError(t(lang, "auth.unauthorized"), 404);
   }
 
   // include upcoming event count and accurate member count from membership collection
@@ -167,8 +200,9 @@ export const getCommunityById = asyncHandler(async (req: Request, res: Response)
   const communityObj: any = community.toObject();
   communityObj.upcomingEventCount = upcomingEvents;
   communityObj.memberCount = memberCount;
+  const localizedCommunity = localizeCommunity(communityObj, lang);
 
-  return sendSuccess(res, communityObj, 'Community retrieved successfully', 201);
+  return sendSuccess(res, localizedCommunity, t(lang,"community.details_retrieved"), 201);
 });
 
 /**
@@ -177,15 +211,32 @@ export const getCommunityById = asyncHandler(async (req: Request, res: Response)
  * Admin only
  */
 export const updateCommunity = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const lang = ((req as any).lang || 'en') as SupportedLanguage;
   const { id } = req.params;
 
   const community = await Community.findById(id);
 
   if (!community) {
-    throw new AppError('Community not found', 404);
+    throw new AppError(t(lang, "auth.unauthorized"), 404);
+  }
+
+  const existingTrackId = normalizeOptionalTrackId((community as any).trackId);
+  if (!existingTrackId) {
+    (community as any).trackId = undefined;
   }
 
   // Update fields
+  if (req.body.title && !req.body.titleAr && !community.titleAr) {
+    req.body.titleAr = req.body.title;
+  }
+  if (req.body.description && !req.body.descriptionAr && !community.descriptionAr) {
+    req.body.descriptionAr = req.body.description;
+  }
+  req.body.trackId = normalizeOptionalTrackId(req.body.trackId);
+  if (!req.body.trackId) {
+    delete req.body.trackId;
+  }
+
   Object.assign(community, req.body);
   await community.save();
 
@@ -193,7 +244,11 @@ export const updateCommunity = asyncHandler(async (req: AuthRequest, res: Respon
     .populate('createdBy', 'fullName email')
     .populate('members', 'fullName email');
 
-  sendSuccess(res, updatedCommunity, 'Community updated successfully', 201);
+  const localizedCommunity = updatedCommunity
+    ? localizeCommunity(updatedCommunity.toObject(), lang)
+    : updatedCommunity;
+
+  sendSuccess(res, localizedCommunity, t(lang,"community.updated"), 201);
 });
 
 /**
@@ -202,15 +257,16 @@ export const updateCommunity = asyncHandler(async (req: AuthRequest, res: Respon
  * Admin only
  */
 export const deleteCommunity = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const lang = ((req as any).lang || 'en') as SupportedLanguage;
   const { id } = req.params;
 
   const community = await Community.findByIdAndDelete(id);
 
   if (!community) {
-    throw new AppError('Community not found', 404);
+    throw new AppError(t(lang, "auth.unauthorized"), 404);
   }
 
-  sendSuccess(res, null, 'Community deleted successfully', 201);
+  sendSuccess(res, null, t(lang, "community.deleted"), 201);
 });
 
 /**
@@ -219,23 +275,31 @@ export const deleteCommunity = asyncHandler(async (req: AuthRequest, res: Respon
  * Authenticated users only
  */
 export const joinCommunity = asyncHandler(async (req: AuthRequest & { params: JoinCommunityParams }, res: Response) => {
+  const lang = ((req as any).lang || 'en') as SupportedLanguage;
   const communityId = req.params.id;
   const userId = req.user?.id;
-
+  const isGuest = req.user?.isGuest;
+  
   if (!userId) {
-    throw new AppError('User not authenticated', 401);
+    throw new AppError(t(lang, "auth.unauthorized"), 401);
+  }
+
+  if (isGuest) {
+    throw new AppError(t(lang, "guest.access_denied"), 403);
   }
 
   const membership = await communityMembershipService.joinCommunity(userId, communityId);
 
-  const communityDoc = await Community.findById(communityId).select('title location type');
+  const communityDoc = await Community.findById(communityId).select('title titleAr location type');
 
   // message based on resulting status
   const message = membership.status === 'active' ?
-    'Successfully joined community' :
-    'Successfully left community';
+    t(lang, "community.joined") :
+    t(lang, "community.leave");
 
-  sendSuccess(res, { community: communityDoc, membership }, message, 201);
+  const localizedCommunity = communityDoc ? localizeCommunity(communityDoc.toObject(), lang) : null;
+
+  sendSuccess(res, { community: localizedCommunity, membership }, message, 201);
 });
 
 /**
@@ -245,16 +309,17 @@ export const joinCommunity = asyncHandler(async (req: AuthRequest & { params: Jo
  */
 export const leaveCommunity = asyncHandler(
   async (req: AuthRequest, res: Response) => {
+    const lang = ((req as any).lang || 'en') as SupportedLanguage;
     const { id } = req.params;
     const userId = req.user?.id;
 
     if (!userId) {
-      throw new AppError('User not authenticated', 401);
+      throw new AppError(t(lang, "auth.unauthorized"), 401);
     }
 
     const result = await communityMembershipService.leaveCommunity(userId, id);
 
-    sendSuccess(res, result, 'Successfully left community', 200);
+    sendSuccess(res, result, t(lang, "community.leave"), 200);
   }
 );
 
@@ -264,7 +329,7 @@ export const leaveCommunity = asyncHandler(
  * Public – guest-accessible.
  */
 export const getCommunityMembers = asyncHandler(async (req: AuthRequest, res: Response) => {
-  
+  const lang = ((req as any).lang || 'en') as SupportedLanguage;
   const id = req.params.id as string;
   
   const { page = 1, limit = 10 } = req.query;
@@ -275,7 +340,7 @@ export const getCommunityMembers = asyncHandler(async (req: AuthRequest, res: Re
 
   const members = await communityMembershipService.getCommunityMembers(id, pageNum, limitNum);
 
-  sendSuccess(res, members, 'Community members retrieved successfully', 201);
+  sendSuccess(res, members, t(lang,"community.memberRetrieved"), 201);
 });
 
 
@@ -283,12 +348,14 @@ export const getCommunityMembers = asyncHandler(async (req: AuthRequest, res: Re
 * Get user community count
 */
 export const getUserCommunityCount = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const lang = ((req as any).lang || 'en') as SupportedLanguage;
+
   const userId = req.user?.id;
   if (!userId) {
-    throw new AppError('User not authenticated', 401);
+    throw new AppError(t(lang, "auth.unauthorized"), 401);
   }
   const count = await communityMembershipService.getUserCommunities(userId);
-  sendSuccess(res, { count }, 'User community count retrieved successfully', 201);
+  sendSuccess(res, { count }, t(lang,"community.memberCount"), 201);
 });
 
 
@@ -296,29 +363,31 @@ export const getUserCommunityCount = asyncHandler(async (req: AuthRequest, res: 
 * Get baned users in a community
 */
 export const getBannedUsersInCommunity = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const lang = ((req as any).lang || 'en') as SupportedLanguage;
   const { id } = req.params;
   const userId = req.user?.id;
 
   if (!userId) {
-    throw new AppError('User not authenticated', 401);
+    throw new AppError(t(lang, "auth.unauthorized"), 401);
   }
 
   const bannedUsers = await communityMembershipService.getBannedMembers(id);
-  sendSuccess(res, bannedUsers, 'Banned users retrieved successfully', 201);
+  sendSuccess(res, bannedUsers, t(lang, "community.bannedUsers"), 201);
 });
 
 /*
 * is member of community
 */
 export const isMemberOfCommunity = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const lang = ((req as any).lang || 'en') as SupportedLanguage;
   const { communityId } = req.params;
   const userId = req.user?.id;
 
   if (!userId) {
-    throw new AppError('User not authenticated', 401);
+    throw new AppError(t(lang, "auth.unauthorized"), 401);
   }
   const memberships = await communityMembershipService.isMember(userId, communityId);
-  sendSuccess(res, { isMember: memberships }, 'Membership status retrieved successfully', 201);
+  sendSuccess(res, { isMember: memberships }, t(lang, "community.status_retrieved"), 201);
   
 });
 
@@ -328,13 +397,14 @@ export const isMemberOfCommunity = asyncHandler(async (req: AuthRequest, res: Re
  * Admin only
  */
 export const addGalleryImages = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const lang = ((req as any).lang || 'en') as SupportedLanguage;
   const { id } = req.params;
   const { images } = req.body;
 
   const community = await Community.findById(id);
 
   if (!community) {
-    throw new AppError('Community not found', 404);
+    throw new AppError(t(lang, "community.not_found"), 404);
   }
 
   // Initialize gallery array if it doesn't exist
@@ -347,7 +417,7 @@ export const addGalleryImages = asyncHandler(async (req: AuthRequest, res: Respo
   const newImages = images.filter((imageUrl: string) => !existingImages.has(imageUrl));
   
   if (newImages.length === 0) {
-    throw new AppError('All provided images already exist in the gallery', 400);
+    throw new AppError(t(lang, "community.gallery_all_exist"), 400);
   }
 
   community.gallery = [...community.gallery, ...newImages];
@@ -358,17 +428,19 @@ export const addGalleryImages = asyncHandler(async (req: AuthRequest, res: Respo
     .populate('members', 'fullName email');
 
   if (!updatedCommunity) {
-    throw new AppError('Failed to retrieve updated community', 500);
+    throw new AppError(t(lang, "community.not_found"), 500);
   }
+
+  const localizedCommunity = localizeCommunity(updatedCommunity.toObject(), lang);
 
   sendSuccess(
     res,
     {
-      community: updatedCommunity,
+      community: localizedCommunity,
       addedImages: newImages,
       totalImages: updatedCommunity.gallery?.length || 0,
     },
-    `Successfully added ${newImages.length} image(s) to gallery`,
+    t(lang, "community.gallery_added", { count: newImages.length }),
     201
   );
 });
@@ -379,18 +451,19 @@ export const addGalleryImages = asyncHandler(async (req: AuthRequest, res: Respo
  * Admin only
  */
 export const removeGalleryImages = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const lang = ((req as any).lang || 'en') as SupportedLanguage;
   const { id } = req.params;
   const { imageUrls } = req.body;
 
   const community = await Community.findById(id);
 
   if (!community) {
-    throw new AppError('Community not found', 404);
+    throw new AppError(t(lang, "community.not_found"), 404);
   }
 
   // Initialize gallery array if it doesn't exist
   if (!community.gallery || community.gallery.length === 0) {
-    throw new AppError('Gallery is empty', 400);
+    throw new AppError(t(lang, "community.gallery_empty"), 400);
   }
 
   // Remove images that exist in the gallery
@@ -402,7 +475,7 @@ export const removeGalleryImages = asyncHandler(async (req: AuthRequest, res: Re
   const removedCount = removedImages.length;
 
   if (removedCount === 0) {
-    throw new AppError('None of the provided images were found in the gallery', 400);
+    throw new AppError(t(lang, "community.gallery_none_found"), 400);
   }
 
   await community.save();
@@ -412,18 +485,20 @@ export const removeGalleryImages = asyncHandler(async (req: AuthRequest, res: Re
     .populate('members', 'fullName email');
 
   if (!updatedCommunity) {
-    throw new AppError('Failed to retrieve updated community', 500);
+    throw new AppError(t(lang, "community.not_found"), 500);
   }
+
+  const localizedCommunity = localizeCommunity(updatedCommunity.toObject(), lang);
 
   sendSuccess(
     res,
     {
-      community: updatedCommunity,
+      community: localizedCommunity,
       removedImages,
       removedCount,
       totalImages: updatedCommunity.gallery?.length || 0,
     },
-    `Successfully removed ${removedCount} image(s) from gallery`,
+    t(lang, "community.gallery_removed", { count: removedCount }),
     201
   );
 });
@@ -434,23 +509,24 @@ export const removeGalleryImages = asyncHandler(async (req: AuthRequest, res: Re
  * Public – guest-accessible.
  */
 export const getGalleryImages = asyncHandler(async (req: Request, res: Response) => {
+  const lang = ((req as any).lang || 'en') as SupportedLanguage;
   const { id } = req.params;
 
-  const community = await Community.findById(id).select('gallery title');
+  const community = await Community.findById(id).select('gallery title titleAr');
 
   if (!community) {
-    throw new AppError('Community not found', 404);
+    throw new AppError(t(lang, "community.not_found"), 404);
   }
 
   sendSuccess(
     res,
     {
       communityId: id,
-      communityTitle: community.title,
+      communityTitle: lang === 'ar' ? community.titleAr || community.title : community.title,
       gallery: community.gallery || [],
       imageCount: community.gallery?.length || 0,
     },
-    'Gallery images retrieved successfully',
+    t(lang, "community.gallery_retrieved"),
     201
   );
 });

@@ -19,12 +19,19 @@ export interface IUser extends Document {
   email?: string;
   gender: 'Male' | 'Female';
   age: number;
-  role: 'Admin' | 'Vendor' | 'Member';
+  role: 'Admin' | 'Vendor' | 'Member' | 'Guest';
   isVerified: boolean;
   refreshTokens: IRefreshToken[];
   stats?: IUserStats;
   createdAt: Date;
   updatedAt: Date;
+}
+
+// Add to user.model.ts
+export interface IGuestSession extends Document {
+  sessionId: string;
+  actions: string[]; // Track what guest did
+  expiresAt: Date;
 }
 
 const RefreshTokenSchema = new Schema({

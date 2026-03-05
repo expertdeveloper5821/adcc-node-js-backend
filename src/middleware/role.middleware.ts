@@ -167,18 +167,31 @@ export const isAdminOrVendor = async (
   }
 };
 
-/**
- * Middleware to require a member (or admin) account. Rejects Guest with 403.
- * Use on routes that require a real user (e.g. join community, join event).
- */
-export const requireMember = (
+
+
+// In role.middleware.ts - Add new middleware
+// export const allowGuests = (
+//   req: AuthRequest,
+//   res: Response,
+//   next: NextFunction
+// ): void => {
+//   // Allow both authenticated users and guests
+//   next();
+// };
+
+
+export const authenticatedOnly = (
   req: AuthRequest,
   res: Response,
   next: NextFunction
 ): void => {
-  if (rejectGuest(req, res, 'Member account required for this action.')) {
+  // Only authenticated users (not guests)
+  if (req.user?.isGuest) {
+    res.status(403).json({
+      success: false,
+      message: 'This action requires user registration',
+    });
     return;
   }
   next();
 };
-
