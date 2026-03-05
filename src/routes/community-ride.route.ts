@@ -14,7 +14,7 @@ import {
   getCommunityRidesQuerySchema,
 } from '@/validators/community-ride.validator';
 import { authenticate } from '@/middleware/auth.middleware';
-import { isAdmin, requireMember } from '@/middleware/role.middleware';
+import { isAdmin } from '@/middleware/role.middleware';
 
 const router = express.Router();
 
@@ -38,7 +38,7 @@ router.patch(
   updateCommunityRide
 );
 router.delete('/:id', authenticate, isAdmin, deleteCommunityRide);
-router.get('/:id/member-status', authenticate, requireMember, communityMemberStatus);
+router.get('/:id/member-status', authenticate, communityMemberStatus);
 
 export default router;
 

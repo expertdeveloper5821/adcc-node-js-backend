@@ -11,6 +11,8 @@ import {
   generateAccessToken,
   generateRefreshToken,
 } from '@/utils/jwt.util';
+import { t } from '@/utils/i18n';
+import { resolveRequestLanguage } from '@/utils/localization';
 import { sendSuccess } from '@/utils/response';
 import { asyncHandler } from '@/utils/async-handler';
 import { AppError } from '@/utils/app-error';
@@ -25,34 +27,6 @@ function isGuestPayload(id?: string, role?: string): boolean {
 }
 
 /**
- * Create guest session (stateless)
- * POST /v1/auth/guest
- * Issues JWT with role Guest; no DB write. For "Continue as Guest" flows.
- */
-export const createGuestSession = asyncHandler(
-  async (_req: Request, res: Response) => {
-    const guestId = GUEST_ID_PREFIX + crypto.randomUUID();
-    const tokens = generateTokens({
-      id: guestId,
-      role: GUEST_ROLE,
-    });
-
-    sendSuccess(
-      res,
-      {
-        user: {
-          id: guestId,
-          role: GUEST_ROLE,
-          isGuest: true,
-        },
-        ...tokens,
-      },
-      'Guest session created'
-    );
-  }
-);
-
-/**
  * Verify Firebase authentication
  * POST /v1/auth/verify
  * Supports both mobile (phone OTP) and web (email/password) authentication
@@ -60,6 +34,7 @@ export const createGuestSession = asyncHandler(
  */
 export const verifyFirebaseAuth = asyncHandler(
   async (req: Request, res: Response) => {
+    const lang = resolveRequestLanguage(req);
     const { idToken } = req.body;
 
     // Verify Firebase token - get UID, phone (for phone auth), email (for email/password auth)
@@ -78,7 +53,7 @@ export const verifyFirebaseAuth = asyncHandler(
       // Check if user has reached the maximum number of active devices
       if (user.refreshTokens.length >= Number(process.env.MAX_REFRESH_TOKENS)) {
         throw new AppError(
-          `Maximum number of devices (${process.env.MAX_REFRESH_TOKENS}) reached. Please sign out from other devices to continue.`,
+          t(lang, 'auth.max_devices_reached', { max: process.env.MAX_REFRESH_TOKENS! }),
           403
         );
       }
@@ -118,7 +93,7 @@ export const verifyFirebaseAuth = asyncHandler(
           },
           ...tokens,
         },
-        'Login successful'
+        t(lang, 'auth.login_success')
       );
     } else {
       // New user - return temporary token (with UID, no user ID)
@@ -137,7 +112,7 @@ export const verifyFirebaseAuth = asyncHandler(
           email: email || undefined,
           ...tokens,
         },
-        'Authentication verified. Please complete registration.'
+        t(lang, 'auth.verify_success')
       );
     }
   }
@@ -151,24 +126,25 @@ export const verifyFirebaseAuth = asyncHandler(
  */
 export const registerUser = asyncHandler(
   async (req: AuthRequest, res: Response) => {
+    const lang = resolveRequestLanguage(req);
     const { fullName, gender, age } = req.body;
     const uid = req.user?.uid; // From JWT (temporary token)
     const phone = req.user?.phone; // Optional phone from JWT (for phone auth)
     const email = req.user?.email; // Optional email from JWT (for email/password auth)
 
     if (!uid) {
-      throw new AppError('Firebase UID not found in token', 400);
+      throw new AppError(t(lang, 'auth.firebase_uid_required'), 400);
     }
 
     // Validate that user has either phone or email (required for registration)
     if (!phone && !email) {
-      throw new AppError('Either phone number or email address is required for registration', 400);
+      throw new AppError(t(lang, 'auth.phone_or_email_required'), 400);
     }
 
     // Check if user already exists by UID
     const existingUser = await User.findOne({ firebaseUid: uid });
     if (existingUser) {
-      throw new AppError('User already registered', 400);
+      throw new AppError(t(lang, 'auth.already_registered'), 400);
     }
 
     // Create user with Firebase UID
@@ -217,7 +193,7 @@ export const registerUser = asyncHandler(
         },
         ...tokens,
       },
-      'Registration successful'
+      t(lang, 'auth.register_success')
     );
   }
 );
@@ -230,27 +206,29 @@ export const registerUser = asyncHandler(
  */
 export const refreshAccessToken = asyncHandler(
   async (req: Request, res: Response) => {
+    const lang = resolveRequestLanguage(req);
     const { refreshToken } = req.body;
 
     // Verify refresh token
     const decoded = verifyRefreshToken(refreshToken);
 
-    if (!decoded.id) {
-      throw new AppError('Invalid refresh token', 401);
-    }
-
-    // Guest refresh: stateless; no DB lookup
-    if (isGuestPayload(decoded.id, decoded.role)) {
+    // Guest refresh: stateless; no DB lookup (check before id guard)
+    if (decoded.role === GUEST_ROLE || isGuestPayload(decoded.id, decoded.role)) {
+      const guestId = decoded.id ?? GUEST_ID_PREFIX + crypto.randomUUID();
       const tokens = generateTokens({
-        id: decoded.id,
+        id: guestId,
         role: GUEST_ROLE,
       });
       sendSuccess(
         res,
         { accessToken: tokens.accessToken, refreshToken: tokens.refreshToken },
-        'Token refreshed successfully'
+        t(lang, 'auth.token_refreshed')
       );
       return;
+    }
+
+    if (!decoded.id) {
+      throw new AppError(t(lang, 'auth.invalid_refresh_token'), 401);
     }
 
     // Check if refresh token exists in database
@@ -261,7 +239,7 @@ export const refreshAccessToken = asyncHandler(
     });
 
     if (!user) {
-      throw new AppError('Invalid or expired refresh token', 401);
+      throw new AppError(t(lang, 'auth.invalid_expired_token'), 401);
     }
 
     // Generate new access token
@@ -314,7 +292,7 @@ export const refreshAccessToken = asyncHandler(
     sendSuccess(
       res,
       { accessToken, refreshToken: newRefreshToken },
-      'Token refreshed successfully'
+      t(lang, 'auth.token_refreshed')
     );
   }
 );
@@ -325,14 +303,15 @@ export const refreshAccessToken = asyncHandler(
  * For Guest: no-op (no DB state to revoke).
  */
 export const logout = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const lang = resolveRequestLanguage(req);
   const userId = req.user?.id;
 
   if (!userId) {
-    throw new AppError('User not authenticated', 401);
+    throw new AppError(t(lang, 'auth.unauthorized'), 401);
   }
 
   if (isGuestPayload(userId, req.user?.role)) {
-    sendSuccess(res, null, 'Logged out successfully');
+    sendSuccess(res, null, t(lang, 'auth.logout_success'));
     return;
   }
 
@@ -341,7 +320,7 @@ export const logout = asyncHandler(async (req: AuthRequest, res: Response) => {
     $pull: { refreshTokens: { token: refreshToken } },
   });
 
-  sendSuccess(res, null, 'Logged out successfully');
+  sendSuccess(res, null, t(lang, 'auth.logout_success'));
 });
 
 /**
@@ -352,14 +331,15 @@ export const logout = asyncHandler(async (req: AuthRequest, res: Response) => {
  */
 export const getCurrentUserStats = asyncHandler(
   async (req: AuthRequest, res: Response) => {
+    const lang = resolveRequestLanguage(req);
     const userId = req.user?.id;
     if (!userId) {
-      throw new AppError('User not authenticated', 401);
+      throw new AppError(t(lang, 'auth.unauthorized'), 401);
     }
 
     const user = await User.findById(userId).select('stats').lean();
     if (!user) {
-      throw new AppError('User not found', 404);
+      throw new AppError(t(lang, 'auth.user_not_found'), 404);
     }
 
     const s = user.stats;
@@ -370,7 +350,7 @@ export const getCurrentUserStats = asyncHandler(
       typeof s.totalEventsParticipated === 'number';
 
     if (hasMaterializedStats) {
-      sendSuccess(res, { ...s }, 'User stats retrieved successfully');
+      sendSuccess(res, { ...s }, t(lang, 'auth.stats_retrieved'));
       return;
     }
 
@@ -436,7 +416,7 @@ export const getCurrentUserStats = asyncHandler(
 
     await User.findByIdAndUpdate(userId, { $set: { stats } });
 
-    sendSuccess(res, stats, 'User stats retrieved successfully');
+    sendSuccess(res, stats, t(lang, 'auth.stats_retrieved'));
   }
 );
 
@@ -447,14 +427,15 @@ export const getCurrentUserStats = asyncHandler(
  */
 export const getMyJoinedCommunities = asyncHandler(
   async (req: AuthRequest, res: Response) => {
+    const lang = resolveRequestLanguage(req);
     const userId = req.user?.id;
     if (!userId) {
-      throw new AppError('User not authenticated', 401);
+      throw new AppError(t(lang, 'auth.unauthorized'), 401);
     }
     const page = Math.max(1, Number(req.query.page) || 1);
     const limit = Math.max(1, Math.min(100, Number(req.query.limit) || 10));
     const result = await communityMembershipService.getMyJoinedCommunities(userId, page, limit);
-    sendSuccess(res, result, 'Joined communities retrieved successfully');
+    sendSuccess(res, result, t(lang, 'auth.joined_communities_retrieved'));
   }
 );
 
@@ -465,9 +446,10 @@ export const getMyJoinedCommunities = asyncHandler(
  */
 export const getMyJoinedEvents = asyncHandler(
   async (req: AuthRequest, res: Response) => {
+    const lang = resolveRequestLanguage(req);
     const userId = req.user?.id;
     if (!userId) {
-      throw new AppError('User not authenticated', 401);
+      throw new AppError(t(lang, 'auth.unauthorized'), 401);
     }
     const page = Math.max(1, Number(req.query.page) || 1);
     const limit = Math.max(1, Math.min(100, Number(req.query.limit) || 10));
@@ -509,7 +491,7 @@ export const getMyJoinedEvents = asyncHandler(
           pages: Math.ceil(total / limit) || 1,
         },
       },
-      'Joined events retrieved successfully'
+      t(lang, 'auth.joined_events_retrieved')
     );
   }
 );
@@ -521,9 +503,10 @@ export const getMyJoinedEvents = asyncHandler(
  */
 export const getMyActiveParticipations = asyncHandler(
   async (req: AuthRequest, res: Response) => {
+    const lang = resolveRequestLanguage(req);
     const userId = req.user?.id;
     if (!userId) {
-      throw new AppError('User not authenticated', 401);
+      throw new AppError(t(lang, 'auth.unauthorized'), 401);
     }
     const page = Math.max(1, Number(req.query.page) || 1);
     const limit = Math.max(1, Math.min(100, Number(req.query.limit) || 10));
@@ -569,7 +552,7 @@ export const getMyActiveParticipations = asyncHandler(
           pages: Math.ceil(total / limit) || 1,
         },
       },
-      'Active participations retrieved successfully'
+      t(lang, 'auth.active_participations_retrieved')
     );
   }
 );
@@ -581,10 +564,11 @@ export const getMyActiveParticipations = asyncHandler(
  */
 export const getCurrentUser = asyncHandler(
   async (req: AuthRequest, res: Response) => {
+    const lang = resolveRequestLanguage(req);
     const userId = req.user?.id;
 
     if (!userId) {
-      throw new AppError('User not authenticated', 401);
+      throw new AppError(t(lang, 'auth.unauthorized'), 401);
     }
 
     if (isGuestPayload(userId, req.user?.role)) {
@@ -595,7 +579,7 @@ export const getCurrentUser = asyncHandler(
           role: GUEST_ROLE,
           isGuest: true,
         },
-        'User profile retrieved successfully'
+        t(lang, 'auth.profile_retrieved')
       );
       return;
     }
@@ -603,31 +587,37 @@ export const getCurrentUser = asyncHandler(
     const user = await User.findById(userId).select('-refreshTokens -__v');
 
     if (!user) {
-      throw new AppError('User not found', 404);
+      throw new AppError(t(lang, 'auth.user_not_found'), 404);
     }
 
-    sendSuccess(res, user, 'User profile retrieved successfully');
+    sendSuccess(res, user, t(lang, 'auth.profile_retrieved'));
   }
 );
 
 /**
  * Guest login - for users who want to try the app without registration
  * POST /v1/auth/guestLogin
- * Returns JWT with guest role and isGuest flag
- * No user record is created in database
+ * Issues a stateless JWT with a unique guest ID and role Guest; no DB write.
  */
 export const guestLogin = asyncHandler(
-  async (_req: AuthRequest, res: Response) => {
-    // Generate tokens with guest role
+  async (req: AuthRequest, res: Response) => {
+    const lang = resolveRequestLanguage(req);
+    const guestId = GUEST_ID_PREFIX + crypto.randomUUID();
     const tokens = generateTokens({
-      role: 'Guest',
-      isGuest: true,
-      type: 'Guest',
+      id: guestId,
+      role: GUEST_ROLE,
     });
     sendSuccess(
       res,
-      { ...tokens },
-      'Guest login successful'
+      {
+        user: {
+          id: guestId,
+          role: GUEST_ROLE,
+          isGuest: true,
+        },
+        ...tokens,
+      },
+      t(lang, 'auth.guest_login_success')
     );
   }
 );

@@ -22,7 +22,25 @@
         "gallery_none_found": "لم يتم العثور على أي من الصور المقدمة في المعرض "
   },
   "auth": {
-    "unauthorized": "المستخدم غير مصرح له"
+    "unauthorized": "المستخدم غير مصرح له",
+    "firebase_uid_required": "لم يتم العثور على معرّف Firebase في الرمز المميز",
+    "phone_or_email_required": "رقم الهاتف أو البريد الإلكتروني مطلوب للتسجيل",
+    "already_registered": "المستخدم مسجل بالفعل",
+    "login_success": "تم تسجيل الدخول بنجاح",
+    "verify_success": "تم التحقق من المصادقة. يرجى إكمال التسجيل.",
+    "register_success": "تم التسجيل بنجاح",
+    "token_refreshed": "تم تحديث الرمز المميز بنجاح",
+    "invalid_refresh_token": "رمز التحديث غير صالح",
+    "invalid_expired_token": "رمز التحديث غير صالح أو منتهي الصلاحية",
+    "max_devices_reached": "تم الوصول إلى الحد الأقصى لعدد الأجهزة ({{max}}). يرجى تسجيل الخروج من الأجهزة الأخرى للمتابعة.",
+    "logout_success": "تم تسجيل الخروج بنجاح",
+    "user_not_found": "المستخدم غير موجود",
+    "stats_retrieved": "تم استرجاع إحصائيات المستخدم بنجاح",
+    "joined_communities_retrieved": "تم استرجاع المجتمعات المنضم إليها بنجاح",
+    "joined_events_retrieved": "تم استرجاع الأحداث المنضم إليها بنجاح",
+    "active_participations_retrieved": "تم استرجاع المشاركات النشطة بنجاح",
+    "profile_retrieved": "تم استرجاع الملف الشخصي بنجاح",
+    "guest_login_success": "تم تسجيل الدخول كضيف بنجاح"
   },
   "guest": {
     "access_denied": "المستخدمون الضيوف غير مسموح لهم بأداء هذا الإجراء"
@@ -63,7 +81,20 @@
         "cancelledEvent": "تم إلغاء الحدث بالفعل",
         "completed": "تم إكمال الحدث بالفعل",
         "participationCancelled": "تم إلغاء مشاركة الحدث بنجاح",
-        "status_retrieved": "تم استرجاع حالة المشاركة في الحدث بنجاح"
+        "status_retrieved": "تم استرجاع حالة المشاركة في الحدث بنجاح",
+        "already_submitted": "تم تقديم النتيجة بالفعل",
+        "calendar_link": "تم إنشاء رابط التقويم",
+        "results_retrieved": "تم استرجاع نتائج الحدث بنجاح",
+        "invalid_id": "معرّف الحدث غير صالح",
+        "not_joined": "المستخدم لم ينضم إلى هذا الحدث"
+    },
+    "communityRide": {
+        "not_found": "رحلة المجتمع غير موجودة",
+        "created": "تم إنشاء رحلة المجتمع بنجاح",
+        "allRides": "تم استرجاع رحلات المجتمع بنجاح",
+        "retrieved": "تم استرجاع رحلة المجتمع بنجاح",
+        "updated": "تم تحديث رحلة المجتمع بنجاح",
+        "deleted": "تم حذف رحلة المجتمع بنجاح"
     },
     "statuses": {
       "open": "مفتول",

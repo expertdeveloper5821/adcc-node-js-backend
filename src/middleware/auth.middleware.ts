@@ -27,9 +27,7 @@ export const authenticate = (
       req.user = {
         role: 'Guest',
         isGuest: true,
-        // Add a virtual guest ID for consistency
-        id: `guest_${decoded.uid || 'anonymous'}`,
-        guestId: decoded.uid || 'anonymous',
+        id: decoded.id ?? `guest_${decoded.uid || 'anonymous'}`,
       };
       return next();
     }

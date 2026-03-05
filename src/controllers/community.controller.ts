@@ -183,7 +183,7 @@ export const getCommunityById = asyncHandler(async (req: Request, res: Response)
     .populate('members', 'fullName email age gender');
 
   if (!community) {
-    throw new AppError(t(lang, "auth.unauthorized"), 404);
+    throw new AppError(t(lang, "community.not_found"), 404);
   }
 
   // include upcoming event count and accurate member count from membership collection
@@ -217,7 +217,7 @@ export const updateCommunity = asyncHandler(async (req: AuthRequest, res: Respon
   const community = await Community.findById(id);
 
   if (!community) {
-    throw new AppError(t(lang, "auth.unauthorized"), 404);
+    throw new AppError(t(lang, "community.not_found"), 404);
   }
 
   const existingTrackId = normalizeOptionalTrackId((community as any).trackId);
@@ -263,7 +263,7 @@ export const deleteCommunity = asyncHandler(async (req: AuthRequest, res: Respon
   const community = await Community.findByIdAndDelete(id);
 
   if (!community) {
-    throw new AppError(t(lang, "auth.unauthorized"), 404);
+    throw new AppError(t(lang, "community.not_found"), 404);
   }
 
   sendSuccess(res, null, t(lang, "community.deleted"), 201);
