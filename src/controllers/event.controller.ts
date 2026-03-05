@@ -6,7 +6,6 @@ import { asyncHandler } from '@/utils/async-handler';
 import { AppError } from '@/utils/app-error';
 import { AuthRequest } from '@/middleware/auth.middleware';
 import {
-  isRideCategory,
   incrementStatsOnJoin,
   decrementStatsOnCancel,
   addDistanceOnComplete,
@@ -161,6 +160,10 @@ export const getEventResults = asyncHandler(async (req: AuthRequest, res: Respon
   if (eventResults.time) {
     throw new AppError('Result already submitted', 400);
   }
+
+  const eventDoc = await Event.findById(eventId).select('trackId').lean();
+  const hasTrack = !!eventDoc?.trackId;
+
   const distanceKm = Number(req.body.distance) || 0;
   eventResults.set({
     distance: distanceKm,
@@ -170,7 +173,7 @@ export const getEventResults = asyncHandler(async (req: AuthRequest, res: Respon
 
   await eventResults.save();
 
-  await addDistanceOnComplete(userId, distanceKm);
+  await addDistanceOnComplete(userId, distanceKm, hasTrack);
 
   sendSuccess(res, eventResults, 'Event results submitted successfully', 201);
 });
@@ -207,7 +210,7 @@ export const joinEvent = asyncHandler(async (req: AuthRequest, res: Response) =>
     eventJoin.status = 'joined';
     await eventJoin.save();
 
-    await incrementStatsOnJoin(userId, isRideCategory(event.category));
+    await incrementStatsOnJoin(userId);
 
     return sendSuccess(
       res,
@@ -223,7 +226,7 @@ export const joinEvent = asyncHandler(async (req: AuthRequest, res: Response) =>
     status: 'joined',
   });
 
-  await incrementStatsOnJoin(userId, isRideCategory(event.category));
+  await incrementStatsOnJoin(userId);
 
   return sendSuccess(
     res,
@@ -389,7 +392,7 @@ export const cancelRegistration = asyncHandler(async (req: AuthRequest, res: Res
   });
   await eventResult.save();
 
-  await decrementStatsOnCancel(userId, isRideCategory(eventDoc?.category));
+  await decrementStatsOnCancel(userId);
 
   sendSuccess(res, eventResult, 'Event participation cancelled successfully', 201);
 });

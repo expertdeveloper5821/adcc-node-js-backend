@@ -5,7 +5,6 @@ import User from '@/models/user.model';
 import EventResult from '@/models/eventResult.model';
 import { verifyFirebaseToken } from '@/services/firebase.service';
 import { communityMembershipService } from '@/services';
-import { RIDE_CATEGORIES } from '@/services/user-stats.service';
 import {
   generateTokens,
   verifyRefreshToken,
@@ -408,7 +407,12 @@ export const getCurrentUserStats = asyncHandler(
           totalRides: {
             $sum: {
               $cond: [
-                { $in: ['$event.category', RIDE_CATEGORIES] },
+                {
+                  $and: [
+                    { $eq: ['$status', 'completed'] },
+                    { $ne: ['$event.trackId', null] },
+                  ],
+                },
                 1,
                 0,
               ],
@@ -546,7 +550,7 @@ export const getMyActiveParticipations = asyncHandler(
         event: r.eventId,
         joinedAt: r.createdAt,
       };
-      if (RIDE_CATEGORIES.includes(r.eventId?.category)) {
+      if (r.eventId?.trackId) {
         rides.push(item);
       } else {
         events.push(item);
