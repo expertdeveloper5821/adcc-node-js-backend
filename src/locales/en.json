@@ -65,5 +65,143 @@
         "completed": "Event completed already",
         "participationCancelled": "Event participation cancelled successfully",
         "status_retrieved": "Event participation status retrieved successfully"
+    },
+    "statuses": {
+      "open": "Open",
+      "draft": "Draft",
+      "full": "Full",
+      "completed": "Completed",
+      "archived": "Archived",
+      "limited": "Limited",
+      "closed": "Closed",
+      "disabled": "Disabled",
+      "active": "Active",
+      "left": "Left",
+      "banned": "Banned"
+    },
+    "communityTypes": {
+      "club": "Club",
+      "city": "City",
+      "group": "Group",
+      "purpose": "Purpose",
+      "special": "Special",
+      "shop": "Shop",
+      "women": "Women",
+      "youth": "Youth",
+      "family": "Family",
+      "corporate": "Corporate",
+      "racingPerformance": "Racing & Performance",
+      "leisureSocial": "Leisure & Social",
+      "advocacyAwareness": "Advocacy & Awareness",
+      "familyKids": "Family & Kids",
+      "corporateEvents": "Corporate Events",
+      "nationalEvents": "National Events",
+      "familyLeisure": "Family & Leisure",
+      "groupCommunities": "Group Communities",
+      "cityCommunities": "City Communities",
+      "specialInterest": "Special Interest",
+      "awarenessCharity": "Awareness & Charity",
+      "trainingClinics": "Training & Clinics"
+    },
+    "locations": {
+      "abuDhabi": "Abu Dhabi",
+      "dubai": "Dubai",
+      "alAin": "Al Ain",
+      "sharjah": "Sharjah"
+    },
+    "amenities": {
+      "water": "Water",
+      "parking": "Parking",
+      "toilets": "Toilets",
+      "lighting": "Lighting",
+      "medicalSupport": "Medical Support",
+      "bikeService": "Bike Service",
+      "cafes": "Cafes",
+      "bikeRental": "Bike Rental",
+      "firstAid": "First Aid",
+      "changingRooms": "Changing Rooms",
+      "lights": "Lights",
+      "women(sherides)": "women(sherides)"
+    },
+    "trackTypes": {
+      "circuit": "Circuit",
+      "road": "Road",
+      "costal": "Coastal",
+      "desert": "Desert",
+      "urban": "Urban"
+    },
+    "surfaceTypes": {
+      "asphalt": "Asphalt",
+      "concrete": "Concrete",
+      "mixed": "Mixed"
+    },
+    "experienceLevels": {
+      "beginner": "Beginner",
+      "intermediate": "Intermediate",
+      "advanced": "Advanced",
+      "all": "All Levels"
+    },
+    "genders": {
+      "male": "Male",
+      "female": "Female",
+      "other": "Other",
+      "all": "All"
+    },
+    "eventCategories": {
+      "race": "Race",
+      "communityRide": "Community Ride",
+      "trainingClinics": "Training & Clinics",
+      "awarenessRides": "Awareness Rides",
+      "familyKids": "Family & Kids",
+      "corporateEvents": "Corporate Events",
+      "nationalEvents": "National Events"
+    },
+    "categories": {
+      "special": "Special",
+      "city": "City",
+      "group": "Group",
+      "purpose": "Purpose",
+      "type": "Type"
+    },
+    "difficulties": {
+      "easy": "Easy",
+      "medium": "Medium",
+      "hard": "Hard",
+      "Beginner": "Beginner",
+      "Intermediate": "Intermediate",
+      "Advanced": "Advanced"
+    },
+    "countries": {
+      "uae": "United Arab Emirates",
+      "SAUDI_ARABIA": "Saudi Arabia",
+      "QATAR": "Qatar",
+      "OMAN": "Oman",
+      "BAHRAIN": "Bahrain",
+      "KUWAIT": "Kuwait",
+      "Oman": "Oman"
+    },
+    "visibilities": {
+      "public": "Public",
+      "private": "Private"
+    },
+    "fieldLabels": {
+      "title": "Title",
+      "description": "Description",
+      "details": "Details",
+      "status": "Status",
+      "featured": "Featured",
+      "members": "Members",
+      "list": "List",
+      "gallery": "Gallery",
+      "post": "Post",
+      "cycling": "Cycling",
+      "routes": "Routes",
+      "city": "City",
+      "location": "Location",
+      "type": "Type",
+      "difficulty": "Difficulty",
+      "country": "Country",
+      "visibility": "Visibility",
+      "category": "Category"
     }
 }

@@ -33,16 +33,17 @@ app.use(morgan('dev'));
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// Language middleware - MUST be before routes
-app.use(languageMiddleware);
-
 // Health check
 app.get('/health', (_req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });
 
-// Route
-app.use(`/${API_VERSION}`, routes);
+// Routes with explicit language short code: /v1/en/* or /v1/ar/*
+app.use(`/${API_VERSION}/en`, languageMiddleware, routes);
+app.use(`/${API_VERSION}/ar`, languageMiddleware, routes);
+
+// Backward-compatible routes without language short code
+app.use(`/${API_VERSION}`, languageMiddleware, routes);
 
 // Error handling
 app.use(notFound as any);

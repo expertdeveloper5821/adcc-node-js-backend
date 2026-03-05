@@ -3,7 +3,9 @@ import { z } from 'zod';
 export const createCommunityRideSchema = z
   .object({
     title: z.string().min(1, 'Title is required'),
+    titleAr: z.string().min(1, 'Arabic title is required').optional(),
     description: z.string().min(1, 'Description is required'),
+    descriptionAr: z.string().min(1, 'Arabic description is required').optional(),
     image: z.string().optional(),
     date: z.string().or(z.date()).refine(
       (val) => {
@@ -14,6 +16,7 @@ export const createCommunityRideSchema = z
     ),
     time: z.string().min(1, 'Time is required'),
     address: z.string().min(1, 'Address is required'),
+    addressAr: z.string().min(1, 'Arabic address is required').optional(),
     maxParticipants: z.number().int().min(0, 'Max participants cannot be negative').optional(),
     minAge: z.number().int().min(0, 'Min age cannot be negative').optional(),
     maxAge: z.number().int().min(0, 'Max age cannot be negative').optional(),
@@ -24,7 +27,9 @@ export const createCommunityRideSchema = z
 export const updateCommunityRideSchema = z
   .object({
     title: z.string().min(1, 'Title is required').optional(),
+    titleAr: z.string().min(1, 'Arabic title is required').optional(),
     description: z.string().min(1, 'Description is required').optional(),
+    descriptionAr: z.string().min(1, 'Arabic description is required').optional(),
     image: z.string().optional(),
     date: z
       .string()
@@ -39,6 +44,7 @@ export const updateCommunityRideSchema = z
       .optional(),
     time: z.string().min(1, 'Time is required').optional(),
     address: z.string().min(1, 'Address is required').optional(),
+    addressAr: z.string().min(1, 'Arabic address is required').optional(),
     maxParticipants: z.number().int().min(0, 'Max participants cannot be negative').optional(),
     minAge: z.number().int().min(0, 'Min age cannot be negative').optional(),
     maxAge: z.number().int().min(0, 'Max age cannot be negative').optional(),

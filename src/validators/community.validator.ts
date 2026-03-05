@@ -6,6 +6,21 @@ export const objectIdSchema = z.string().refine(
   { message: 'Invalid MongoDB ObjectId' }
 );
 
+const optionalObjectIdSchema = z.preprocess(
+  (val) => {
+    if (val === null || val === undefined) return undefined;
+    if (typeof val === 'string') {
+      const normalized = val.trim().toLowerCase();
+      if (!normalized || normalized === 'null' || normalized === 'undefined') {
+        return undefined;
+      }
+      return val;
+    }
+    return val;
+  },
+  objectIdSchema.optional()
+);
+
 // Maximum image size: 2MB (original image size before base64 encoding)
 // Base64 encoding increases size by ~33% (4/3 ratio), so 2MB image ≈ 2.67MB in base64
 // 2MB = 2 * 1024 * 1024 = 2,097,152 bytes
@@ -50,7 +65,9 @@ const imageStringSchema = z.string().refine(
 export const createCommunitySchema = z
   .object({
     title: z.string().min(1, 'Community title is required'),
+    titleAr: z.string().min(1, 'Arabic community title is required').optional(),
     description: z.string().min(1, 'Community description is required'),
+    descriptionAr: z.string().min(1, 'Arabic community description is required').optional(),
     type: z.array(z.string().trim()).optional(),
     category: z.string().optional(),
     location: z.enum(['Abu Dhabi', 'Dubai', 'Al Ain', 'Sharjah']).optional(),
@@ -70,14 +87,16 @@ export const createCommunitySchema = z
     manager: z.string().optional(),
     area: z.string().optional(),
     city: z.string().optional(),
-    trackId: objectIdSchema.optional(),
+    trackId: optionalObjectIdSchema,
   })
   .strict();
 
 export const updateCommunitySchema = z
   .object({
     title: z.string().min(1, 'Community title is required').optional(),
+    titleAr: z.string().min(1, 'Arabic community title is required').optional(),
     description: z.string().min(1, 'Community description is required').optional(),
+    descriptionAr: z.string().min(1, 'Arabic community description is required').optional(),
     type: z.array(z.string().trim()).optional(),
     category: z.string().optional(),
     location: z.enum(['Abu Dhabi', 'Dubai', 'Al Ain', 'Sharjah']).optional(),
@@ -97,12 +116,12 @@ export const updateCommunitySchema = z
     manager: z.string().optional(),
     area: z.string().optional(),
     city: z.string().optional(),
-    trackId: objectIdSchema.optional(),
+    trackId: optionalObjectIdSchema,
   })
   .strict();
 
 export const getCommunitiesQuerySchema = z.object({
-  type: z.enum(['Club', 'Shop', 'Women', 'Youth', 'Family', 'Corporate']).optional(),
+  type: z.enum(['Family Rides', 'Racing & Performance', 'Women (SheRides)', 'Youth Cycling', 'Weekend Social', 'Night Riders', 'MTB/Trail', 'Training & Clinics']).optional(),
   location: z.enum(['Abu Dhabi', 'Dubai', 'Al Ain', 'Sharjah']).optional(),
   category: z.string().optional(),
   search: z.string().optional(),

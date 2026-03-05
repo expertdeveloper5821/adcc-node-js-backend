@@ -14,7 +14,9 @@ export const facilityEnum = z.enum([
 export const createTrackSchema = z
     .object({
         title: z.string().min(1, 'Track title is required'),
+        titleAr: z.string().min(1, 'Arabic track title is required').optional(),
         description: z.string().min(1, 'Track description is required'),
+        descriptionAr: z.string().min(1, 'Arabic track description is required').optional(),
         image: z.string().optional(),
         coverImage: z.string().optional(),
         city: z.string().optional(),
@@ -50,7 +52,9 @@ export const createTrackSchema = z
 export const updateTrackSchema = z
     .object({
         title: z.string().min(1, 'Track title is required').optional(),
+        titleAr: z.string().min(1, 'Arabic track title is required').optional(),
         description: z.string().min(1, 'Track description is required').optional(),
+        descriptionAr: z.string().min(1, 'Arabic track description is required').optional(),
         image: z.string().optional(),
         coverImage: z.string().optional(),
         city: z.string().optional(),

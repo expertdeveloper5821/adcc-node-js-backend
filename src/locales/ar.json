@@ -64,5 +64,142 @@
         "completed": "تم إكمال الحدث بالفعل",
         "participationCancelled": "تم إلغاء مشاركة الحدث بنجاح",
         "status_retrieved": "تم استرجاع حالة المشاركة في الحدث بنجاح"
+    },
+    "statuses": {
+      "open": "مفتول",
+      "draft": "مسودة",
+      "full": "ممتلء",
+      "completed": "مكتمل",
+      "archived": "مؤرشف",
+      "limited": "محدود",
+      "closed": "مغلق",
+      "disabled": "معطل",
+      "active": "نشط",
+      "left": "غادر",
+      "banned": "محظور"
+    },
+    "communityTypes": {
+      "club": "نادي",
+      "shop": "متجر",
+      "city": "مدينة",
+      "group": "مجموعة",
+      "purpose": "غرض",
+      "women": "نساء",
+      "youth": "شباب",
+      "family": "عائلة",
+      "corporate": "شركات",
+      "racingPerformance": "السباق والأداء",
+      "leisureSocial": "الترفيه والاجتماعي",
+      "advocacyAwareness": "الدعوة والوعي",
+      "familyKids": "العائلة والأطفال",
+      "corporateEvents": "الأحداث الشركات",
+      "nationalEvents": "الأحداث الوطنية",
+      "familyLeisure": "العائلة والترفيه",
+      "groupCommunities": "المجتمعات الجماعية",
+      "cityCommunities": "المجتمعات الحضرية",
+      "specialInterest": "الاهتمام الخاص",
+      "awarenessCharity": "الوعي والخيرية",
+      "trainingClinics": "ورش التدريب والعيادات",
+      "awarenessRides": "ركوب الوعي",
+      "women(sherides)": "نساء (شيريدز)"
+    },
+    "locations": {
+      "abuDhabi": "أبوظبي",
+      "dubai": "دبي",
+      "alAin": "العين",
+      "sharjah": "الشارقة"
+    },
+    "amenities": {
+      "water": "ماء",
+      "parking": "موقف سيارات",
+      "toilets": "دورات المياه",
+      "lighting": "إضاءة",
+      "medicalSupport": "الدعم الطبي",
+      "bikeService": "خدمة الدراجات",
+      "cafes": "مقاهي",
+      "bikeRental": "تأجير الدراجات",
+      "firstAid": "الإسعافات الأولية",
+      "changingRooms": "غرف تبديل الملابس",
+      "lights": "أضواء"
+    },
+    "trackTypes": {
+      "circuit": "دائري",
+      "road": "طريق",
+      "costal": "ساحلي",
+      "desert": "صحراوي",
+      "urban": "حضري"
+    },
+    "surfaceTypes": {
+      "asphalt": "رصيف",
+      "concrete": "خرسانة",
+      "mixed": "مختلط"
+    },
+    "experienceLevels": {
+      "beginner": "مبتدئ",
+      "intermediate": "متوسط",
+      "advanced": "متقدم",
+      "all": "جميع المستويات"
+    },
+    "genders": {
+      "male": "ذكر",
+      "female": "أنثى",
+      "other": "آخر",
+      "all": "الكل"
+    },
+    "eventCategories": {
+      "race": "سباق",
+      "communityRide": "ركوب المجتمع",
+      "trainingClinics": "ورش التدريب والعيادات",
+      "awarenessRides": "ركوب الوعي",
+      "familyKids": "العائلة والأطفال",
+      "corporateEvents": "الأحداث الشركات",
+      "nationalEvents": "الأحداث الوطنية"
+    },
+    "categories": {
+      "special": "خاص",
+      "city": "مدينة",
+      "group": "مجموعة",
+      "purpose": "غرض",
+      "type": "نوع"
+    },
+    "difficulties": {
+      "easy": "سهل",
+      "medium": "متوسط",
+      "hard": "صعب",
+      "Beginner": "مبتدئ",
+      "Intermediate": "متوسط",
+      "Advanced": "متقدم"
+    },
+    "countries": {
+      "uae": "الإمارات العربية المتحدة",
+      "KSA": "المملكة العربية السعودية",
+      "Qatar": "قطر",
+      "Bahrain": "البحرين",
+      "Oman": "عمان",
+      "Kuwait": "الكويت"
+    },
+    "visibilities": {
+      "public": "عام",
+      "private": "خاص"
+    },
+    "fieldLabels": {
+      "title": "العنوان",
+      "description": "الوصف",
+      "details": "التفاصيل",
+      "status": "الحالة",
+      "featured": "مميز",
+      "members": "الأعضاء",
+      "list": "قائمة",
+      "gallery": "المعرض",
+      "post": "منشور",
+      "cycling": "ركوب الدراجات",
+      "routes": "المسارات",
+      "city": "المدينة",
+      "location": "الموقع",
+      "type": "النوع",
+      "difficulty": "الصعوبة",
+      "country": "البلد",
+      "visibility": "الرؤية",
+      "category": "الفئة"
     }
 }

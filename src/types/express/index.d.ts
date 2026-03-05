@@ -1,9 +1,7 @@
-import { Request } from "express";
-
-declare global {
-  namespace Express {
-    interface Request {
-      lang?: string;
-    }
+declare module 'express-serve-static-core' {
+  interface Request {
+    lang?: 'en' | 'ar';
   }
 }
+
+export {};

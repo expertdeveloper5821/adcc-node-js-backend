@@ -2,11 +2,14 @@ import mongoose, { Schema, Document } from 'mongoose';
 
 export interface ICommunityRide extends Document {
   title: string;
+  titleAr?: string;
   description: string;
+  descriptionAr?: string;
   image?: string;
   date: Date;
   time: string;
   address: string;
+  addressAr?: string;
   maxParticipants?: number; // 0 means unlimited
   minAge?: number;
   maxAge?: number;
@@ -24,9 +27,17 @@ const CommunityRideSchema = new Schema(
       required: [true, 'Title is required'],
       trim: true,
     },
+    titleAr: {
+      type: String,
+      trim: true,
+    },
     description: {
       type: String,
       required: [true, 'Description is required'],
+      trim: true,
+    },
+    descriptionAr: {
+      type: String,
       trim: true,
     },
     image: {
@@ -44,6 +55,10 @@ const CommunityRideSchema = new Schema(
     address: {
       type: String,
       required: [true, 'Address is required'],
+      trim: true,
+    },
+    addressAr: {
+      type: String,
       trim: true,
     },
     maxParticipants: {

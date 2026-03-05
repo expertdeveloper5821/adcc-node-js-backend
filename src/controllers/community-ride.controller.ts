@@ -6,6 +6,19 @@ import { sendSuccess } from '@/utils/response';
 import { asyncHandler } from '@/utils/async-handler';
 import { AppError } from '@/utils/app-error';
 import { AuthRequest } from '@/middleware/auth.middleware';
+import { localizeDocumentFields, SupportedLanguage, localizeCommunityRideStatic } from '@/utils/localization';
+
+const COMMUNITY_RIDE_LOCALIZED_FIELDS = {
+  title: 'titleAr',
+  description: 'descriptionAr',
+  address: 'addressAr',
+};
+
+const localizeCommunityRide = (ride: Record<string, any>, lang: SupportedLanguage) => {
+  const localized = localizeDocumentFields(ride, lang, COMMUNITY_RIDE_LOCALIZED_FIELDS);
+  localizeCommunityRideStatic(localized, lang);
+  return localized;
+};
 
 /**
  * Create new community ride
@@ -13,6 +26,7 @@ import { AuthRequest } from '@/middleware/auth.middleware';
  * Admin only
  */
 export const createCommunityRide = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const lang = ((req as any).lang || 'en') as SupportedLanguage;
   const userId = req.user?.id;
 
   if (!userId) {
@@ -21,13 +35,16 @@ export const createCommunityRide = asyncHandler(async (req: AuthRequest, res: Re
 
   const rideData = {
     ...req.body,
+    titleAr: req.body.titleAr || req.body.title,
+    descriptionAr: req.body.descriptionAr || req.body.description,
+    addressAr: req.body.addressAr || req.body.address,
     date: req.body.date ? new Date(req.body.date) : undefined,
     createdBy: userId,
   };
 
   const ride = await CommunityRide.create(rideData);
 
-  sendSuccess(res, ride, 'Community ride created successfully', 201);
+  sendSuccess(res, localizeCommunityRide(ride.toObject(), lang), 'Community ride created successfully', 201);
 });
 
 /**
@@ -36,6 +53,7 @@ export const createCommunityRide = asyncHandler(async (req: AuthRequest, res: Re
  * Public - with optional filters
  */
 export const getAllCommunityRides = asyncHandler(async (req: Request, res: Response) => {
+  const lang = ((req as any).lang || 'en') as SupportedLanguage;
   const { status, page = 1, limit = 10 } = req.query;
 
   // Build filter object
@@ -55,13 +73,15 @@ export const getAllCommunityRides = asyncHandler(async (req: Request, res: Respo
     .skip(skip)
     .limit(limitNum);
 
+  const localizedRides = rides.map((ride) => localizeCommunityRide(ride.toObject(), lang));
+
   // Get total count
   const total = await CommunityRide.countDocuments(filter);
 
   sendSuccess(
     res,
     {
-      rides,
+      rides: localizedRides,
       pagination: {
         page: pageNum,
         limit: limitNum,
@@ -79,6 +99,7 @@ export const getAllCommunityRides = asyncHandler(async (req: Request, res: Respo
  * Public
  */
 export const getCommunityRideById = asyncHandler(async (req: Request, res: Response) => {
+  const lang = ((req as any).lang || 'en') as SupportedLanguage;
   const { id } = req.params;
 
   const ride = await CommunityRide.findById(id).populate('createdBy', 'fullName email');
@@ -87,7 +108,7 @@ export const getCommunityRideById = asyncHandler(async (req: Request, res: Respo
     throw new AppError('Community ride not found', 404);
   }
 
-  sendSuccess(res, ride, 'Community ride retrieved successfully');
+  sendSuccess(res, localizeCommunityRide(ride.toObject(), lang), 'Community ride retrieved successfully');
 });
 
 /**
@@ -96,12 +117,23 @@ export const getCommunityRideById = asyncHandler(async (req: Request, res: Respo
  * Admin only
  */
 export const updateCommunityRide = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const lang = ((req as any).lang || 'en') as SupportedLanguage;
   const { id } = req.params;
   const updateData = { ...req.body };
 
   // Convert date string to Date if provided
   if (updateData.date) {
     updateData.date = new Date(updateData.date);
+  }
+
+  if (updateData.title && !updateData.titleAr) {
+    updateData.titleAr = updateData.title;
+  }
+  if (updateData.description && !updateData.descriptionAr) {
+    updateData.descriptionAr = updateData.description;
+  }
+  if (updateData.address && !updateData.addressAr) {
+    updateData.addressAr = updateData.address;
   }
 
   const ride = await CommunityRide.findByIdAndUpdate(id, updateData, {
@@ -113,7 +145,7 @@ export const updateCommunityRide = asyncHandler(async (req: AuthRequest, res: Re
     throw new AppError('Community ride not found', 404);
   }
 
-  sendSuccess(res, ride, 'Community ride updated successfully');
+  sendSuccess(res, localizeCommunityRide(ride.toObject(), lang), 'Community ride updated successfully');
 });
 
 /**
@@ -141,6 +173,7 @@ export const deleteCommunityRide = asyncHandler(async (req: AuthRequest, res: Re
  */
 export const communityMemberStatus = asyncHandler(
   async (req: AuthRequest, res: Response) => {
+    const lang = ((req as any).lang || 'en') as SupportedLanguage;
     const { id: communityId } = req.params;
     const userId = req.user?.id;
 
@@ -186,7 +219,7 @@ export const communityMemberStatus = asyncHandler(
         membershipDetails,
         community: {
           id: community._id,
-          title: community.title,
+          title: lang === 'ar' ? community.titleAr || community.title : community.title,
           type: community.type,
           category: community.category,
           location: community.location,

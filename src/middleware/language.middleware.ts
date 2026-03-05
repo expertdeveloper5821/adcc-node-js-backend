@@ -1,15 +1,12 @@
-import { Response, NextFunction } from "express";
-import { AuthRequest } from './auth.middleware';
+import { Request, Response, NextFunction } from 'express';
+import { resolveRequestLanguage } from '@/utils/localization';
 
 export const languageMiddleware = (
-  req: AuthRequest,
+  req: Request,
   _res: Response,
   next: NextFunction
 ) => {
-  const lang = req.headers["accept-language"];
-
-  // Check if the header starts with 'ar' (handles 'ar', 'ar-AE', etc.)
-  (req as any).lang = (lang as string)?.toLowerCase().startsWith("ar") ? "ar" : "en";
+  (req as Request & { lang?: 'en' | 'ar' }).lang = resolveRequestLanguage(req);
 
   next();
 };
