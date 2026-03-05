@@ -30,8 +30,8 @@ export interface IEvent {
 
 
 export interface IEvent extends Document {
-  communityId: mongoose.Types.ObjectId;
-  trackId: mongoose.Types.ObjectId;
+  communityId?: mongoose.Types.ObjectId;
+  trackId?: mongoose.Types.ObjectId;
   title: string;
   titleAr?: string;
   description: string;
@@ -77,13 +77,13 @@ const EventSchema = new Schema(
     communityId: {
       type: Schema.Types.ObjectId,
       ref: 'communities',
-      default: null,
+      // default: null,
       // required: [true, 'Community ID is required'],
     },
     trackId: {
       type: Schema.Types.ObjectId,
       ref: 'track',
-      default: null,
+      // default: null,
       // required: [true, 'Track ID is required'],
     },
     title: {

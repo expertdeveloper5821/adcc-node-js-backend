@@ -25,8 +25,8 @@ export const createEventSchema = z
     maxAge: z.number().int().min(0, 'Max age cannot be negative').optional(),
     youtubeLink: z.string().url('Invalid YouTube URL').optional().or(z.literal('')),
     distance: z.number().min(0, 'Distance cannot be negative').optional(),
-    communityId: z.string().min(1, 'Community ID is required'),
-    trackId: z.string().min(1, 'Track ID is required'),
+    communityId: z.string().min(1, 'Community ID is required').optional(),
+    trackId: z.string().min(1, 'Track ID is required').optional(),
     amenities: z
       .array(
         z.enum({
@@ -67,7 +67,7 @@ export const createEventSchema = z
     category: z.string().optional(),
     isFeatured: z.boolean().default(false),
     allowCancellation: z.boolean().default(false),
-    galleryImages: z.array(z.string().optional())
+    galleryImages: z.array(z.string()).optional().default([])
   })
   .strict();
 
@@ -142,7 +142,7 @@ export const updateEventSchema = z
     category: z.string().optional(),
     isFeatured: z.boolean().default(false),
     allowCancellation: z.boolean().default(false),
-    galleryImages: z.array(z.string().optional())
+    galleryImages: z.array(z.string()).optional()
 
   })
   .strict();
