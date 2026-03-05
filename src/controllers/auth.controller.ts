@@ -4,6 +4,7 @@ import mongoose from 'mongoose';
 import User from '@/models/user.model';
 import EventResult from '@/models/eventResult.model';
 import { verifyFirebaseToken } from '@/services/firebase.service';
+import { communityMembershipService } from '@/services';
 import { RIDE_CATEGORIES } from '@/services/user-stats.service';
 import {
   generateTokens,
@@ -432,6 +433,140 @@ export const getCurrentUserStats = asyncHandler(
     await User.findByIdAndUpdate(userId, { $set: { stats } });
 
     sendSuccess(res, stats, 'User stats retrieved successfully');
+  }
+);
+
+/**
+ * Get current user's joined communities (paginated)
+ * GET /v1/auth/me/joined-communities
+ * Member only.
+ */
+export const getMyJoinedCommunities = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const userId = req.user?.id;
+    if (!userId) {
+      throw new AppError('User not authenticated', 401);
+    }
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const limit = Math.max(1, Math.min(100, Number(req.query.limit) || 10));
+    const result = await communityMembershipService.getMyJoinedCommunities(userId, page, limit);
+    sendSuccess(res, result, 'Joined communities retrieved successfully');
+  }
+);
+
+/**
+ * Get current user's joined events (paginated)
+ * GET /v1/auth/me/joined-events
+ * Member only.
+ */
+export const getMyJoinedEvents = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const userId = req.user?.id;
+    if (!userId) {
+      throw new AppError('User not authenticated', 401);
+    }
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const limit = Math.max(1, Math.min(100, Number(req.query.limit) || 10));
+    const skip = (page - 1) * limit;
+    const filter = { userId, status: { $in: ['joined', 'completed'] } };
+
+    const [results, total] = await Promise.all([
+      EventResult.find(filter)
+        .select('eventId status distance time createdAt')
+        .populate('eventId', 'title eventDate eventTime address city status mainImage communityId trackId category')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      EventResult.countDocuments(filter),
+    ]);
+
+    const events = results.map((r: any) => {
+      const item: any = {
+        event: r.eventId,
+        participationStatus: r.status,
+        joinedAt: r.createdAt,
+      };
+      if (r.status === 'completed') {
+        item.distance = r.distance;
+        item.time = r.time;
+      }
+      return item;
+    });
+
+    sendSuccess(
+      res,
+      {
+        events,
+        pagination: {
+          page,
+          limit,
+          total,
+          pages: Math.ceil(total / limit) || 1,
+        },
+      },
+      'Joined events retrieved successfully'
+    );
+  }
+);
+
+/**
+ * Get current user's active (joined, not yet completed) rides and events
+ * GET /v1/auth/me/active-participations
+ * Member only.
+ */
+export const getMyActiveParticipations = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const userId = req.user?.id;
+    if (!userId) {
+      throw new AppError('User not authenticated', 401);
+    }
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const limit = Math.max(1, Math.min(100, Number(req.query.limit) || 10));
+    const skip = (page - 1) * limit;
+
+    const filter = { userId, status: 'joined' };
+
+    const [results, total] = await Promise.all([
+      EventResult.find(filter)
+        .select('eventId status createdAt')
+        .populate('eventId', 'title eventDate eventTime address city status mainImage communityId trackId category')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      EventResult.countDocuments(filter),
+    ]);
+
+    const rides: any[] = [];
+    const events: any[] = [];
+
+    for (const r of results as any[]) {
+      const item = {
+        event: r.eventId,
+        joinedAt: r.createdAt,
+      };
+      if (RIDE_CATEGORIES.includes(r.eventId?.category)) {
+        rides.push(item);
+      } else {
+        events.push(item);
+      }
+    }
+
+    sendSuccess(
+      res,
+      {
+        rides,
+        events,
+        pagination: {
+          page,
+          limit,
+          total,
+          pages: Math.ceil(total / limit) || 1,
+        },
+      },
+      'Active participations retrieved successfully'
+    );
   }
 );
 

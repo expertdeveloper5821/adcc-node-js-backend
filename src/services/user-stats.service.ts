@@ -6,6 +6,8 @@ export const RIDE_CATEGORIES = [
   'Community Ride',
   'Awareness Rides',
   'Training & Clinics',
+  'Family & Kids','Corporate Events',
+  'National Events'
 ];
 
 export function isRideCategory(category: string | undefined): boolean {

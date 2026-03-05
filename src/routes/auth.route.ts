@@ -6,6 +6,9 @@ import {
   logout,
   getCurrentUser,
   getCurrentUserStats,
+  getMyJoinedCommunities,
+  getMyJoinedEvents,
+  getMyActiveParticipations,
   createGuestSession,
 } from '@/controllers/auth.controller';
 import { validate } from '@/middleware/validate.middleware';
@@ -35,6 +38,9 @@ router.post('/refresh', validate(refreshTokenSchema), refreshAccessToken);
 // Protected routes
 router.post('/logout', authenticate, validate(logoutSchema), logout);
 router.get('/me/stats', authenticate, requireMember, getCurrentUserStats);
+router.get('/me/joined-communities', authenticate, requireMember, getMyJoinedCommunities);
+router.get('/me/joined-events', authenticate, requireMember, getMyJoinedEvents);
+router.get('/me/active-participations', authenticate, requireMember, getMyActiveParticipations);
 router.get('/me', authenticate, getCurrentUser);
 
 export default router;

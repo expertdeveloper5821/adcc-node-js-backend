@@ -154,6 +154,42 @@ export class CommunityMembershipService {
 
 }
 
+  /**
+   * Get current user's joined communities (paginated).
+   * Returns empty list when user has no memberships; does not throw.
+   */
+  async getMyJoinedCommunities(userId: string, page: number = 1, limit: number = 10) {
+    const skip = (page - 1) * limit;
+    const filter = { userId, status: 'active' };
+
+    const [memberships, total] = await Promise.all([
+      CommunityMembership.find(filter)
+        .select('communityId joinedAt role')
+        .populate('communityId', 'title description image location city memberCount type category slug')
+        .sort({ joinedAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      CommunityMembership.countDocuments(filter),
+    ]);
+
+    const communities = memberships.map((m: any) => ({
+      community: m.communityId,
+      joinedAt: m.joinedAt,
+      role: m.role,
+    }));
+
+    return {
+      communities,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit) || 1,
+      },
+    };
+  }
+
 /*
 * Get banned members of a community
 */ 
