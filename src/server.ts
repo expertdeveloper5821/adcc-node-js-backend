@@ -12,6 +12,7 @@ import { connectDB } from './data/database';
 import routes from './routes';
 import { errorHandler } from './middleware/error.middleware';
 import { notFound } from './middleware/not-found.middleware';
+import { languageMiddleware } from './middleware/language.middleware';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -37,8 +38,13 @@ app.get('/health', (_req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });
 
-// Route
-app.use(`/${API_VERSION}`, routes);
+// Routes with explicit language short code: /v1/en/* or /v1/ar/*
+app.use(`/${API_VERSION}/en`, languageMiddleware, routes);
+app.use(`/${API_VERSION}/ar`, languageMiddleware, routes);
+
+// Backward-compatible routes without language short code
+app.use(`/${API_VERSION}`, languageMiddleware, routes);
+
 // Error handling
 app.use(notFound as any);
 app.use(errorHandler as any);

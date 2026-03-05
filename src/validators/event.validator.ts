@@ -3,7 +3,9 @@ import { z } from 'zod';
 export const createEventSchema = z
   .object({
     title: z.string().min(1, 'Event title is required'),
+    titleAr: z.string().min(1, 'Arabic event title is required').optional(),
     description: z.string().min(1, 'Event description is required'),
+    descriptionAr: z.string().min(1, 'Arabic event description is required').optional(),
     mainImage: z.string().optional(),
     eventImage: z.string().optional(),
     eventDate: z.string().or(z.date()).refine(
@@ -15,6 +17,7 @@ export const createEventSchema = z
     ),
     eventTime: z.string().min(1, 'Event time is required'),
     address: z.string().min(1, 'Event address is required'),
+    addressAr: z.string().min(1, 'Arabic event address is required').optional(),
     city: z.string().optional(),
     zipCode: z.string().optional(),
     maxParticipants: z.number().int().min(0, 'Max participants cannot be negative').optional(),
@@ -22,8 +25,8 @@ export const createEventSchema = z
     maxAge: z.number().int().min(0, 'Max age cannot be negative').optional(),
     youtubeLink: z.string().url('Invalid YouTube URL').optional().or(z.literal('')),
     distance: z.number().min(0, 'Distance cannot be negative').optional(),
-    communityId: z.string().min(1, 'Community ID is required'),
-    trackId: z.string().min(1, 'Track ID is required'),
+    communityId: z.string().min(1, 'Community ID is required').optional(),
+    trackId: z.string().min(1, 'Track ID is required').optional(),
     amenities: z
       .array(
         z.enum({
@@ -41,7 +44,9 @@ export const createEventSchema = z
         z.object({
           time: z.string(),
           title:z.string(),
+          titleAr: z.string().optional(),
           description: z.string().optional(),
+          descriptionAr: z.string().optional(),
           order: z.number().optional(),
         })
       )
@@ -62,14 +67,16 @@ export const createEventSchema = z
     category: z.string().optional(),
     isFeatured: z.boolean().default(false),
     allowCancellation: z.boolean().default(false),
-    galleryImages: z.array(z.string().optional())
+    galleryImages: z.array(z.string()).optional().default([])
   })
   .strict();
 
 export const updateEventSchema = z
   .object({
     title: z.string().min(1, 'Event title is required').optional(),
+    titleAr: z.string().min(1, 'Arabic event title is required').optional(),
     description: z.string().min(1, 'Event description is required').optional(),
+    descriptionAr: z.string().min(1, 'Arabic event description is required').optional(),
     mainImage: z.string().optional(),
     eventImage: z.string().optional(),
     eventDate: z
@@ -85,6 +92,7 @@ export const updateEventSchema = z
       .optional(),
     eventTime: z.string().min(1, 'Event time is required').optional(),
     address: z.string().min(1, 'Event address is required').optional(),
+    addressAr: z.string().min(1, 'Arabic event address is required').optional(),
     city: z.string().optional(),
     zipCode: z.string().optional(),
     maxParticipants: z.number().int().min(0, 'Max participants cannot be negative').optional(),
@@ -113,7 +121,9 @@ export const updateEventSchema = z
         z.object({
           time: z.string(),
           title:z.string(),
+          titleAr: z.string().optional(),
           description: z.string().optional(),
+          descriptionAr: z.string().optional(),
           order: z.number().optional(),
         })
       )
@@ -132,7 +142,7 @@ export const updateEventSchema = z
     category: z.string().optional(),
     isFeatured: z.boolean().default(false),
     allowCancellation: z.boolean().default(false),
-    galleryImages: z.array(z.string().optional())
+    galleryImages: z.array(z.string()).optional()
 
   })
   .strict();
