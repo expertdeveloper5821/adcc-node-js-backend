@@ -150,4 +150,3 @@ export type UpdateCommunityInput = z.infer<typeof updateCommunitySchema>;
 export type GetCommunitiesQueryInput = z.infer<typeof getCommunitiesQuerySchema>;
 export type AddGalleryImagesInput = z.infer<typeof addGalleryImagesSchema>;
 export type RemoveGalleryImagesInput = z.infer<typeof removeGalleryImagesSchema>;
-
