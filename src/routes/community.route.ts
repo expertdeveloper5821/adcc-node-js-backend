@@ -12,9 +12,9 @@ import {
   isMemberOfCommunity,
   addGalleryImages,
   removeGalleryImages,
-  getGalleryImages,
+  // getGalleryImages,
   featureCommunity,
-  getFeaturedCommunities,
+  // getFeaturedCommunities,
 } from '@/controllers/community.controller';
 import { validate } from '@/middleware/validate.middleware';
 import {
