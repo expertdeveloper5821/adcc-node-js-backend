@@ -38,6 +38,7 @@ export interface IEvent extends Document {
   eventTime: string;
   address: string;
   city?: string;
+  country ?: string;
   zipCode?: string;
   maxParticipants?: number; // 0 means unlimited
   minAge?: number;
@@ -113,6 +114,10 @@ const EventSchema = new Schema(
       trim: true,
     },
     city: {
+      type: String,
+      trim: true,
+    },
+    country: {
       type: String,
       trim: true,
     },
