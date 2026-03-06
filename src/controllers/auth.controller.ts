@@ -459,7 +459,7 @@ export const getMyJoinedEvents = asyncHandler(
     const [results, total] = await Promise.all([
       EventResult.find(filter)
         .select('eventId status distance time createdAt')
-        .populate('eventId', 'title eventDate eventTime address city status mainImage communityId trackId category')
+        .populate('eventId', 'title titleAr address addressAr eventDate eventTime city status mainImage communityId trackId category')
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
@@ -517,7 +517,7 @@ export const getMyActiveParticipations = asyncHandler(
     const [results, total] = await Promise.all([
       EventResult.find(filter)
         .select('eventId status createdAt')
-        .populate('eventId', 'title eventDate eventTime address city status mainImage communityId trackId category')
+        .populate('eventId', 'title titleAr address addressAr eventDate eventTime city status mainImage communityId trackId category')
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
@@ -591,6 +591,243 @@ export const getCurrentUser = asyncHandler(
     }
 
     sendSuccess(res, user, t(lang, 'auth.profile_retrieved'));
+  }
+);
+
+/**
+ * Get current user's upcoming events (joined + event date in the future)
+ * GET /v1/auth/me/upcoming-events
+ * Member only. Guests get 403.
+ */
+export const getMyUpcomingEvents = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const lang = resolveRequestLanguage(req);
+    const userId = req.user?.id;
+    if (!userId) {
+      throw new AppError(t(lang, 'auth.unauthorized'), 401);
+    }
+    if (req.user?.isGuest) {
+      throw new AppError(t(lang, 'guest.access_denied'), 403);
+    }
+
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const limit = Math.max(1, Math.min(100, Number(req.query.limit) || 10));
+    const skip = (page - 1) * limit;
+    const now = new Date();
+    const userObjectId = new mongoose.Types.ObjectId(userId);
+
+    const basePipeline = [
+      { $match: { userId: userObjectId, status: 'joined' } },
+      {
+        $lookup: {
+          from: 'events',
+          localField: 'eventId',
+          foreignField: '_id',
+          as: 'event',
+        },
+      },
+      { $unwind: { path: '$event', preserveNullAndEmptyArrays: false } },
+      { $match: { 'event.eventDate': { $gt: now } } },
+      {
+        $project: {
+          createdAt: 1,
+          event: 1,
+        },
+      },
+    ];
+
+    const [results, countResult] = await Promise.all([
+      EventResult.aggregate([
+        ...basePipeline,
+        { $sort: { 'event.eventDate': 1 } },
+        { $skip: skip },
+        { $limit: limit },
+      ]),
+      EventResult.aggregate([
+        ...basePipeline,
+        { $count: 'total' },
+      ]),
+    ]);
+
+    const total = countResult[0]?.total ?? 0;
+    const rides: any[] = [];
+    const events: any[] = [];
+
+    for (const r of results) {
+      const item = { event: r.event, joinedAt: r.createdAt };
+      if (r.event?.trackId) {
+        rides.push(item);
+      } else {
+        events.push(item);
+      }
+    }
+
+    sendSuccess(
+      res,
+      {
+        rides,
+        events,
+        pagination: { page, limit, total, pages: Math.ceil(total / limit) || 1 },
+      },
+      t(lang, 'auth.upcoming_events_retrieved')
+    );
+  }
+);
+
+/**
+ * Get current user's cancelled events (user cancelled their registration)
+ * GET /v1/auth/me/cancelled-events
+ * Member only. Guests get 403.
+ */
+export const getMyCancelledEvents = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const lang = resolveRequestLanguage(req);
+    const userId = req.user?.id;
+    if (!userId) {
+      throw new AppError(t(lang, 'auth.unauthorized'), 401);
+    }
+    if (req.user?.isGuest) {
+      throw new AppError(t(lang, 'guest.access_denied'), 403);
+    }
+
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const limit = Math.max(1, Math.min(100, Number(req.query.limit) || 10));
+    const skip = (page - 1) * limit;
+    const filter = { userId, status: 'cancelled' };
+
+    const [results, total] = await Promise.all([
+      EventResult.find(filter)
+        .select('eventId reason updatedAt')
+        .populate('eventId', 'title titleAr address addressAr eventDate eventTime city status mainImage communityId trackId category')
+        .sort({ updatedAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      EventResult.countDocuments(filter),
+    ]);
+
+    const rides: any[] = [];
+    const events: any[] = [];
+
+    for (const r of results as any[]) {
+      const item = {
+        event: r.eventId,
+        cancelledAt: r.updatedAt,
+        reason: r.reason ?? null,
+      };
+      if (r.eventId?.trackId) {
+        rides.push(item);
+      } else {
+        events.push(item);
+      }
+    }
+
+    sendSuccess(
+      res,
+      {
+        rides,
+        events,
+        pagination: { page, limit, total, pages: Math.ceil(total / limit) || 1 },
+      },
+      t(lang, 'auth.cancelled_events_retrieved')
+    );
+  }
+);
+
+/**
+ * Get current user's completed events
+ * GET /v1/auth/me/completed-events
+ * Member only. Guests get 403.
+ */
+export const getMyCompletedEvents = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const lang = resolveRequestLanguage(req);
+    const userId = req.user?.id;
+    if (!userId) {
+      throw new AppError(t(lang, 'auth.unauthorized'), 401);
+    }
+    if (req.user?.isGuest) {
+      throw new AppError(t(lang, 'guest.access_denied'), 403);
+    }
+
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const limit = Math.max(1, Math.min(100, Number(req.query.limit) || 10));
+    const skip = (page - 1) * limit;
+    const filter = { userId, status: 'completed' };
+
+    const [results, total] = await Promise.all([
+      EventResult.find(filter)
+        .select('eventId distance time updatedAt')
+        .populate('eventId', 'title titleAr address addressAr eventDate eventTime city status mainImage communityId trackId category')
+        .sort({ updatedAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      EventResult.countDocuments(filter),
+    ]);
+
+    const rides: any[] = [];
+    const events: any[] = [];
+
+    for (const r of results as any[]) {
+      const item: any = {
+        event: r.eventId,
+        completedAt: r.updatedAt,
+        distance: r.distance ?? null,
+        time: r.time ?? null,
+      };
+      if (r.eventId?.trackId) {
+        rides.push(item);
+      } else {
+        events.push(item);
+      }
+    }
+
+    sendSuccess(
+      res,
+      {
+        rides,
+        events,
+        pagination: { page, limit, total, pages: Math.ceil(total / limit) || 1 },
+      },
+      t(lang, 'auth.completed_events_retrieved')
+    );
+  }
+);
+
+/**
+ * Update current user's profile (fullName, gender, age)
+ * PATCH /v1/auth/me
+ * Member only. Guests get 403.
+ */
+export const updateMyProfile = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const lang = resolveRequestLanguage(req);
+    const userId = req.user?.id;
+    if (!userId) {
+      throw new AppError(t(lang, 'auth.unauthorized'), 401);
+    }
+    if (req.user?.isGuest) {
+      throw new AppError(t(lang, 'guest.access_denied'), 403);
+    }
+
+    const { fullName, gender, age } = req.body;
+    const updates: Record<string, unknown> = {};
+    if (fullName !== undefined) updates.fullName = fullName;
+    if (gender !== undefined) updates.gender = gender;
+    if (age !== undefined) updates.age = age;
+
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { $set: updates },
+      { new: true, runValidators: true }
+    ).select('-refreshTokens -__v');
+
+    if (!user) {
+      throw new AppError(t(lang, 'auth.user_not_found'), 404);
+    }
+
+    sendSuccess(res, user, t(lang, 'auth.profile_updated'));
   }
 );
 

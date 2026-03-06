@@ -39,7 +39,11 @@
     "joined_communities_retrieved": "Joined communities retrieved successfully",
     "joined_events_retrieved": "Joined events retrieved successfully",
     "active_participations_retrieved": "Active participations retrieved successfully",
+    "upcoming_events_retrieved": "Upcoming events retrieved successfully",
+    "cancelled_events_retrieved": "Cancelled events retrieved successfully",
+    "completed_events_retrieved": "Completed events retrieved successfully",
     "profile_retrieved": "User profile retrieved successfully",
+    "profile_updated": "Profile updated successfully",
     "guest_login_success": "Guest login successful"
   },
   "guest": {

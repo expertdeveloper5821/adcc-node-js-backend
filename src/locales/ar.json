@@ -39,7 +39,11 @@
     "joined_communities_retrieved": "تم استرجاع المجتمعات المنضم إليها بنجاح",
     "joined_events_retrieved": "تم استرجاع الأحداث المنضم إليها بنجاح",
     "active_participations_retrieved": "تم استرجاع المشاركات النشطة بنجاح",
+    "upcoming_events_retrieved": "تم استرجاع الأحداث القادمة بنجاح",
+    "cancelled_events_retrieved": "تم استرجاع الأحداث الملغاة بنجاح",
+    "completed_events_retrieved": "تم استرجاع الأحداث المكتملة بنجاح",
     "profile_retrieved": "تم استرجاع الملف الشخصي بنجاح",
+    "profile_updated": "تم تحديث الملف الشخصي بنجاح",
     "guest_login_success": "تم تسجيل الدخول كضيف بنجاح"
   },
   "guest": {
