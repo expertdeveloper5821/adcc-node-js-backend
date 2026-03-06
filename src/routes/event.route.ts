@@ -29,10 +29,10 @@ import { isAdmin } from '@/middleware/role.middleware';
 const router = express.Router();
 
 // Public routes
-router.get('/', validate(getEventsQuerySchema), getAllEvents);
-router.get('/:id', getEventById);
+router.get('/', authenticate, validate(getEventsQuerySchema), getAllEvents);
+router.get('/:id', authenticate, getEventById);
 router.post('/:eventId/results', authenticate, getEventResults);
-router.get('/:eventId/results', getEventResultsList);
+router.get('/:eventId/results',  authenticate, getEventResultsList);
 router.post('/:eventId/joinEvent', authenticate, validate(joinEventSchema), joinEvent);
 router.post('/:eventId/cancel', authenticate, cancelRegistration);
 router.post('/:eventId/add-to-calendar', authenticate, addToCalendar);

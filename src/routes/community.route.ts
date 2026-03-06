@@ -31,15 +31,12 @@ import { isAdmin } from '@/middleware/role.middleware';
 const router = express.Router();
 
 // Public routes
-router.get('/', validate(getCommunitiesQuerySchema), getAllCommunities);
-// featured list for homepage
-router.get('/featured', validate(getCommunitiesQuerySchema), getFeaturedCommunities);
-router.get('/:id', getCommunityById);
-router.get('/:id/gallery', getGalleryImages);
+router.get('/', authenticate, validate(getCommunitiesQuerySchema), getAllCommunities);
+router.get('/:id', authenticate, getCommunityById);
 
 
 // Authenticated routes
-router.get('/:id/communityMembers',  getCommunityMembers);
+router.get('/:id/communityMembers',  authenticate, getCommunityMembers);
 router.post('/:id/join', authenticate, joinCommunity);
 router.post('/:id/leave', authenticate, leaveCommunity);
 router.get('/:id/bannedMembers',authenticate, getBannedUsersInCommunity);
