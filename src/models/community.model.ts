@@ -7,8 +7,16 @@ export interface ICommunity extends Document {
   type: string[];
   category: string;
   location?: 'Abu Dhabi' | 'Dubai' | 'Al Ain' | 'Sharjah';
+  purposeType?: string;
+  ridesThisMonth?: string;
+  weeklyRides?: string;
+  fundsRaised?: string;
+  primaryTracks?: string;
+  joinMode?: string;
+  displayPriority?: string;
   area?: string;
   city?: string;
+  country?: string;
   image?: string;
   logo?: string;
   gallery?: string[];
@@ -20,6 +28,8 @@ export interface ICommunity extends Document {
   isActive: boolean;
   isPublic: boolean;
   isFeatured: boolean;
+  allowPosts: boolean;
+  allowGallery: boolean;
   foundedYear: number;
   trackId?: mongoose.Types.ObjectId;
   createdBy: mongoose.Types.ObjectId;
@@ -51,6 +61,26 @@ const CommunitySchema = new Schema(
       type: String,
       trim: true,
     },
+    purposeType: {
+      type: String,
+      trim: true,
+    },
+    ridesThisMonth: {
+      type: String,
+      trim: true,
+    },
+    weeklyRides: {
+      type: String,
+      trim: true,
+    },
+    fundsRaised: {
+      type: String,
+      trim: true,
+    },
+    joinMode: {
+      type: String,
+      trim: true,
+    },
     location: {
       type: String,
       enum: ['Abu Dhabi', 'Dubai', 'Al Ain', 'Sharjah'],
@@ -60,6 +90,10 @@ const CommunitySchema = new Schema(
       trim: true,
     },
     city: {
+      type: String,
+      trim: true,
+    },
+    country: {
       type: String,
       trim: true,
     },
@@ -111,6 +145,14 @@ const CommunitySchema = new Schema(
       ref: 'tracks',
     },
     isPublic: {
+      type: Boolean,
+      default: false,
+    },
+    allowPosts: {
+      type: Boolean,
+      default: false,
+    },
+    allowGallery: {
       type: Boolean,
       default: false,
     },
