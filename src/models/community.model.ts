@@ -29,6 +29,7 @@ export interface ICommunity extends Document {
   terrain?: string; // For search functionality
   isActive: boolean;
   isPublic: boolean;
+  status: boolean;
   isFeatured: boolean;
   allowPosts: boolean;
   allowGallery: boolean;
@@ -165,6 +166,10 @@ const CommunitySchema = new Schema(
       },
     },
     isPublic: {
+      type: Boolean,
+      default: false,
+    },
+    status: {
       type: Boolean,
       default: false,
     },
