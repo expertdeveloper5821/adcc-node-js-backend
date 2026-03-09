@@ -3,20 +3,6 @@ import { AuthRequest } from './auth.middleware';
 import User from '@/models/user.model';
 
 /**
- * Reject Guest with 403 (used by admin/vendor checks and requireMember).
- */
-function rejectGuest(req: AuthRequest, res: Response, message: string): boolean {
-  if (req.user?.role === 'Guest') {
-    res.status(403).json({
-      success: false,
-      message,
-    });
-    return true;
-  }
-  return false;
-}
-
-/**
  * Middleware to check if user is admin
  */
 export const isAdmin = async (
@@ -24,6 +10,16 @@ export const isAdmin = async (
   res: Response,
   next: NextFunction
 ): Promise<void> => {
+
+  // Guests cannot be admins
+  if (req.user?.isGuest) {
+    res.status(403).json({
+      success: false,
+      message: 'Admin access required',
+    });
+    return;
+  }
+  
   try {
     const userId = req.user?.id;
 
@@ -32,10 +28,6 @@ export const isAdmin = async (
         success: false,
         message: 'User not authenticated',
       });
-      return;
-    }
-
-    if (rejectGuest(req, res, 'Access denied. Guest cannot perform this action.')) {
       return;
     }
 
@@ -86,10 +78,6 @@ export const isVendor = async (
       return;
     }
 
-    if (rejectGuest(req, res, 'Access denied. Guest cannot perform this action.')) {
-      return;
-    }
-
     const user = await User.findById(userId);
 
     if (!user) {
@@ -133,10 +121,6 @@ export const isAdminOrVendor = async (
         success: false,
         message: 'User not authenticated',
       });
-      return;
-    }
-
-    if (rejectGuest(req, res, 'Access denied. Guest cannot perform this action.')) {
       return;
     }
 
