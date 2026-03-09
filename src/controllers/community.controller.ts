@@ -10,6 +10,7 @@ import { AppError } from '@/utils/app-error';
 import { AuthRequest } from '@/middleware/auth.middleware';
 import { communityMembershipService } from '@/services';
 import { localizeDocumentFields, SupportedLanguage, localizeCommunityStatic } from '@/utils/localization';
+import { uploadImageBufferToS3 } from '@/services/s3-upload.service';
 
 interface JoinCommunityParams {
   communityId: string;
@@ -38,6 +39,38 @@ const normalizeOptionalTrackId = (value: unknown): string | undefined => {
   return String(value);
 };
 
+const normalizeGalleryImagesInput = (value: unknown): string[] => {
+  if (!value) return [];
+
+  if (Array.isArray(value)) {
+    return value.filter((item): item is string => typeof item === 'string').map((item) => item.trim()).filter(Boolean);
+  }
+
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed) return [];
+
+    // support form-data where array comes as JSON string
+    if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        if (Array.isArray(parsed)) {
+          return parsed
+            .filter((item): item is string => typeof item === 'string')
+            .map((item) => item.trim())
+            .filter(Boolean);
+        }
+      } catch {
+        return [];
+      }
+    }
+
+    return [trimmed];
+  }
+
+  return [];
+};
+
 /**
  * Create new community
  * POST /v1/communities
@@ -53,6 +86,7 @@ export const createCommunity = asyncHandler(async (req: AuthRequest, res: Respon
 
   const communityData = {
     ...req.body,
+    image: req.body.image || req.body.coverImage,
     titleAr: req.body.titleAr || req.body.title,
     descriptionAr: req.body.descriptionAr || req.body.description,
     trackId: normalizeOptionalTrackId(req.body.trackId),
@@ -60,6 +94,8 @@ export const createCommunity = asyncHandler(async (req: AuthRequest, res: Respon
     members: [], // Start with no members
     memberCount: 0,
   };
+
+  delete (communityData as any).coverImage;
 
   const community = await Community.create(communityData);
   const localizedCommunity = localizeCommunity(community.toObject(), lang);
@@ -232,6 +268,11 @@ export const updateCommunity = asyncHandler(async (req: AuthRequest, res: Respon
   if (req.body.description && !req.body.descriptionAr && !community.descriptionAr) {
     req.body.descriptionAr = req.body.description;
   }
+  if (req.body.coverImage && !req.body.image) {
+    req.body.image = req.body.coverImage;
+  }
+  delete (req.body as any).coverImage;
+
   req.body.trackId = normalizeOptionalTrackId(req.body.trackId);
   if (!req.body.trackId) {
     delete req.body.trackId;
@@ -506,7 +547,29 @@ export const isMemberOfCommunity = asyncHandler(async (req: AuthRequest, res: Re
 export const addGalleryImages = asyncHandler(async (req: AuthRequest, res: Response) => {
   const lang = ((req as any).lang || 'en') as SupportedLanguage;
   const { id } = req.params;
-  const { images } = req.body;
+
+  const uploadedImageUrls =
+    req.files && Array.isArray(req.files)
+      ? await Promise.all(
+          req.files.map(async (file) => {
+            const uploaded = await uploadImageBufferToS3(
+              file.buffer,
+              file.mimetype,
+              file.originalname,
+              'galleries'
+            );
+            return uploaded.url;
+          })
+        )
+      : [];
+
+  const bodyImages = normalizeGalleryImagesInput((req.body as any).images);
+  const bodyImage = normalizeGalleryImagesInput((req.body as any).image);
+  const images = [...uploadedImageUrls, ...bodyImages, ...bodyImage];
+
+  if (images.length === 0) {
+    throw new AppError('At least one image is required', 400);
+  }
 
   const community = await Community.findById(id);
 

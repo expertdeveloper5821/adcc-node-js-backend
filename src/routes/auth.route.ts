@@ -5,7 +5,8 @@ import {
   refreshAccessToken,
   logout,
   getCurrentUser,
-  guestLogin
+  guestLogin,
+  updateProfileImage,
 } from '@/controllers/auth.controller';
 import { validate } from '@/middleware/validate.middleware';
 import {
@@ -13,6 +14,7 @@ import {
   registerUserSchema,
   refreshTokenSchema,
   logoutSchema,
+  updateProfileImageSchema,
 } from '@/validators/auth.validator';
 import { authenticate } from '@/middleware/auth.middleware';
 
@@ -32,6 +34,7 @@ router.post('/guestLogin', guestLogin);
 // Protected routes
 router.post('/logout', authenticate, validate(logoutSchema), logout);
 router.get('/me', authenticate, getCurrentUser);
+router.patch('/me/profile-image', authenticate, validate(updateProfileImageSchema), updateProfileImage);
 
 export default router;
 

@@ -98,23 +98,23 @@ export const getAllEvents = asyncHandler(async (req: Request, res: Response) => 
   if (status) filter.status = status;
 
   // Pagination
-  const pageNum = Number(page);
-  const limitNum = Number(limit);
+  const pageNum = Math.max(1, Number(page) || 1);
+  const limitNum = Math.min(100, Math.max(1, Number(limit) || 10));
   const skip = (pageNum - 1) * limitNum;
 
-  // Get events
-  const events = await Event.find(filter)
+  const eventsQuery = Event.find(filter)
     .populate('createdBy', 'fullName email')
     .populate('trackId', 'title titleAr')
     .populate('communityId', 'title titleAr')
     .sort({ eventDate: 1, createdAt: -1 })
     .skip(skip)
-    .limit(limitNum);
+    .limit(limitNum)
+    .lean();
 
-  // Get total count
-  const total = await Event.countDocuments(filter);
+  // Run list + count in parallel to reduce endpoint latency.
+  const [events, total] = await Promise.all([eventsQuery, Event.countDocuments(filter)]);
 
-  const localizedEvents = events.map((event) => localizeEventPayload(event.toObject(), lang));
+  const localizedEvents = events.map((event) => localizeEventPayload(event as Record<string, any>, lang));
 
   sendSuccess(
     res,

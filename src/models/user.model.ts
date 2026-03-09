@@ -11,6 +11,7 @@ export interface IUser extends Document {
   firebaseUid: string;
   phone?: string;
   email?: string;
+  profileImage?: string;
   gender: 'Male' | 'Female';
   age: number;
   role: 'Admin' | 'Vendor' | 'Member' | 'Guest';
@@ -67,6 +68,10 @@ const UserSchema = new Schema(
       sparse: true,
       trim: true,
       lowercase: true,
+    },
+    profileImage: {
+      type: String,
+      trim: true,
     },
     gender: {
       type: String,

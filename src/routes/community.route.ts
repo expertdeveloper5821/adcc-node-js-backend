@@ -22,11 +22,11 @@ import {
   updateCommunitySchema,
   getCommunitiesQuerySchema,
   featureCommunitySchema,
-  addGalleryImagesSchema,
   removeGalleryImagesSchema,
 } from '@/validators/community.validator';
 import { authenticate } from '@/middleware/auth.middleware';
 import { isAdmin } from '@/middleware/role.middleware';
+import { uploadMultipleImages } from '@/middleware/upload.middleware';
 
 const router = express.Router();
 
@@ -46,7 +46,7 @@ router.post('/:id/isMemberOfCommunity', authenticate, isMemberOfCommunity);
 router.post('/', authenticate, isAdmin, validate(createCommunitySchema), createCommunity);
 router.patch('/:id', authenticate, isAdmin, validate(updateCommunitySchema), updateCommunity);
 router.delete('/:id', authenticate, isAdmin, deleteCommunity);
-router.post('/:id/gallery', authenticate, isAdmin, validate(addGalleryImagesSchema), addGalleryImages);
+router.post('/:id/gallery', authenticate, isAdmin, uploadMultipleImages, addGalleryImages);
 router.delete('/:id/gallery', authenticate, isAdmin, validate(removeGalleryImagesSchema), removeGalleryImages);
 
 // admin controls for featuring

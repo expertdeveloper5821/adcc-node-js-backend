@@ -20,8 +20,13 @@ export const logoutSchema = z.object({
   refreshToken: z.string().min(1, 'Refresh token is required'),
 });
 
+export const updateProfileImageSchema = z.object({
+  profileImage: z.string().url('Profile image must be a valid URL'),
+});
+
 export type VerifyFirebaseAuthInput = z.infer<typeof verifyFirebaseAuthSchema>;
 export type RegisterUserInput = z.infer<typeof registerUserSchema>;
 export type RefreshTokenInput = z.infer<typeof refreshTokenSchema>;
 export type LogoutInput = z.infer<typeof logoutSchema>;
+export type UpdateProfileImageInput = z.infer<typeof updateProfileImageSchema>;
 

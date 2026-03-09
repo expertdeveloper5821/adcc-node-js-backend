@@ -310,6 +310,38 @@ export const getCurrentUser = asyncHandler(
 );
 
 /**
+ * Update current user profile image URL
+ * PATCH /v1/auth/me/profile-image
+ */
+export const updateProfileImage = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const userId = req.user?.id;
+
+    if (!userId) {
+      throw new AppError('User not authenticated', 401);
+    }
+
+    if (req.user?.isGuest) {
+      throw new AppError('Guest users cannot update profile', 403);
+    }
+
+    const { profileImage } = req.body as { profileImage: string };
+
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { profileImage },
+      { new: true, runValidators: true }
+    ).select('-refreshTokens -__v');
+
+    if (!user) {
+      throw new AppError('User not found', 404);
+    }
+
+    sendSuccess(res, user, 'Profile image updated successfully');
+  }
+);
+
+/**
  * Guest login - for users who want to try the app without registration
  * POST /v1/auth/guestLogin
  * Returns JWT with guest role and isGuest flag

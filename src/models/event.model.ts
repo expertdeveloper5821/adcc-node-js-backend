@@ -78,12 +78,32 @@ const EventSchema = new Schema(
     communityId: {
       type: Schema.Types.ObjectId,
       ref: 'communities',
+      set: (value: unknown) => {
+        if (value === null || value === undefined) return undefined;
+        if (typeof value === 'string') {
+          const normalized = value.trim().toLowerCase();
+          if (!normalized || normalized === 'null' || normalized === 'undefined') {
+            return undefined;
+          }
+        }
+        return value;
+      },
       // default: null,
       // required: [true, 'Community ID is required'],
     },
     trackId: {
       type: Schema.Types.ObjectId,
       ref: 'track',
+      set: (value: unknown) => {
+        if (value === null || value === undefined) return undefined;
+        if (typeof value === 'string') {
+          const normalized = value.trim().toLowerCase();
+          if (!normalized || normalized === 'null' || normalized === 'undefined') {
+            return undefined;
+          }
+        }
+        return value;
+      },
       // default: null,
       // required: [true, 'Track ID is required'],
     },
@@ -242,5 +262,6 @@ const EventSchema = new Schema(
 
 // Index for filtering
 EventSchema.index({ eventDate: 1, status: 1 });
+EventSchema.index({ status: 1, eventDate: 1, createdAt: -1 });
 
 export default mongoose.model<IEvent>('events', EventSchema);
