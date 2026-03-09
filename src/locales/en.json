@@ -22,7 +22,29 @@
       "gallery_none_found": "None of the provided images were found in the gallery"
   },
   "auth": {
-    "unauthorized": "User not authenticated"
+    "unauthorized": "User not authenticated",
+    "firebase_uid_required": "Firebase UID not found in token",
+    "phone_or_email_required": "Either phone number or email address is required for registration",
+    "already_registered": "User already registered",
+    "login_success": "Login successful",
+    "verify_success": "Authentication verified. Please complete registration.",
+    "register_success": "Registration successful",
+    "token_refreshed": "Token refreshed successfully",
+    "invalid_refresh_token": "Invalid refresh token",
+    "invalid_expired_token": "Invalid or expired refresh token",
+    "max_devices_reached": "Maximum number of devices ({{max}}) reached. Please sign out from other devices to continue.",
+    "logout_success": "Logged out successfully",
+    "user_not_found": "User not found",
+    "stats_retrieved": "User stats retrieved successfully",
+    "joined_communities_retrieved": "Joined communities retrieved successfully",
+    "joined_events_retrieved": "Joined events retrieved successfully",
+    "active_participations_retrieved": "Active participations retrieved successfully",
+    "upcoming_events_retrieved": "Upcoming events retrieved successfully",
+    "cancelled_events_retrieved": "Cancelled events retrieved successfully",
+    "completed_events_retrieved": "Completed events retrieved successfully",
+    "profile_retrieved": "User profile retrieved successfully",
+    "profile_updated": "Profile updated successfully",
+    "guest_login_success": "Guest login successful"
   },
   "guest": {
     "access_denied": "Guest users are not allowed to perform this action"
@@ -64,7 +86,20 @@
         "cancelledEvent": "Event cancelled already",
         "completed": "Event completed already",
         "participationCancelled": "Event participation cancelled successfully",
-        "status_retrieved": "Event participation status retrieved successfully"
+        "status_retrieved": "Event participation status retrieved successfully",
+        "already_submitted": "Result already submitted",
+        "calendar_link": "Calendar link generated",
+        "results_retrieved": "Event results retrieved successfully",
+        "invalid_id": "Invalid event ID",
+        "not_joined": "User has not joined this event"
+    },
+    "communityRide": {
+        "not_found": "Community ride not found",
+        "created": "Community ride created successfully",
+        "allRides": "Community rides retrieved successfully",
+        "retrieved": "Community ride retrieved successfully",
+        "updated": "Community ride updated successfully",
+        "deleted": "Community ride deleted successfully"
     },
     "statuses": {
       "open": "Open",

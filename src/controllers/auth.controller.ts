@@ -1,18 +1,30 @@
 import { Request, Response } from 'express';
+import crypto from 'node:crypto';
+import mongoose from 'mongoose';
 import User from '@/models/user.model';
+import EventResult from '@/models/eventResult.model';
 import { verifyFirebaseToken } from '@/services/firebase.service';
+import { communityMembershipService } from '@/services';
 import {
   generateTokens,
   verifyRefreshToken,
   generateAccessToken,
   generateRefreshToken,
 } from '@/utils/jwt.util';
+import { t } from '@/utils/i18n';
+import { resolveRequestLanguage } from '@/utils/localization';
 import { sendSuccess } from '@/utils/response';
 import { asyncHandler } from '@/utils/async-handler';
 import { AppError } from '@/utils/app-error';
 import { AuthRequest } from '@/middleware/auth.middleware';
 
+/** Guest role and ID prefix - guest users are stateless (no DB record) */
+const GUEST_ROLE = 'Guest';
+const GUEST_ID_PREFIX = 'guest_';
 
+function isGuestPayload(id?: string, role?: string): boolean {
+  return role === GUEST_ROLE && typeof id === 'string' && id.startsWith(GUEST_ID_PREFIX);
+}
 
 /**
  * Verify Firebase authentication
@@ -22,6 +34,7 @@ import { AuthRequest } from '@/middleware/auth.middleware';
  */
 export const verifyFirebaseAuth = asyncHandler(
   async (req: Request, res: Response) => {
+    const lang = resolveRequestLanguage(req);
     const { idToken } = req.body;
 
     // Verify Firebase token - get UID, phone (for phone auth), email (for email/password auth)
@@ -40,7 +53,7 @@ export const verifyFirebaseAuth = asyncHandler(
       // Check if user has reached the maximum number of active devices
       if (user.refreshTokens.length >= Number(process.env.MAX_REFRESH_TOKENS)) {
         throw new AppError(
-          `Maximum number of devices (${process.env.MAX_REFRESH_TOKENS}) reached. Please sign out from other devices to continue.`,
+          t(lang, 'auth.max_devices_reached', { max: process.env.MAX_REFRESH_TOKENS! }),
           403
         );
       }
@@ -80,7 +93,7 @@ export const verifyFirebaseAuth = asyncHandler(
           },
           ...tokens,
         },
-        'Login successful'
+        t(lang, 'auth.login_success')
       );
     } else {
       // New user - return temporary token (with UID, no user ID)
@@ -99,7 +112,7 @@ export const verifyFirebaseAuth = asyncHandler(
           email: email || undefined,
           ...tokens,
         },
-        'Authentication verified. Please complete registration.'
+        t(lang, 'auth.verify_success')
       );
     }
   }
@@ -113,24 +126,25 @@ export const verifyFirebaseAuth = asyncHandler(
  */
 export const registerUser = asyncHandler(
   async (req: AuthRequest, res: Response) => {
+    const lang = resolveRequestLanguage(req);
     const { fullName, gender, age } = req.body;
     const uid = req.user?.uid; // From JWT (temporary token)
     const phone = req.user?.phone; // Optional phone from JWT (for phone auth)
     const email = req.user?.email; // Optional email from JWT (for email/password auth)
 
     if (!uid) {
-      throw new AppError('Firebase UID not found in token', 400);
+      throw new AppError(t(lang, 'auth.firebase_uid_required'), 400);
     }
 
     // Validate that user has either phone or email (required for registration)
     if (!phone && !email) {
-      throw new AppError('Either phone number or email address is required for registration', 400);
+      throw new AppError(t(lang, 'auth.phone_or_email_required'), 400);
     }
 
     // Check if user already exists by UID
     const existingUser = await User.findOne({ firebaseUid: uid });
     if (existingUser) {
-      throw new AppError('User already registered', 400);
+      throw new AppError(t(lang, 'auth.already_registered'), 400);
     }
 
     // Create user with Firebase UID
@@ -179,7 +193,7 @@ export const registerUser = asyncHandler(
         },
         ...tokens,
       },
-      'Registration successful'
+      t(lang, 'auth.register_success')
     );
   }
 );
@@ -192,13 +206,29 @@ export const registerUser = asyncHandler(
  */
 export const refreshAccessToken = asyncHandler(
   async (req: Request, res: Response) => {
+    const lang = resolveRequestLanguage(req);
     const { refreshToken } = req.body;
 
     // Verify refresh token
     const decoded = verifyRefreshToken(refreshToken);
 
+    // Guest refresh: stateless; no DB lookup (check before id guard)
+    if (decoded.role === GUEST_ROLE || isGuestPayload(decoded.id, decoded.role)) {
+      const guestId = decoded.id ?? GUEST_ID_PREFIX + crypto.randomUUID();
+      const tokens = generateTokens({
+        id: guestId,
+        role: GUEST_ROLE,
+      });
+      sendSuccess(
+        res,
+        { accessToken: tokens.accessToken, refreshToken: tokens.refreshToken },
+        t(lang, 'auth.token_refreshed')
+      );
+      return;
+    }
+
     if (!decoded.id) {
-      throw new AppError('Invalid refresh token', 401);
+      throw new AppError(t(lang, 'auth.invalid_refresh_token'), 401);
     }
 
     // Check if refresh token exists in database
@@ -209,7 +239,7 @@ export const refreshAccessToken = asyncHandler(
     });
 
     if (!user) {
-      throw new AppError('Invalid or expired refresh token', 401);
+      throw new AppError(t(lang, 'auth.invalid_expired_token'), 401);
     }
 
     // Generate new access token
@@ -262,7 +292,7 @@ export const refreshAccessToken = asyncHandler(
     sendSuccess(
       res,
       { accessToken, refreshToken: newRefreshToken },
-      'Token refreshed successfully'
+      t(lang, 'auth.token_refreshed')
     );
   }
 );
@@ -270,63 +300,561 @@ export const refreshAccessToken = asyncHandler(
 /**
  * Logout - Revoke refresh token
  * POST /v1/auth/logout
+ * For Guest: no-op (no DB state to revoke).
  */
 export const logout = asyncHandler(async (req: AuthRequest, res: Response) => {
-  const { refreshToken } = req.body;
+  const lang = resolveRequestLanguage(req);
   const userId = req.user?.id;
 
   if (!userId) {
-    throw new AppError('User not authenticated', 401);
+    throw new AppError(t(lang, 'auth.unauthorized'), 401);
   }
 
-  // Remove refresh token from database
+  if (isGuestPayload(userId, req.user?.role)) {
+    sendSuccess(res, null, t(lang, 'auth.logout_success'));
+    return;
+  }
+
+  const { refreshToken } = req.body;
   await User.findByIdAndUpdate(userId, {
     $pull: { refreshTokens: { token: refreshToken } },
   });
 
-  sendSuccess(res, null, 'Logged out successfully');
+  sendSuccess(res, null, t(lang, 'auth.logout_success'));
 });
+
+/**
+ * Get current user stats (distance, rides, events participated)
+ * GET /v1/auth/me/stats
+ * Requires member (guest gets 403).
+ * Reads from materialized User.stats; runs aggregation once for legacy users and backfills.
+ */
+export const getCurrentUserStats = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const lang = resolveRequestLanguage(req);
+    const userId = req.user?.id;
+    if (!userId) {
+      throw new AppError(t(lang, 'auth.unauthorized'), 401);
+    }
+
+    const user = await User.findById(userId).select('stats').lean();
+    if (!user) {
+      throw new AppError(t(lang, 'auth.user_not_found'), 404);
+    }
+
+    const s = user.stats;
+    const hasMaterializedStats =
+      s &&
+      typeof s.totalDistanceKm === 'number' &&
+      typeof s.totalRides === 'number' &&
+      typeof s.totalEventsParticipated === 'number';
+
+    if (hasMaterializedStats) {
+      sendSuccess(res, { ...s }, t(lang, 'auth.stats_retrieved'));
+      return;
+    }
+
+    const objectIdUserId = new mongoose.Types.ObjectId(userId);
+    const results = await EventResult.aggregate([
+      {
+        $match: {
+          userId: objectIdUserId,
+          status: { $in: ['joined', 'completed'] },
+        },
+      },
+      {
+        $lookup: {
+          from: 'events',
+          localField: 'eventId',
+          foreignField: '_id',
+          as: 'event',
+        },
+      },
+      { $unwind: { path: '$event', preserveNullAndEmptyArrays: false } },
+      {
+        $group: {
+          _id: null,
+          totalDistanceKm: {
+            $sum: {
+              $cond: [
+                { $eq: ['$status', 'completed'] },
+                { $ifNull: ['$distance', 0] },
+                0,
+              ],
+            },
+          },
+          totalEventsParticipated: { $sum: 1 },
+          totalRides: {
+            $sum: {
+              $cond: [
+                {
+                  $and: [
+                    { $eq: ['$status', 'completed'] },
+                    { $ne: ['$event.trackId', null] },
+                  ],
+                },
+                1,
+                0,
+              ],
+            },
+          },
+        },
+      },
+    ]);
+
+    const stats = results[0]
+      ? {
+          totalDistanceKm: Number(results[0].totalDistanceKm ?? 0),
+          totalRides: Number(results[0].totalRides ?? 0),
+          totalEventsParticipated: Number(results[0].totalEventsParticipated ?? 0),
+        }
+      : {
+          totalDistanceKm: 0,
+          totalRides: 0,
+          totalEventsParticipated: 0,
+        };
+
+    await User.findByIdAndUpdate(userId, { $set: { stats } });
+
+    sendSuccess(res, stats, t(lang, 'auth.stats_retrieved'));
+  }
+);
+
+/**
+ * Get current user's joined communities (paginated)
+ * GET /v1/auth/me/joined-communities
+ * Member only.
+ */
+export const getMyJoinedCommunities = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const lang = resolveRequestLanguage(req);
+    const userId = req.user?.id;
+    if (!userId) {
+      throw new AppError(t(lang, 'auth.unauthorized'), 401);
+    }
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const limit = Math.max(1, Math.min(100, Number(req.query.limit) || 10));
+    const result = await communityMembershipService.getMyJoinedCommunities(userId, page, limit);
+    sendSuccess(res, result, t(lang, 'auth.joined_communities_retrieved'));
+  }
+);
+
+/**
+ * Get current user's joined events (paginated)
+ * GET /v1/auth/me/joined-events
+ * Member only.
+ */
+export const getMyJoinedEvents = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const lang = resolveRequestLanguage(req);
+    const userId = req.user?.id;
+    if (!userId) {
+      throw new AppError(t(lang, 'auth.unauthorized'), 401);
+    }
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const limit = Math.max(1, Math.min(100, Number(req.query.limit) || 10));
+    const skip = (page - 1) * limit;
+    const filter = { userId, status: { $in: ['joined', 'completed'] } };
+
+    const [results, total] = await Promise.all([
+      EventResult.find(filter)
+        .select('eventId status distance time createdAt')
+        .populate('eventId', 'title titleAr address addressAr eventDate eventTime city status mainImage communityId trackId category')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      EventResult.countDocuments(filter),
+    ]);
+
+    const events = results.map((r: any) => {
+      const item: any = {
+        event: r.eventId,
+        participationStatus: r.status,
+        joinedAt: r.createdAt,
+      };
+      if (r.status === 'completed') {
+        item.distance = r.distance;
+        item.time = r.time;
+      }
+      return item;
+    });
+
+    sendSuccess(
+      res,
+      {
+        events,
+        pagination: {
+          page,
+          limit,
+          total,
+          pages: Math.ceil(total / limit) || 1,
+        },
+      },
+      t(lang, 'auth.joined_events_retrieved')
+    );
+  }
+);
+
+/**
+ * Get current user's active (joined, not yet completed) rides and events
+ * GET /v1/auth/me/active-participations
+ * Member only.
+ */
+export const getMyActiveParticipations = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const lang = resolveRequestLanguage(req);
+    const userId = req.user?.id;
+    if (!userId) {
+      throw new AppError(t(lang, 'auth.unauthorized'), 401);
+    }
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const limit = Math.max(1, Math.min(100, Number(req.query.limit) || 10));
+    const skip = (page - 1) * limit;
+
+    const filter = { userId, status: 'joined' };
+
+    const [results, total] = await Promise.all([
+      EventResult.find(filter)
+        .select('eventId status createdAt')
+        .populate('eventId', 'title titleAr address addressAr eventDate eventTime city status mainImage communityId trackId category')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      EventResult.countDocuments(filter),
+    ]);
+
+    const rides: any[] = [];
+    const events: any[] = [];
+
+    for (const r of results as any[]) {
+      const item = {
+        event: r.eventId,
+        joinedAt: r.createdAt,
+      };
+      if (r.eventId?.trackId) {
+        rides.push(item);
+      } else {
+        events.push(item);
+      }
+    }
+
+    sendSuccess(
+      res,
+      {
+        rides,
+        events,
+        pagination: {
+          page,
+          limit,
+          total,
+          pages: Math.ceil(total / limit) || 1,
+        },
+      },
+      t(lang, 'auth.active_participations_retrieved')
+    );
+  }
+);
 
 /**
  * Get current user
  * GET /v1/auth/me
+ * For Guest: returns minimal profile from JWT (no DB).
  */
 export const getCurrentUser = asyncHandler(
   async (req: AuthRequest, res: Response) => {
+    const lang = resolveRequestLanguage(req);
     const userId = req.user?.id;
 
     if (!userId) {
-      throw new AppError('User not authenticated', 401);
+      throw new AppError(t(lang, 'auth.unauthorized'), 401);
+    }
+
+    if (isGuestPayload(userId, req.user?.role)) {
+      sendSuccess(
+        res,
+        {
+          id: userId,
+          role: GUEST_ROLE,
+          isGuest: true,
+        },
+        t(lang, 'auth.profile_retrieved')
+      );
+      return;
     }
 
     const user = await User.findById(userId).select('-refreshTokens -__v');
 
     if (!user) {
-      throw new AppError('User not found', 404);
+      throw new AppError(t(lang, 'auth.user_not_found'), 404);
     }
 
-    sendSuccess(res, user, 'User profile retrieved successfully');
+    sendSuccess(res, user, t(lang, 'auth.profile_retrieved'));
+  }
+);
+
+/**
+ * Get current user's upcoming events (joined + event date in the future)
+ * GET /v1/auth/me/upcoming-events
+ * Member only. Guests get 403.
+ */
+export const getMyUpcomingEvents = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const lang = resolveRequestLanguage(req);
+    const userId = req.user?.id;
+    if (!userId) {
+      throw new AppError(t(lang, 'auth.unauthorized'), 401);
+    }
+    if (req.user?.isGuest) {
+      throw new AppError(t(lang, 'guest.access_denied'), 403);
+    }
+
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const limit = Math.max(1, Math.min(100, Number(req.query.limit) || 10));
+    const skip = (page - 1) * limit;
+    const now = new Date();
+    const userObjectId = new mongoose.Types.ObjectId(userId);
+
+    const basePipeline = [
+      { $match: { userId: userObjectId, status: 'joined' } },
+      {
+        $lookup: {
+          from: 'events',
+          localField: 'eventId',
+          foreignField: '_id',
+          as: 'event',
+        },
+      },
+      { $unwind: { path: '$event', preserveNullAndEmptyArrays: false } },
+      { $match: { 'event.eventDate': { $gt: now } } },
+      {
+        $project: {
+          createdAt: 1,
+          event: 1,
+        },
+      },
+    ];
+
+    const [results, countResult] = await Promise.all([
+      EventResult.aggregate([
+        ...basePipeline,
+        { $sort: { 'event.eventDate': 1 } },
+        { $skip: skip },
+        { $limit: limit },
+      ]),
+      EventResult.aggregate([
+        ...basePipeline,
+        { $count: 'total' },
+      ]),
+    ]);
+
+    const total = countResult[0]?.total ?? 0;
+    const rides: any[] = [];
+    const events: any[] = [];
+
+    for (const r of results) {
+      const item = { event: r.event, joinedAt: r.createdAt };
+      if (r.event?.trackId) {
+        rides.push(item);
+      } else {
+        events.push(item);
+      }
+    }
+
+    sendSuccess(
+      res,
+      {
+        rides,
+        events,
+        pagination: { page, limit, total, pages: Math.ceil(total / limit) || 1 },
+      },
+      t(lang, 'auth.upcoming_events_retrieved')
+    );
+  }
+);
+
+/**
+ * Get current user's cancelled events (user cancelled their registration)
+ * GET /v1/auth/me/cancelled-events
+ * Member only. Guests get 403.
+ */
+export const getMyCancelledEvents = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const lang = resolveRequestLanguage(req);
+    const userId = req.user?.id;
+    if (!userId) {
+      throw new AppError(t(lang, 'auth.unauthorized'), 401);
+    }
+    if (req.user?.isGuest) {
+      throw new AppError(t(lang, 'guest.access_denied'), 403);
+    }
+
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const limit = Math.max(1, Math.min(100, Number(req.query.limit) || 10));
+    const skip = (page - 1) * limit;
+    const filter = { userId, status: 'cancelled' };
+
+    const [results, total] = await Promise.all([
+      EventResult.find(filter)
+        .select('eventId reason updatedAt')
+        .populate('eventId', 'title titleAr address addressAr eventDate eventTime city status mainImage communityId trackId category')
+        .sort({ updatedAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      EventResult.countDocuments(filter),
+    ]);
+
+    const rides: any[] = [];
+    const events: any[] = [];
+
+    for (const r of results as any[]) {
+      const item = {
+        event: r.eventId,
+        cancelledAt: r.updatedAt,
+        reason: r.reason ?? null,
+      };
+      if (r.eventId?.trackId) {
+        rides.push(item);
+      } else {
+        events.push(item);
+      }
+    }
+
+    sendSuccess(
+      res,
+      {
+        rides,
+        events,
+        pagination: { page, limit, total, pages: Math.ceil(total / limit) || 1 },
+      },
+      t(lang, 'auth.cancelled_events_retrieved')
+    );
+  }
+);
+
+/**
+ * Get current user's completed events
+ * GET /v1/auth/me/completed-events
+ * Member only. Guests get 403.
+ */
+export const getMyCompletedEvents = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const lang = resolveRequestLanguage(req);
+    const userId = req.user?.id;
+    if (!userId) {
+      throw new AppError(t(lang, 'auth.unauthorized'), 401);
+    }
+    if (req.user?.isGuest) {
+      throw new AppError(t(lang, 'guest.access_denied'), 403);
+    }
+
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const limit = Math.max(1, Math.min(100, Number(req.query.limit) || 10));
+    const skip = (page - 1) * limit;
+    const filter = { userId, status: 'completed' };
+
+    const [results, total] = await Promise.all([
+      EventResult.find(filter)
+        .select('eventId distance time updatedAt')
+        .populate('eventId', 'title titleAr address addressAr eventDate eventTime city status mainImage communityId trackId category')
+        .sort({ updatedAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      EventResult.countDocuments(filter),
+    ]);
+
+    const rides: any[] = [];
+    const events: any[] = [];
+
+    for (const r of results as any[]) {
+      const item: any = {
+        event: r.eventId,
+        completedAt: r.updatedAt,
+        distance: r.distance ?? null,
+        time: r.time ?? null,
+      };
+      if (r.eventId?.trackId) {
+        rides.push(item);
+      } else {
+        events.push(item);
+      }
+    }
+
+    sendSuccess(
+      res,
+      {
+        rides,
+        events,
+        pagination: { page, limit, total, pages: Math.ceil(total / limit) || 1 },
+      },
+      t(lang, 'auth.completed_events_retrieved')
+    );
+  }
+);
+
+/**
+ * Update current user's profile (fullName, gender, age)
+ * PATCH /v1/auth/me
+ * Member only. Guests get 403.
+ */
+export const updateMyProfile = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const lang = resolveRequestLanguage(req);
+    const userId = req.user?.id;
+    if (!userId) {
+      throw new AppError(t(lang, 'auth.unauthorized'), 401);
+    }
+    if (req.user?.isGuest) {
+      throw new AppError(t(lang, 'guest.access_denied'), 403);
+    }
+
+    const { fullName, gender, age } = req.body;
+    const updates: Record<string, unknown> = {};
+    if (fullName !== undefined) updates.fullName = fullName;
+    if (gender !== undefined) updates.gender = gender;
+    if (age !== undefined) updates.age = age;
+
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { $set: updates },
+      { new: true, runValidators: true }
+    ).select('-refreshTokens -__v');
+
+    if (!user) {
+      throw new AppError(t(lang, 'auth.user_not_found'), 404);
+    }
+
+    sendSuccess(res, user, t(lang, 'auth.profile_updated'));
   }
 );
 
 /**
  * Guest login - for users who want to try the app without registration
  * POST /v1/auth/guestLogin
- * Returns JWT with guest role and isGuest flag
- * No user record is created in database
+ * Issues a stateless JWT with a unique guest ID and role Guest; no DB write.
  */
 export const guestLogin = asyncHandler(
-  async (_req: AuthRequest, res: Response) => {
-    // Generate tokens with guest role
+  async (req: AuthRequest, res: Response) => {
+    const lang = resolveRequestLanguage(req);
+    const guestId = GUEST_ID_PREFIX + crypto.randomUUID();
     const tokens = generateTokens({
-      role: 'Guest',
-      isGuest: true,
-      type: 'Guest',
+      id: guestId,
+      role: GUEST_ROLE,
     });
     sendSuccess(
       res,
-      { ...tokens },
-      'Guest login successful'
+      {
+        user: {
+          id: guestId,
+          role: GUEST_ROLE,
+          isGuest: true,
+        },
+        ...tokens,
+      },
+      t(lang, 'auth.guest_login_success')
     );
   }
 );

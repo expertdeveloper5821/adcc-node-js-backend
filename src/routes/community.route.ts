@@ -22,6 +22,10 @@ import { isAdmin } from '@/middleware/role.middleware';
 
 const router = express.Router();
 
+
+
+// Authenticated routes
+
 // Public routes
 router.get('/', authenticate, validate(getCommunitiesQuerySchema), getAllCommunities);
 router.get('/:id', authenticate, getCommunityById);
@@ -33,6 +37,7 @@ router.post('/:id/join', authenticate, joinCommunity);
 router.post('/:id/leave', authenticate, leaveCommunity);
 router.get('/:id/bannedMembers',authenticate, getBannedUsersInCommunity);
 router.post('/:id/isMemberOfCommunity', authenticate, isMemberOfCommunity);
+
 
 // Admin only routes
 router.post('/', authenticate, isAdmin, validate(createCommunitySchema), createCommunity);

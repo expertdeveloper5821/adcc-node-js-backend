@@ -6,6 +6,12 @@ export interface IRefreshToken {
   createdAt: Date;
 }
 
+export interface IUserStats {
+  totalDistanceKm: number;
+  totalRides: number;
+  totalEventsParticipated: number;
+}
+
 export interface IUser extends Document {
   fullName: string;
   firebaseUid: string;
@@ -16,6 +22,7 @@ export interface IUser extends Document {
   role: 'Admin' | 'Vendor' | 'Member' | 'Guest';
   isVerified: boolean;
   refreshTokens: IRefreshToken[];
+  stats?: IUserStats;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -89,6 +96,11 @@ const UserSchema = new Schema(
       default: false,
     },
     refreshTokens: [RefreshTokenSchema],
+    stats: {
+      totalDistanceKm: { type: Number, default: 0 },
+      totalRides: { type: Number, default: 0 },
+      totalEventsParticipated: { type: Number, default: 0 },
+    },
   },
   {
     timestamps: true,

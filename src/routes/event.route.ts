@@ -24,11 +24,13 @@ import {
   joinEventSchema
  } from '@/validators/event-result.validator';
 import { authenticate } from '@/middleware/auth.middleware';
-import { isAdmin } from '@/middleware/role.middleware';
+import { isAdmin} from '@/middleware/role.middleware';
 
 const router = express.Router();
 
-// Public routes
+
+// Public routes – guest-accessible (no auth required)
+
 router.get('/', authenticate, validate(getEventsQuerySchema), getAllEvents);
 router.get('/:id', authenticate, getEventById);
 router.post('/:eventId/results', authenticate, getEventResults);

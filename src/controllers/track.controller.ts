@@ -77,9 +77,9 @@ export const createTrack = asyncHandler(async (req: AuthRequest, res: Response) 
 
 /**
  * Get track by ID
- * GET /v1/tracks/:id
- * Public
- * */
+ * GET /v1/tracks/:trackId
+ * Public – guest-accessible.
+ */
 export const getTrackById = asyncHandler(async (req: Request, res: Response) => {
     const lang = ((req as any).lang || 'en') as SupportedLanguage;
 
@@ -89,7 +89,7 @@ export const getTrackById = asyncHandler(async (req: Request, res: Response) => 
 
     const track = await Track.findById(trackId);
     if (!track) {
-        throw new AppError(t(lang, "auth.unauthorized") , 404);
+        throw new AppError(t(lang, "track.not_found"), 404);
     }
     return sendSuccess(res, localizeTrack(track.toObject(), lang), t(lang, "track.trackDetails"), 201);
 });
@@ -115,7 +115,7 @@ export const updateTrack = asyncHandler(async (req: AuthRequest, res: Response) 
     // console.log('req.body:', req.body);
     const track = await Track.findByIdAndUpdate(trackId, req.body, { new: true });
     if (!track) {
-         throw new AppError(t(lang, "auth.unauthorized"), 404);
+         throw new AppError(t(lang, "track.not_found"), 404);
     }
 
     return sendSuccess(res, localizeTrack(track.toObject(), lang), t(lang, "track.updated"), 201);
@@ -134,7 +134,7 @@ export const deleteTrack = asyncHandler(async (req: AuthRequest, res: Response) 
 
     const track = await Track.findByIdAndDelete(trackId);
     if (!track) {
-            throw new AppError(t(lang, "auth.unauthorized"), 404);
+            throw new AppError(t(lang, "track.not_found"), 404);
     }
     return sendSuccess(res, null, t(lang, "track.deleted"), 201);
 });
@@ -157,7 +157,7 @@ export const disableTrack = asyncHandler(
     );
 
     if (!track) {
-      throw new AppError(t(supportedLang, "auth.unauthorized"), 404);
+      throw new AppError(t(supportedLang, "track.not_found"), 404);
     }
 
     return sendSuccess(res, localizeTrack(track.toObject(), supportedLang), t(supportedLang, "track.disabled"), 200);
@@ -182,7 +182,7 @@ export const enableTrack = asyncHandler(
     );
 
     if (!track) {
-      throw new AppError(t(lang, "auth.unauthorized"), 404);
+      throw new AppError(t(lang, "track.not_found"), 404);
     }
 
     return sendSuccess(res, localizeTrack(track.toObject(), lang), t(lang, "track.enabled"), 200);
@@ -191,8 +191,10 @@ export const enableTrack = asyncHandler(
 
 
 /**
- * Track realted events resuts
- * */
+ * Get track-related event results
+ * GET /v1/tracks/:trackId/events/results
+ * Public – guest-accessible.
+ */
 export const getTrackResults = asyncHandler(async (req: Request, res: Response) => {
   const lang = ((req as any).lang || 'en') as SupportedLanguage;
 
@@ -240,8 +242,10 @@ export const getTrackResults = asyncHandler(async (req: Request, res: Response) 
 
 
 /**
- * Track related community photos for an event
- * */
+ * Get track community photos for an event
+ * GET /v1/tracks/:trackId/events/:eventId/communities/:Id/photos
+ * Public – guest-accessible.
+ */
 export const trackCommunityPhotos = asyncHandler(async (req: AuthRequest, res: Response) => {
   const lang = ((req as any).lang || 'en') as SupportedLanguage;
   const trackIdParam = Array.isArray(req.params.trackId)
@@ -276,9 +280,10 @@ export const trackCommunityPhotos = asyncHandler(async (req: AuthRequest, res: R
 });
 
 /**
- * Track related community results for an event
- * */
-
+ * Get track-related community results
+ * GET /v1/tracks/:trackId/communities/results
+ * Public – guest-accessible.
+ */
 export const trackCommunityResults = asyncHandler(async (req: AuthRequest, res: Response) => {
   
   const lang = ((req as any).lang || 'en') as SupportedLanguage;

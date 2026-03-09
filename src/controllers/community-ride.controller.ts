@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import CommunityRide from '@/models/community-ride.model';
 import Community from '@/models/community.model';
 import CommunityMembership from '@/models/communityMembership.model';
+import { t } from '@/utils/i18n';
 import { sendSuccess } from '@/utils/response';
 import { asyncHandler } from '@/utils/async-handler';
 import { AppError } from '@/utils/app-error';
@@ -30,7 +31,7 @@ export const createCommunityRide = asyncHandler(async (req: AuthRequest, res: Re
   const userId = req.user?.id;
 
   if (!userId) {
-    throw new AppError('User not authenticated', 401);
+    throw new AppError(t(lang, 'auth.unauthorized'), 401);
   }
 
   const rideData = {
@@ -44,7 +45,7 @@ export const createCommunityRide = asyncHandler(async (req: AuthRequest, res: Re
 
   const ride = await CommunityRide.create(rideData);
 
-  sendSuccess(res, localizeCommunityRide(ride.toObject(), lang), 'Community ride created successfully', 201);
+  sendSuccess(res, localizeCommunityRide(ride.toObject(), lang), t(lang, 'communityRide.created'), 201);
 });
 
 /**
@@ -89,7 +90,7 @@ export const getAllCommunityRides = asyncHandler(async (req: Request, res: Respo
         pages: Math.ceil(total / limitNum),
       },
     },
-    'Community rides retrieved successfully'
+    t(lang, 'communityRide.allRides')
   );
 });
 
@@ -105,10 +106,10 @@ export const getCommunityRideById = asyncHandler(async (req: Request, res: Respo
   const ride = await CommunityRide.findById(id).populate('createdBy', 'fullName email');
 
   if (!ride) {
-    throw new AppError('Community ride not found', 404);
+    throw new AppError(t(lang, 'communityRide.not_found'), 404);
   }
 
-  sendSuccess(res, localizeCommunityRide(ride.toObject(), lang), 'Community ride retrieved successfully');
+  sendSuccess(res, localizeCommunityRide(ride.toObject(), lang), t(lang, 'communityRide.retrieved'));
 });
 
 /**
@@ -142,10 +143,10 @@ export const updateCommunityRide = asyncHandler(async (req: AuthRequest, res: Re
   }).populate('createdBy', 'fullName email');
 
   if (!ride) {
-    throw new AppError('Community ride not found', 404);
+    throw new AppError(t(lang, 'communityRide.not_found'), 404);
   }
 
-  sendSuccess(res, localizeCommunityRide(ride.toObject(), lang), 'Community ride updated successfully');
+  sendSuccess(res, localizeCommunityRide(ride.toObject(), lang), t(lang, 'communityRide.updated'));
 });
 
 /**
@@ -154,15 +155,16 @@ export const updateCommunityRide = asyncHandler(async (req: AuthRequest, res: Re
  * Admin only
  */
 export const deleteCommunityRide = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const lang = ((req as any).lang || 'en') as SupportedLanguage;
   const { id } = req.params;
 
   const ride = await CommunityRide.findByIdAndDelete(id);
 
   if (!ride) {
-    throw new AppError('Community ride not found', 404);
+    throw new AppError(t(lang, 'communityRide.not_found'), 404);
   }
 
-  sendSuccess(res, null, 'Community ride deleted successfully');
+  sendSuccess(res, null, t(lang, 'communityRide.deleted'));
 });
 
 
@@ -178,14 +180,14 @@ export const communityMemberStatus = asyncHandler(
     const userId = req.user?.id;
 
     if (!userId) {
-      throw new AppError("User not authenticated", 401);
+      throw new AppError(t(lang, 'auth.unauthorized'), 401);
     }
 
 
     // Fetch full community details
     const community = await Community.findById(communityId);
     if (!community) {
-      throw new AppError("Community not found", 404);
+      throw new AppError(t(lang, 'community.not_found'), 404);
     }
 
     const membership = await CommunityMembership.findOne({
@@ -209,29 +211,25 @@ export const communityMemberStatus = asyncHandler(
       };
     }
 
-    return res.status(200).json({
-      success: true,
-      message: "Community membership status retrieved successfully",
-      data: {
-        communityId,
-        userId,
-        status,
-        membershipDetails,
-        community: {
-          id: community._id,
-          title: lang === 'ar' ? community.titleAr || community.title : community.title,
-          type: community.type,
-          category: community.category,
-          location: community.location,
-          area: community.area,
-          city: community.city,
-          image: community.image,
-          logo: community.logo,
-          memberCount: community.memberCount,
-          trackName: community.trackName,
-          isActive: community.isActive
-        },
+    return sendSuccess(res, {
+      communityId,
+      userId,
+      status,
+      membershipDetails,
+      community: {
+        id: community._id,
+        title: lang === 'ar' ? community.titleAr || community.title : community.title,
+        type: community.type,
+        category: community.category,
+        location: community.location,
+        area: community.area,
+        city: community.city,
+        image: community.image,
+        logo: community.logo,
+        memberCount: community.memberCount,
+        trackName: community.trackName,
+        isActive: community.isActive
       },
-    });
+    }, t(lang, 'community.status_retrieved'), 200);
   }
 );
