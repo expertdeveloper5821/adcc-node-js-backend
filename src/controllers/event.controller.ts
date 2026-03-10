@@ -6,6 +6,11 @@ import { sendSuccess } from '@/utils/response';
 import { asyncHandler } from '@/utils/async-handler';
 import { AppError } from '@/utils/app-error';
 import { AuthRequest } from '@/middleware/auth.middleware';
+import {
+  incrementStatsOnJoin,
+  decrementStatsOnCancel,
+  addDistanceOnComplete,
+} from '@/services/user-stats.service';
 import dayjs from 'dayjs';
 import mongoose from 'mongoose';
 import { localizeDocumentFields, SupportedLanguage, localizeEventStatic } from '@/utils/localization';
@@ -86,7 +91,7 @@ export const createEvent = asyncHandler(async (req: AuthRequest, res: Response) 
 /**
  * Get all events
  * GET /v1/events
- * Public - with optional filters
+ * Public – guest-accessible. Optional query filters and pagination.
  */
 export const getAllEvents = asyncHandler(async (req: Request, res: Response) => {
   const lang = ((req as any).lang || 'en') as SupportedLanguage;
@@ -134,7 +139,7 @@ export const getAllEvents = asyncHandler(async (req: Request, res: Response) => 
 /**
  * Get event by ID
  * GET /v1/events/:id
- * Public
+ * Public – guest-accessible.
  */
 export const getEventById = asyncHandler(async (req: Request, res: Response) => {
   const lang = ((req as any).lang || 'en') as SupportedLanguage;
@@ -235,16 +240,23 @@ export const getEventResults = asyncHandler(async (req: AuthRequest, res: Respon
   }
 
   if (eventResults.time) {
-    throw new AppError('Result already submitted', 400);
+    throw new AppError(t(lang, 'event.already_submitted'), 400);
   }
+
+  const eventDoc = await Event.findById(eventId).select('trackId').lean();
+  const hasTrack = !!eventDoc?.trackId;
+
+  const distanceKm = Number(req.body.distance) || 0;
   eventResults.set({
-    distance: req.body.distance,
+    distance: distanceKm,
     time: req.body.time,
     status: 'completed',
   });
 
   await eventResults.save();
 
+
+  await addDistanceOnComplete(userId, distanceKm, hasTrack);
   sendSuccess(res, eventResults, t(lang, "event.submitted"), 201);
 });
 
@@ -281,6 +293,8 @@ export const joinEvent = asyncHandler(async (req: AuthRequest, res: Response) =>
     eventJoin.status = 'joined';
     await eventJoin.save();
 
+    await incrementStatsOnJoin(userId);
+
     return sendSuccess(
       res,
       eventJoin,
@@ -295,6 +309,8 @@ export const joinEvent = asyncHandler(async (req: AuthRequest, res: Response) =>
     status: 'joined',
   });
 
+  await incrementStatsOnJoin(userId);
+
   return sendSuccess(
     res,
     eventData,
@@ -304,18 +320,19 @@ export const joinEvent = asyncHandler(async (req: AuthRequest, res: Response) =>
 });
 
 
-/*
-* Get event results list
-*/
-
+/**
+ * Get event results list
+ * GET /v1/events/:eventId/results
+ * Public – guest-accessible.
+ */
 export const getEventResultsList = asyncHandler(async (req: Request, res: Response) => {
-  
+  const lang = ((req as any).lang || 'en') as SupportedLanguage;
   const eventIdParam = Array.isArray(req.params.eventId)
     ? req.params.eventId[0]
     : req.params.eventId;
   // console.log('body',req.params);
   if (!mongoose.Types.ObjectId.isValid(eventIdParam)) {
-    throw new AppError('Invalid eventId', 400);
+    throw new AppError(t(lang, 'event.invalid_id'), 400);
   }
 
   const eventResults = await EventResult.aggregate([
@@ -416,7 +433,7 @@ export const getEventResultsList = asyncHandler(async (req: Request, res: Respon
 ]);
 
 
-  sendSuccess(res, eventResults, 'Event results retrieved successfully', 201);
+  sendSuccess(res, eventResults, t(lang, 'event.results_retrieved'), 201);
 });
 
 /**
@@ -450,11 +467,15 @@ export const cancelRegistration = asyncHandler(async (req: AuthRequest, res: Res
   if (event.status === 'completed') {
     throw new AppError(t(lang, "event.completed"), 400);
   }
+
   event.set({
     reason,
     status: 'cancelled',
   });
   await event.save();
+
+
+  await decrementStatsOnCancel(userId);
 
   sendSuccess(res, event, t(lang, "event.participationCancelled"), 201);
 });
@@ -476,7 +497,7 @@ export const cancelRegistration = asyncHandler(async (req: AuthRequest, res: Res
   }
 
   const event = await Event.findById(eventId);
-  if (!event) throw new AppError('Event not found', 404);
+  if (!event) throw new AppError(t(lang, 'event.not_found'), 404);
 
   // Optional: only allow joined users
   if (userId) {
@@ -487,7 +508,7 @@ export const cancelRegistration = asyncHandler(async (req: AuthRequest, res: Res
     });
 
     if (!joined) {
-      throw new AppError('User has not joined this event', 403);
+      throw new AppError(t(lang, 'event.not_joined'), 403);
     }
   }
 
@@ -504,7 +525,7 @@ export const cancelRegistration = asyncHandler(async (req: AuthRequest, res: Res
   sendSuccess(
     res,
     { googleCalendarUrl },
-    'Calendar link generated',
+    t(lang, 'event.calendar_link'),
     200
   );
 });

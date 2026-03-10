@@ -34,7 +34,8 @@ const EventResultSchema = new Schema<IEventResult>(
     { timestamps: true }
 );
 
-// Index for filtering
+// Index for filtering and user-stats aggregation
 EventResultSchema.index({ eventDate: 1, status: 1 });
+EventResultSchema.index({ userId: 1, status: 1 });
 
 export default mongoose.model<IEventResult>('eventResult', EventResultSchema);

@@ -5,8 +5,15 @@ import {
   refreshAccessToken,
   logout,
   getCurrentUser,
-  guestLogin,
-  updateProfileImage,
+  getCurrentUserStats,
+  getMyJoinedCommunities,
+  getMyJoinedEvents,
+  getMyActiveParticipations,
+  getMyUpcomingEvents,
+  getMyCancelledEvents,
+  getMyCompletedEvents,
+  updateMyProfile,
+  guestLogin
 } from '@/controllers/auth.controller';
 import { validate } from '@/middleware/validate.middleware';
 import {
@@ -14,7 +21,7 @@ import {
   registerUserSchema,
   refreshTokenSchema,
   logoutSchema,
-  updateProfileImageSchema,
+  updateProfileSchema,
 } from '@/validators/auth.validator';
 import { authenticate } from '@/middleware/auth.middleware';
 
@@ -22,6 +29,7 @@ const router = express.Router();
 
 // Public routes
 router.post('/verify', validate(verifyFirebaseAuthSchema), verifyFirebaseAuth);
+
 router.post(
   '/register',
   authenticate,
@@ -33,8 +41,15 @@ router.post('/guestLogin', guestLogin);
 
 // Protected routes
 router.post('/logout', authenticate, validate(logoutSchema), logout);
+router.get('/me/stats', authenticate, getCurrentUserStats);
+router.get('/me/joined-communities', authenticate, getMyJoinedCommunities);
+router.get('/me/joined-events', authenticate, getMyJoinedEvents);
+router.get('/me/active-participations', authenticate,getMyActiveParticipations);
+router.get('/me/upcoming-events', authenticate, getMyUpcomingEvents);
+router.get('/me/cancelled-events', authenticate, getMyCancelledEvents);
+router.get('/me/completed-events', authenticate, getMyCompletedEvents);
+router.patch('/me', authenticate, validate(updateProfileSchema), updateMyProfile);
 router.get('/me', authenticate, getCurrentUser);
-router.patch('/me/profile-image', authenticate, validate(updateProfileImageSchema), updateProfileImage);
 
 export default router;
 

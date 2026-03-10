@@ -24,6 +24,15 @@ export type IEventAmenity =
   | 'medical support'
   | 'bike service';
 
+export type IEventCategory =
+  | 'Race'
+  | 'Community Ride'
+  | 'Training & Clinics'
+  | 'Awareness Rides'
+  | 'Family & Kids'
+  | 'Corporate Events'
+  | 'National Events';
+
 export interface IEvent {
   amenities?: IEventAmenity[];
 }
@@ -51,10 +60,9 @@ export interface IEvent extends Document {
   distance?: number; // in kilometers
   amenities?: IEventAmenity[];
   schedule?: IEventSchedule[];
-  categories?: 'Race' | 'Community Ride' | 'Training & Clinics' | 'Awareness Rides' | 'Family & Kids' | 'Corporate Events' | 'National Events';
   eligibility?: IEventEligibility;
   youtubeLink?: string;
-  category?: string;
+  category?: IEventCategory;
   currentParticipants: number;
   status: 'Open' | 'Draft' | 'Full' | 'Completed' | 'Archived';
   createdBy: mongoose.Types.ObjectId;
@@ -217,6 +225,7 @@ const EventSchema = new Schema(
     },
     category: {
       type: String,
+      enum: ['Race', 'Community Ride', 'Training & Clinics', 'Awareness Rides', 'Family & Kids', 'Corporate Events', 'National Events'],
       trim: true,
     },
     currentParticipants: {

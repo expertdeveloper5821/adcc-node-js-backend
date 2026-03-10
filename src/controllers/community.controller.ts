@@ -106,7 +106,7 @@ export const createCommunity = asyncHandler(async (req: AuthRequest, res: Respon
 /**
  * Get all communities
  * GET /v1/communities
- * Public - with optional filters
+ * Public – guest-accessible. Optional query filters and pagination.
  */
 export const getAllCommunities = asyncHandler(async (req: Request, res: Response ) => {
   const lang = ((req as any).lang || 'en') as SupportedLanguage;
@@ -200,7 +200,7 @@ export const getAllCommunities = asyncHandler(async (req: Request, res: Response
 /**
  * Get community by ID
  * GET /v1/communities/:id
- * Public
+ * Public – guest-accessible.
  */
 export const getCommunityById = asyncHandler(async (req: Request, res: Response) => {
   const lang = ((req as any).lang || 'en') as SupportedLanguage;
@@ -219,7 +219,7 @@ export const getCommunityById = asyncHandler(async (req: Request, res: Response)
     .populate('members', 'fullName email age gender');
 
   if (!community) {
-    throw new AppError(t(lang, "auth.unauthorized"), 404);
+    throw new AppError(t(lang, "community.not_found"), 404);
   }
 
   // include upcoming event count and accurate member count from membership collection
@@ -253,7 +253,7 @@ export const updateCommunity = asyncHandler(async (req: AuthRequest, res: Respon
   const community = await Community.findById(id);
 
   if (!community) {
-    throw new AppError(t(lang, "auth.unauthorized"), 404);
+    throw new AppError(t(lang, "community.not_found"), 404);
   }
 
   const existingTrackId = normalizeOptionalTrackId((community as any).trackId);
@@ -411,7 +411,7 @@ export const deleteCommunity = asyncHandler(async (req: AuthRequest, res: Respon
   const community = await Community.findByIdAndDelete(id);
 
   if (!community) {
-    throw new AppError(t(lang, "auth.unauthorized"), 404);
+    throw new AppError(t(lang, "community.not_found"), 404);
   }
 
   sendSuccess(res, null, t(lang, "community.deleted"), 201);
@@ -473,8 +473,8 @@ export const leaveCommunity = asyncHandler(
 
 /**
  * Get community members
- * GET /v1/communities/:id/members
- * Public
+ * GET /v1/communities/:id/communityMembers
+ * Public – guest-accessible.
  */
 export const getCommunityMembers = asyncHandler(async (req: AuthRequest, res: Response) => {
   const lang = ((req as any).lang || 'en') as SupportedLanguage;
@@ -676,7 +676,7 @@ export const removeGalleryImages = asyncHandler(async (req: AuthRequest, res: Re
 /**
  * Get community gallery images
  * GET /v1/communities/:id/gallery
- * Public
+ * Public – guest-accessible.
  */
 export const getGalleryImages = asyncHandler(async (req: Request, res: Response) => {
   const lang = ((req as any).lang || 'en') as SupportedLanguage;
