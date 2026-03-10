@@ -10,6 +10,7 @@ import { AppError } from '@/utils/app-error';
 import { AuthRequest } from '@/middleware/auth.middleware';
 import { communityMembershipService } from '@/services';
 import { localizeDocumentFields, SupportedLanguage, localizeCommunityStatic } from '@/utils/localization';
+import { uploadImageBufferToS3 } from '@/services/s3-upload.service';
 
 interface JoinCommunityParams {
   communityId: string;
@@ -38,6 +39,38 @@ const normalizeOptionalTrackId = (value: unknown): string | undefined => {
   return String(value);
 };
 
+const normalizeGalleryImagesInput = (value: unknown): string[] => {
+  if (!value) return [];
+
+  if (Array.isArray(value)) {
+    return value.filter((item): item is string => typeof item === 'string').map((item) => item.trim()).filter(Boolean);
+  }
+
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed) return [];
+
+    // support form-data where array comes as JSON string
+    if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        if (Array.isArray(parsed)) {
+          return parsed
+            .filter((item): item is string => typeof item === 'string')
+            .map((item) => item.trim())
+            .filter(Boolean);
+        }
+      } catch {
+        return [];
+      }
+    }
+
+    return [trimmed];
+  }
+
+  return [];
+};
+
 /**
  * Create new community
  * POST /v1/communities
@@ -53,6 +86,7 @@ export const createCommunity = asyncHandler(async (req: AuthRequest, res: Respon
 
   const communityData = {
     ...req.body,
+    image: req.body.image || req.body.coverImage,
     titleAr: req.body.titleAr || req.body.title,
     descriptionAr: req.body.descriptionAr || req.body.description,
     trackId: normalizeOptionalTrackId(req.body.trackId),
@@ -60,6 +94,8 @@ export const createCommunity = asyncHandler(async (req: AuthRequest, res: Respon
     members: [], // Start with no members
     memberCount: 0,
   };
+
+  delete (communityData as any).coverImage;
 
   const community = await Community.create(communityData);
   const localizedCommunity = localizeCommunity(community.toObject(), lang);
@@ -232,6 +268,11 @@ export const updateCommunity = asyncHandler(async (req: AuthRequest, res: Respon
   if (req.body.description && !req.body.descriptionAr && !community.descriptionAr) {
     req.body.descriptionAr = req.body.description;
   }
+  if (req.body.coverImage && !req.body.image) {
+    req.body.image = req.body.coverImage;
+  }
+  delete (req.body as any).coverImage;
+
   req.body.trackId = normalizeOptionalTrackId(req.body.trackId);
   if (!req.body.trackId) {
     delete req.body.trackId;
@@ -252,7 +293,114 @@ export const updateCommunity = asyncHandler(async (req: AuthRequest, res: Respon
 });
 
 /**
- * Delete community
+ * Set or unset featured status for a community
+ * PATCH /v1/communities/:id/feature
+ * Admin only
+ */
+ export const featureCommunity = asyncHandler(async (req: AuthRequest, res: Response) => {
+   const { id } = req.params;
+   const { isFeatured } = req.body as { isFeatured: boolean };
+
+   const community = await Community.findById(id);
+   if (!community) {
+     throw new AppError('Community not found', 404);
+   }
+
+   community.isFeatured = isFeatured;
+   await community.save();
+
+   const updatedCommunity = await Community.findById(id)
+     .populate('createdBy', 'fullName email')
+     .populate('members', 'fullName email');
+
+   sendSuccess(res, updatedCommunity, `Community ${isFeatured ? 'marked as' : 'removed from'} featured`, 200);
+ });
+
+/**
+ * Get communities highlighted for homepage
+ * GET /v1/communities/featured
+ * Public
+ */
+ export const getFeaturedCommunities = asyncHandler(async (req: Request, res: Response) => {
+   const {
+     type,
+     location,
+     category,
+     search,
+     page = 1,
+     limit = 10,
+     isActive,
+     isPublic,
+   } = req.query as any;
+
+   const query: any = { isFeatured: true };
+
+   if (type && ['Club', 'Shop', 'Women', 'Youth', 'Family', 'Corporate'].includes(type as string)) {
+     query.type = type;
+   }
+   if (location && ['Abu Dhabi', 'Dubai', 'Al Ain', 'Sharjah'].includes(location as string)) {
+     query.location = location;
+   }
+   if (category) {
+     query.category = { $in: [category] };
+   }
+   if (isActive !== undefined) {
+     query.isActive = isActive === 'true';
+   }
+   if (isPublic !== undefined) {
+     query.isPublic = isPublic === 'true';
+   }
+   if (search && typeof search === 'string') {
+     query.$text = { $search: search };
+   }
+
+   const pageNum = Number(page);
+   const limitNum = Number(limit);
+   const skip = (pageNum - 1) * limitNum;
+
+   const communities = await Community.find(query)
+     .populate('createdBy', 'fullName email')
+     .sort(search ? { score: { $meta: 'textScore' } } : { createdAt: -1 })
+     .skip(skip)
+     .limit(limitNum);
+
+   const total = await Community.countDocuments(query);
+
+   const now = new Date();
+   const communitiesWithCounts = await Promise.all(
+     communities.map(async (comm) => {
+       const upcomingEvents = await Event.countDocuments({
+         communityId: comm._id,
+         eventDate: { $gte: now },
+       });
+       const memberCount = await CommunityMembership.countDocuments({
+         communityId: comm._id,
+         status: 'active',
+       });
+       const commObj: any = comm.toObject();
+       commObj.upcomingEventCount = upcomingEvents;
+       commObj.memberCount = memberCount;
+       return commObj;
+     })
+   );
+
+   sendSuccess(
+     res,
+     {
+       communities: communitiesWithCounts,
+       pagination: {
+         page: pageNum,
+         limit: limitNum,
+         total,
+         pages: Math.ceil(total / limitNum),
+       },
+     },
+     'Featured communities retrieved successfully',
+     200
+   );
+ });
+ 
+ /* Delete community
  * DELETE /v1/communities/:id
  * Admin only
  */
@@ -399,7 +547,29 @@ export const isMemberOfCommunity = asyncHandler(async (req: AuthRequest, res: Re
 export const addGalleryImages = asyncHandler(async (req: AuthRequest, res: Response) => {
   const lang = ((req as any).lang || 'en') as SupportedLanguage;
   const { id } = req.params;
-  const { images } = req.body;
+
+  const uploadedImageUrls =
+    req.files && Array.isArray(req.files)
+      ? await Promise.all(
+          req.files.map(async (file) => {
+            const uploaded = await uploadImageBufferToS3(
+              file.buffer,
+              file.mimetype,
+              file.originalname,
+              'galleries'
+            );
+            return uploaded.url;
+          })
+        )
+      : [];
+
+  const bodyImages = normalizeGalleryImagesInput((req.body as any).images);
+  const bodyImage = normalizeGalleryImagesInput((req.body as any).image);
+  const images = [...uploadedImageUrls, ...bodyImages, ...bodyImage];
+
+  if (images.length === 0) {
+    throw new AppError('At least one image is required', 400);
+  }
 
   const community = await Community.findById(id);
 

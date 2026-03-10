@@ -70,8 +70,15 @@ export const createCommunitySchema = z
     descriptionAr: z.string().min(1, 'Arabic community description is required').optional(),
     type: z.array(z.string().trim()).optional(),
     category: z.string().optional(),
+    purposeType: z.string().optional(),
+    ridesThisMonth: z.string().optional(),
+    weeklyRides: z.string().optional(),
+    fundsRaised: z.string().optional(),
+    joinMode: z.string().optional(),
     location: z.enum(['Abu Dhabi', 'Dubai', 'Al Ain', 'Sharjah']).optional(),
+    country: z.string().optional(),
     image: z.string().optional(),
+    coverImage: z.string().optional(),
     logo: z.string().optional(),
     gallery: z.array(imageStringSchema).optional(),
     trackName: z.string().optional(),
@@ -79,6 +86,9 @@ export const createCommunitySchema = z
     terrain: z.string().optional(),
     isActive: z.boolean().default(true),
     isPublic: z.boolean().default(false),
+    status: z.boolean().default(false),
+    allowPosts: z.boolean().default(false),
+    allowGallery: z.boolean().default(false),
     isFeatured: z.boolean().default(false),
     foundedYear: z.number().optional(),
     members: z.string().optional(),
@@ -99,8 +109,15 @@ export const updateCommunitySchema = z
     descriptionAr: z.string().min(1, 'Arabic community description is required').optional(),
     type: z.array(z.string().trim()).optional(),
     category: z.string().optional(),
+    purposeType: z.string().optional(),
+    ridesThisMonth: z.string().optional(),
+    weeklyRides: z.string().optional(),
+    fundsRaised: z.string().optional(),
+    joinMode: z.string().optional(),
     location: z.enum(['Abu Dhabi', 'Dubai', 'Al Ain', 'Sharjah']).optional(),
+    country: z.string().optional(),
     image: z.string().optional(),
+    coverImage: z.string().optional(),
     logo: z.string().optional(),
     gallery: z.array(imageStringSchema).optional(),
     trackName: z.string().optional(),
@@ -108,6 +125,9 @@ export const updateCommunitySchema = z
     terrain: z.string().optional(),
     isActive: z.boolean().optional(),
     isPublic: z.boolean().optional(),
+    status: z.boolean().optional(),
+    allowPosts: z.boolean().optional(),
+    allowGallery: z.boolean().optional(),
     isFeatured: z.boolean().default(false),
     foundedYear: z.number().optional(),
     members: z.string().optional(),
@@ -117,6 +137,12 @@ export const updateCommunitySchema = z
     area: z.string().optional(),
     city: z.string().optional(),
     trackId: optionalObjectIdSchema,
+  })
+  .strict();
+
+export const featureCommunitySchema = z
+  .object({
+    isFeatured: z.boolean(),
   })
   .strict();
 
@@ -169,3 +195,5 @@ export type UpdateCommunityInput = z.infer<typeof updateCommunitySchema>;
 export type GetCommunitiesQueryInput = z.infer<typeof getCommunitiesQuerySchema>;
 export type AddGalleryImagesInput = z.infer<typeof addGalleryImagesSchema>;
 export type RemoveGalleryImagesInput = z.infer<typeof removeGalleryImagesSchema>;
+export type FeatureCommunityInput = z.infer<typeof featureCommunitySchema>;
+

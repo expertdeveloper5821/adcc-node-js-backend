@@ -123,14 +123,14 @@ export const updateTrack = asyncHandler(async (req: AuthRequest, res: Response) 
 
 /**
  * Delete track
- * DELETE /v1/tracks/:id
+ * DELETE /v1/tracks/:trackId
  * Admin only
  * */
 export const deleteTrack = asyncHandler(async (req: AuthRequest, res: Response) => {
     const lang = ((req as any).lang || 'en') as SupportedLanguage;
-    const trackId = Array.isArray(req.params.id)
-    ? req.params.id[0]
-    : req.params.id;
+    const trackId = Array.isArray(req.params.trackId)
+    ? req.params.trackId[0]
+    : req.params.trackId;
 
     const track = await Track.findByIdAndDelete(trackId);
     if (!track) {

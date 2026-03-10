@@ -71,6 +71,17 @@ All endpoints that require authentication (marked with 🔒) will automatically 
 - 🔒 **Update Community Ride** (Admin Only) - Update ride
 - 🔒 **Delete Community Ride** (Admin Only) - Delete ride
 
+### Communities
+- ✅ **Get All Communities** (Public) - List communities with filters (supports `isFeatured` query)
+- ✅ **Get Featured Communities** (Public) - List only communities highlighted on homepage (query params optional)
+- ✅ **Get Community By ID** (Public) - Get single community
+- 🔒 **Create Community** (Admin Only) - Create new community
+- 🔒 **Update Community** (Admin Only) - Update existing community
+- 🔒 **Feature/Unfeature Community** (Admin Only) - Toggle homepage highlight flag
+- 🔒 **Delete Community** (Admin Only) - Delete community
+- 🔒 **Add/Remove Gallery Images** (Admin Only) - Manage community gallery
+- ✅ **Get Community Gallery** (Public) - View community images
+- other membership-related endpoints continue below (not shown here)
 ## Notes
 
 - **Public endpoints** (✅): No authentication required

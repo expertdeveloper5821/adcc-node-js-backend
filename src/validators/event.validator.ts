@@ -1,4 +1,25 @@
 import { z } from 'zod';
+import mongoose from 'mongoose';
+
+const objectIdSchema = z.string().refine(
+  (val) => mongoose.Types.ObjectId.isValid(val),
+  { message: 'Invalid MongoDB ObjectId' }
+);
+
+const optionalObjectIdSchema = z.preprocess(
+  (val) => {
+    if (val === null || val === undefined) return undefined;
+    if (typeof val === 'string') {
+      const normalized = val.trim().toLowerCase();
+      if (!normalized || normalized === 'null' || normalized === 'undefined') {
+        return undefined;
+      }
+      return val;
+    }
+    return val;
+  },
+  objectIdSchema.optional()
+);
 
 export const createEventSchema = z
   .object({
@@ -19,14 +40,15 @@ export const createEventSchema = z
     address: z.string().min(1, 'Event address is required'),
     addressAr: z.string().min(1, 'Arabic event address is required').optional(),
     city: z.string().optional(),
+    country: z.string().optional(),
     zipCode: z.string().optional(),
     maxParticipants: z.number().int().min(0, 'Max participants cannot be negative').optional(),
     minAge: z.number().int().min(0, 'Min age cannot be negative').optional(),
     maxAge: z.number().int().min(0, 'Max age cannot be negative').optional(),
     youtubeLink: z.string().url('Invalid YouTube URL').optional().or(z.literal('')),
     distance: z.number().min(0, 'Distance cannot be negative').optional(),
-    communityId: z.string().min(1, 'Community ID is required').optional(),
-    trackId: z.string().min(1, 'Track ID is required').optional(),
+    communityId: optionalObjectIdSchema,
+    trackId: optionalObjectIdSchema,
     amenities: z
       .array(
         z.enum({
@@ -94,6 +116,7 @@ export const updateEventSchema = z
     address: z.string().min(1, 'Event address is required').optional(),
     addressAr: z.string().min(1, 'Arabic event address is required').optional(),
     city: z.string().optional(),
+    country: z.string().optional(),
     zipCode: z.string().optional(),
     maxParticipants: z.number().int().min(0, 'Max participants cannot be negative').optional(),
     minAge: z.number().int().min(0, 'Min age cannot be negative').optional(),
@@ -101,8 +124,8 @@ export const updateEventSchema = z
     youtubeLink: z.string().url('Invalid YouTube URL').optional().or(z.literal('')),
     status: z.enum(['Draft', 'Open', 'Full', 'Completed', 'Archived']).optional(),
     distance: z.number().min(0, 'Distance cannot be negative').optional(),
-    communityId: z.string().min(1, 'Community ID is required').optional(),
-    trackId: z.string().min(1, 'Track ID is required').optional(),
+    communityId: optionalObjectIdSchema,
+    trackId: optionalObjectIdSchema,
     amenities: z
       .array(
         z.enum({

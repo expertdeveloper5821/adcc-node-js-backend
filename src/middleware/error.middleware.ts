@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { AppError } from '@/utils/app-error';
+import multer from 'multer';
 
 export const errorHandler = (err: Error, _req: Request, res: Response, _next: NextFunction): void => {
   let statusCode = 500;
@@ -45,6 +46,24 @@ export const errorHandler = (err: Error, _req: Request, res: Response, _next: Ne
   if ((err as any).type === 'entity.too.large' || (err as any).name === 'PayloadTooLargeError') {
     statusCode = 413;
     message = 'Request payload too large. Maximum size is 50MB. Consider compressing images or reducing the number of images.';
+  }
+
+  // Multer upload errors
+  if (err instanceof multer.MulterError) {
+    statusCode = 400;
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      message = 'Image is too large. Maximum allowed size is 10MB.';
+    } else if (err.code === 'LIMIT_UNEXPECTED_FILE') {
+      message = 'Invalid upload field. Use "image" for single upload or "images" for multiple upload.';
+    } else {
+      message = err.message;
+    }
+  }
+
+  // Generic upload filter errors
+  if (err.message === 'Only image files are allowed') {
+    statusCode = 400;
+    message = err.message;
   }
 
   res.status(statusCode).json({
