@@ -92,6 +92,24 @@
         "invalid_id": "معرّف الحدث غير صالح",
         "not_joined": "المستخدم لم ينضم إلى هذا الحدث"
     },
+    "store": {
+        "created": "Item created successfully",
+        "list": "Items retrieved successfully",
+        "admin_list": "Marketplace moderation items retrieved successfully",
+        "my_list": "My listings retrieved successfully",
+        "details": "Item details retrieved successfully",
+        "updated": "Item updated successfully",
+        "archived": "Item archived successfully",
+        "approved": "Item approved successfully",
+        "rejected": "Item rejected successfully",
+        "featured": "Item featured status updated",
+        "sold": "Item marked as sold",
+        "not_found": "Item not found",
+        "forbidden": "Access denied for this item",
+        "admin_required": "Admin access required",
+        "update_not_allowed": "Item cannot be updated in its current status",
+        "feature_requires_approval": "Item must be approved before featuring"
+    },
     "communityRide": {
         "not_found": "رحلة المجتمع غير موجودة",
         "created": "تم إنشاء رحلة المجتمع بنجاح",

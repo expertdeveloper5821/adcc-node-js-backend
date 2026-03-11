@@ -6,6 +6,7 @@ import communityRideRoutes from './community-ride.route';
 import eventRoutes from './event.route';
 import trackRoutes from './track.route';
 import uploadRoutes from './upload.route';
+import storeRoutes from './store.route';
 
 const router = Router();
 
@@ -17,6 +18,7 @@ router.use('/community-rides', communityRideRoutes);
 router.use('/events', eventRoutes);
 router.use('/tracks', trackRoutes);
 router.use('/uploads', uploadRoutes);
+router.use('/store', storeRoutes);
 
 // Add more routes here as you create them
 // router.use('/users', userRoutes);
