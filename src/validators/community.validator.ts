@@ -6,28 +6,49 @@ export const objectIdSchema = z.string().refine(
   { message: 'Invalid MongoDB ObjectId' }
 );
 
+const firstValue = (val: unknown) => (Array.isArray(val) ? val[0] : val);
+
+const arrayFromStringOrJson = (val: unknown) => {
+  const raw = firstValue(val);
+  if (typeof raw !== 'string') return raw;
+  const trimmed = raw.trim();
+  if (!trimmed) return [];
+  if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+    try {
+      return JSON.parse(trimmed);
+    } catch {
+      return [trimmed];
+    }
+  }
+  return [trimmed];
+};
+
 const booleanFromString = z.preprocess(
   (val) => {
-    if (val === 'true') return true;
-    if (val === 'false') return false;
-    return val;
+    const value = firstValue(val);
+    if (value === 'true') return true;
+    if (value === 'false') return false;
+    return value;
   },
   z.boolean()
 );
 
-const numberFromString = z.coerce.number();
+const numberFromString = z.preprocess(firstValue, z.coerce.number());
+const numberFromStringMin = (min: number, message: string) =>
+  z.preprocess(firstValue, z.coerce.number().min(min, message));
 
 const optionalObjectIdSchema = z.preprocess(
   (val) => {
-    if (val === null || val === undefined) return undefined;
-    if (typeof val === 'string') {
-      const normalized = val.trim().toLowerCase();
+    const value = firstValue(val);
+    if (value === null || value === undefined) return undefined;
+    if (typeof value === 'string') {
+      const normalized = value.trim().toLowerCase();
       if (!normalized || normalized === 'null' || normalized === 'undefined') {
         return undefined;
       }
-      return val;
+      return value;
     }
-    return val;
+    return value;
   },
   objectIdSchema.optional()
 );
@@ -75,26 +96,26 @@ const imageStringSchema = z.string().refine(
 
 export const createCommunitySchema = z
   .object({
-    title: z.string().min(1, 'Community title is required'),
-    titleAr: z.string().min(1, 'Arabic community title is required').optional(),
-    description: z.string().min(1, 'Community description is required'),
-    descriptionAr: z.string().min(1, 'Arabic community description is required').optional(),
-    type: z.array(z.string().trim()).optional(),
-    category: z.string().optional(),
-    purposeType: z.string().optional(),
-    ridesThisMonth: z.string().optional(),
-    weeklyRides: z.string().optional(),
-    fundsRaised: z.string().optional(),
-    joinMode: z.string().optional(),
-    location: z.enum(['Abu Dhabi', 'Dubai', 'Al Ain', 'Sharjah']).optional(),
-    country: z.string().optional(),
-    image: imageStringSchema.optional(),
-    coverImage: imageStringSchema.optional(),
-    logo: imageStringSchema.optional(),
-    gallery: z.array(imageStringSchema).optional(),
-    trackName: z.string().optional(),
-    distance: numberFromString.min(0, 'Distance cannot be negative').optional(),
-    terrain: z.string().optional(),
+    title: z.preprocess(firstValue, z.string().min(1, 'Community title is required')),
+    titleAr: z.preprocess(firstValue, z.string().min(1, 'Arabic community title is required')).optional(),
+    description: z.preprocess(firstValue, z.string().min(1, 'Community description is required')),
+    descriptionAr: z.preprocess(firstValue, z.string().min(1, 'Arabic community description is required')).optional(),
+    type: z.preprocess(arrayFromStringOrJson, z.array(z.string().trim())).optional(),
+    category: z.preprocess(firstValue, z.string()).optional(),
+    purposeType: z.preprocess(firstValue, z.string()).optional(),
+    ridesThisMonth: z.preprocess(firstValue, z.string()).optional(),
+    weeklyRides: z.preprocess(firstValue, z.string()).optional(),
+    fundsRaised: z.preprocess(firstValue, z.string()).optional(),
+    joinMode: z.preprocess(firstValue, z.string()).optional(),
+    location: z.preprocess(firstValue, z.enum(['Abu Dhabi', 'Dubai', 'Al Ain', 'Sharjah'])).optional(),
+    country: z.preprocess(firstValue, z.string()).optional(),
+    image: z.preprocess(firstValue, imageStringSchema).optional(),
+    coverImage: z.preprocess(firstValue, imageStringSchema).optional(),
+    logo: z.preprocess(firstValue, imageStringSchema).optional(),
+    gallery: z.preprocess(arrayFromStringOrJson, z.array(imageStringSchema)).optional(),
+    trackName: z.preprocess(firstValue, z.string()).optional(),
+    distance: numberFromStringMin(0, 'Distance cannot be negative').optional(),
+    terrain: z.preprocess(firstValue, z.string()).optional(),
     isActive: booleanFromString.default(true),
     isPublic: booleanFromString.default(false),
     status: booleanFromString.default(false),
@@ -102,38 +123,38 @@ export const createCommunitySchema = z
     allowGallery: booleanFromString.default(false),
     isFeatured: booleanFromString.default(false),
     foundedYear: numberFromString.optional(),
-    members: z.string().optional(),
+    members: z.preprocess(firstValue, z.string()).optional(),
     memberCount: numberFromString.optional(),
-    slug: z.string().optional(),
-    manager: z.string().optional(),
-    area: z.string().optional(),
-    city: z.string().optional(),
+    slug: z.preprocess(firstValue, z.string()).optional(),
+    manager: z.preprocess(firstValue, z.string()).optional(),
+    area: z.preprocess(firstValue, z.string()).optional(),
+    city: z.preprocess(firstValue, z.string()).optional(),
     trackId: optionalObjectIdSchema,
   })
   .strict();
 
 export const updateCommunitySchema = z
   .object({
-    title: z.string().min(1, 'Community title is required').optional(),
-    titleAr: z.string().min(1, 'Arabic community title is required').optional(),
-    description: z.string().min(1, 'Community description is required').optional(),
-    descriptionAr: z.string().min(1, 'Arabic community description is required').optional(),
-    type: z.array(z.string().trim()).optional(),
-    category: z.string().optional(),
-    purposeType: z.string().optional(),
-    ridesThisMonth: z.string().optional(),
-    weeklyRides: z.string().optional(),
-    fundsRaised: z.string().optional(),
-    joinMode: z.string().optional(),
-    location: z.enum(['Abu Dhabi', 'Dubai', 'Al Ain', 'Sharjah']).optional(),
-    country: z.string().optional(),
-    image: imageStringSchema.optional(),
-    coverImage: imageStringSchema.optional(),
-    logo: imageStringSchema.optional(),
-    gallery: z.array(imageStringSchema).optional(),
-    trackName: z.string().optional(),
-    distance: numberFromString.min(0, 'Distance cannot be negative').optional(),
-    terrain: z.string().optional(),
+    title: z.preprocess(firstValue, z.string().min(1, 'Community title is required')).optional(),
+    titleAr: z.preprocess(firstValue, z.string().min(1, 'Arabic community title is required')).optional(),
+    description: z.preprocess(firstValue, z.string().min(1, 'Community description is required')).optional(),
+    descriptionAr: z.preprocess(firstValue, z.string().min(1, 'Arabic community description is required')).optional(),
+    type: z.preprocess(arrayFromStringOrJson, z.array(z.string().trim())).optional(),
+    category: z.preprocess(firstValue, z.string()).optional(),
+    purposeType: z.preprocess(firstValue, z.string()).optional(),
+    ridesThisMonth: z.preprocess(firstValue, z.string()).optional(),
+    weeklyRides: z.preprocess(firstValue, z.string()).optional(),
+    fundsRaised: z.preprocess(firstValue, z.string()).optional(),
+    joinMode: z.preprocess(firstValue, z.string()).optional(),
+    location: z.preprocess(firstValue, z.enum(['Abu Dhabi', 'Dubai', 'Al Ain', 'Sharjah'])).optional(),
+    country: z.preprocess(firstValue, z.string()).optional(),
+    image: z.preprocess(firstValue, imageStringSchema).optional(),
+    coverImage: z.preprocess(firstValue, imageStringSchema).optional(),
+    logo: z.preprocess(firstValue, imageStringSchema).optional(),
+    gallery: z.preprocess(arrayFromStringOrJson, z.array(imageStringSchema)).optional(),
+    trackName: z.preprocess(firstValue, z.string()).optional(),
+    distance: numberFromStringMin(0, 'Distance cannot be negative').optional(),
+    terrain: z.preprocess(firstValue, z.string()).optional(),
     isActive: booleanFromString.optional(),
     isPublic: booleanFromString.optional(),
     status: booleanFromString.optional(),
@@ -141,19 +162,19 @@ export const updateCommunitySchema = z
     allowGallery: booleanFromString.optional(),
     isFeatured: booleanFromString.default(false),
     foundedYear: numberFromString.optional(),
-    members: z.string().optional(),
+    members: z.preprocess(firstValue, z.string()).optional(),
     memberCount: numberFromString.optional(),
-    slug: z.string().optional(),
-    manager: z.string().optional(),
-    area: z.string().optional(),
-    city: z.string().optional(),
+    slug: z.preprocess(firstValue, z.string()).optional(),
+    manager: z.preprocess(firstValue, z.string()).optional(),
+    area: z.preprocess(firstValue, z.string()).optional(),
+    city: z.preprocess(firstValue, z.string()).optional(),
     trackId: optionalObjectIdSchema,
   })
   .strict();
 
 export const featureCommunitySchema = z
   .object({
-    isFeatured: z.boolean(),
+    isFeatured: z.preprocess(firstValue, z.boolean()),
   })
   .strict();
 
@@ -173,15 +194,15 @@ export const addGalleryImagesSchema = z
   .union([
     // Accept "images" array
     z.object({
-      images: z.array(imageStringSchema).min(1, 'At least one image is required'),
+      images: z.preprocess(arrayFromStringOrJson, z.array(imageStringSchema).min(1, 'At least one image is required')),
     }),
     // Accept "image" as single string
     z.object({
-      image: imageStringSchema,
+      image: z.preprocess(firstValue, imageStringSchema),
     }),
     // Accept "image" as array
     z.object({
-      image: z.array(imageStringSchema).min(1, 'At least one image is required'),
+      image: z.preprocess(arrayFromStringOrJson, z.array(imageStringSchema).min(1, 'At least one image is required')),
     }),
   ])
   .transform((data) => {
@@ -197,7 +218,7 @@ export const addGalleryImagesSchema = z
 
 export const removeGalleryImagesSchema = z
   .object({
-    imageUrls: z.array(imageStringSchema).min(1, 'At least one image URL is required'),
+    imageUrls: z.preprocess(arrayFromStringOrJson, z.array(imageStringSchema).min(1, 'At least one image URL is required')),
   })
   .strict();
 
