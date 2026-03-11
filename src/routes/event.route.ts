@@ -12,7 +12,11 @@ import {
   addToCalendar,
   getMemberEventStatus,
   deleteGalleryImage,
-  addEventGalleryImages
+  addEventGalleryImages,
+  closeEventRegistration,
+  reopenEventRegistration,
+  completeEvent,
+  disableEvent
 
 } from '@/controllers/event.controller';
 import { validate } from '@/middleware/validate.middleware';
@@ -50,6 +54,10 @@ router.delete('/:eventId/gallery', authenticate, deleteGalleryImage);
 router.post('/', authenticate, isAdmin, requireMultipartFormData, uploadEventImages, validate(createEventSchema), createEvent);
 router.patch('/:id', authenticate, isAdmin, requireMultipartFormData, uploadEventImages, validate(updateEventSchema), updateEvent);
 router.delete('/:id', authenticate, isAdmin, deleteEvent);
+router.patch('/:eventId/close-registration', authenticate, isAdmin, closeEventRegistration);
+router.patch('/:eventId/reopen-registration', authenticate, isAdmin, reopenEventRegistration);
+router.patch('/:eventId/complete', authenticate, isAdmin, completeEvent);
+router.patch('/:eventId/disable', authenticate, isAdmin, disableEvent);
 
 export default router;
 

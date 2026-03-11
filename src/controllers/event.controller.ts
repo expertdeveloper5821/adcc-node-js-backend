@@ -291,6 +291,88 @@ export const deleteEvent = asyncHandler(async (req: AuthRequest, res: Response) 
   sendSuccess(res, null, t(lang, "event.deleted"), 201);
 });
 
+const updateEventStatus = async (
+  eventId: string,
+  status: 'Draft' | 'Open' | 'Full' | 'Closed' | 'Disabled' | 'Completed' | 'Archived',
+  lang: SupportedLanguage
+) => {
+  const event = await Event.findByIdAndUpdate(
+    eventId,
+    { status },
+    { new: true, runValidators: true }
+  )
+    .populate('createdBy', 'fullName email')
+    .populate('trackId', 'title titleAr')
+    .populate('communityId', 'title titleAr');
+
+  if (!event) {
+    throw new AppError(t(lang, "event.not_found"), 404);
+  }
+
+  return event;
+};
+
+/**
+ * Close event registration
+ * PATCH /v1/events/:eventId/close-registration
+ * Admin only
+ */
+export const closeEventRegistration = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const lang = ((req as any).lang || 'en') as SupportedLanguage;
+  const eventId = Array.isArray(req.params.eventId)
+    ? req.params.eventId[0]
+    : req.params.eventId;
+
+  const event = await updateEventStatus(eventId, 'Closed', lang);
+  sendSuccess(res, localizeEventPayload(event.toObject(), lang), t(lang, "event.registration_closed"), 200);
+});
+
+/**
+ * Re-open event registration
+ * PATCH /v1/events/:eventId/reopen-registration
+ * Admin only
+ */
+export const reopenEventRegistration = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const lang = ((req as any).lang || 'en') as SupportedLanguage;
+  const eventId = Array.isArray(req.params.eventId)
+    ? req.params.eventId[0]
+    : req.params.eventId;
+
+  const event = await updateEventStatus(eventId, 'Open', lang);
+  sendSuccess(res, localizeEventPayload(event.toObject(), lang), t(lang, "event.registration_reopened"), 200);
+});
+
+/**
+ * Mark event as completed
+ * PATCH /v1/events/:eventId/complete
+ * Admin only
+ */
+export const completeEvent = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const lang = ((req as any).lang || 'en') as SupportedLanguage;
+  const eventId = Array.isArray(req.params.eventId)
+    ? req.params.eventId[0]
+    : req.params.eventId;
+
+  const event = await updateEventStatus(eventId, 'Completed', lang);
+  sendSuccess(res, localizeEventPayload(event.toObject(), lang), t(lang, "event.marked_completed"), 200);
+});
+
+/**
+ * Disable event
+ * PATCH /v1/events/:eventId/disable
+ * Admin only
+ */
+export const disableEvent = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const lang = ((req as any).lang || 'en') as SupportedLanguage;
+  const eventId = Array.isArray(req.params.eventId)
+    ? req.params.eventId[0]
+    : req.params.eventId;
+
+  const event = await updateEventStatus(eventId, 'Disabled', lang);
+  sendSuccess(res, localizeEventPayload(event.toObject(), lang), t(lang, "event.disabled"), 200);
+});
+
+
 /*
 * Status update event results
 */

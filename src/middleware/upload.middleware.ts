@@ -33,6 +33,7 @@ export const uploadMultipleImages = upload.array('images', 10);
 export const uploadEventImages = upload.fields([
   { name: 'mainImage', maxCount: 1 },
   { name: 'eventImage', maxCount: 1 },
+  { name: 'galleryImages', maxCount: 10 },
 
 ]);
 

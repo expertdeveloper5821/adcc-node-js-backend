@@ -91,7 +91,12 @@
         "calendar_link": "Calendar link generated",
         "results_retrieved": "Event results retrieved successfully",
         "invalid_id": "Invalid event ID",
-        "not_joined": "User has not joined this event"
+        "not_joined": "User has not joined this event",
+        "registration_closed": "Event registration closed successfully",
+        "registration_reopened": "Event registration reopened successfully",
+        "marked_completed": "Event marked as completed successfully",
+        "disabled": "Event disabled successfully",
+        "archived": "Event archived successfully"
     },
     "communityRide": {
         "not_found": "Community ride not found",

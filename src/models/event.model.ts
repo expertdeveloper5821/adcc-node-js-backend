@@ -16,13 +16,7 @@ export interface IEventSchedule {
   order?: number;
 }
 
-export type IEventAmenity =
-  | 'water'
-  | 'parking'
-  | 'toilets'
-  | 'lighting'
-  | 'medical support'
-  | 'bike service';
+export type IEventAmenity = string;
 
 export type IEventCategory =
   | 'Race'
@@ -64,7 +58,7 @@ export interface IEvent extends Document {
   youtubeLink?: string;
   category?: IEventCategory;
   currentParticipants: number;
-  status: 'Open' | 'Draft' | 'Full' | 'Completed' | 'Archived';
+  status: 'Open' | 'Draft' | 'Full' | 'Closed' | 'Disabled' | 'Completed' | 'Archived';
   createdBy: mongoose.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
@@ -177,7 +171,7 @@ const EventSchema = new Schema(
     amenities: [
       {
         type: String,
-        enum: ['water', 'parking', 'toilets', 'lighting', 'medical support', 'bike service' ],
+        trim: true,
       },
     ],
     schedule: [
@@ -235,7 +229,7 @@ const EventSchema = new Schema(
     },
     status: {
       type: String,
-      enum: ['Draft', 'Open', 'Full', 'Completed', 'Archived'],
+      enum: ['Draft', 'Open', 'Full', 'Closed', 'Disabled', 'Completed', 'Archived'],
       default: 'Open',
     },
     galleryImages: {

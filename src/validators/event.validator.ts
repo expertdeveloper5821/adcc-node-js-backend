@@ -49,18 +49,7 @@ export const createEventSchema = z
     distance: z.number().min(0, 'Distance cannot be negative').optional(),
     communityId: optionalObjectIdSchema,
     trackId: optionalObjectIdSchema,
-    amenities: z
-      .array(
-        z.enum({
-          'water': 'water',
-          'toilets': 'toilets',
-          'parking': 'parking',
-          'lighting': 'lighting',
-          'medical support': 'medical support',
-          'bike service': 'bike service',
-        })
-      )
-      .optional(),
+    amenities: z.array(z.string().trim().min(1)).optional(),
     schedule: z
       .array(
         z.object({
@@ -82,7 +71,7 @@ export const createEventSchema = z
       })
       .optional(),
 
-    status: z.enum(['Draft', 'Open', 'Full', 'Completed', 'Archived']).default('Draft'),
+    status: z.enum(['Draft', 'Open', 'Full', 'Closed', 'Disabled', 'Completed', 'Archived']).default('Draft'),
     slug: z.string().optional(),
     difficulty: z.string().optional(),
     endTime: z.string().optional(),
@@ -122,23 +111,11 @@ export const updateEventSchema = z
     minAge: z.number().int().min(0, 'Min age cannot be negative').optional(),
     maxAge: z.number().int().min(0, 'Max age cannot be negative').optional(),
     youtubeLink: z.string().url('Invalid YouTube URL').optional().or(z.literal('')),
-    status: z.enum(['Draft', 'Open', 'Full', 'Completed', 'Archived']).optional(),
+    status: z.enum(['Draft', 'Open', 'Full', 'Closed', 'Disabled', 'Completed', 'Archived']).optional(),
     distance: z.number().min(0, 'Distance cannot be negative').optional(),
     communityId: optionalObjectIdSchema,
     trackId: optionalObjectIdSchema,
-    amenities: z
-      .array(
-        z.enum({
-          'water': 'water',
-          'parking': 'parking',
-          'toilets': 'toilets',
-          'medical': 'medical',
-          'lighting': 'lighting',
-          'medical support': 'medical support',
-          'bike service': 'bike service',
-        })
-      )
-      .optional(),
+    amenities: z.array(z.string().trim().min(1)).optional(),
     schedule: z
       .array(
         z.object({
@@ -171,7 +148,7 @@ export const updateEventSchema = z
   .strict();
 
 export const getEventsQuerySchema = z.object({
-  status: z.enum(['Draft', 'Open', 'Full', 'Completed', 'Archived']).optional(),
+  status: z.enum(['Draft', 'Open', 'Full', 'Closed', 'Disabled', 'Completed', 'Archived']).optional(),
   page: z.string().regex(/^\d+$/).transform(Number).optional(),
   limit: z.string().regex(/^\d+$/).transform(Number).optional(),
 });
