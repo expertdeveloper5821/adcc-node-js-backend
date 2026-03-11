@@ -36,6 +36,7 @@
     "logout_success": "Logged out successfully",
     "user_not_found": "User not found",
     "stats_retrieved": "User stats retrieved successfully",
+    "performance_insights_retrieved": "Performance insights retrieved successfully",
     "joined_communities_retrieved": "Joined communities retrieved successfully",
     "joined_events_retrieved": "Joined events retrieved successfully",
     "active_participations_retrieved": "Active participations retrieved successfully",
@@ -96,7 +97,12 @@
         "registration_reopened": "Event registration reopened successfully",
         "marked_completed": "Event marked as completed successfully",
         "disabled": "Event disabled successfully",
-        "archived": "Event archived successfully"
+        "archived": "Event archived successfully",
+        "completed_summary_not_found": "Completed result not found for this event",
+        "completed_summary_retrieved": "Event completed summary retrieved successfully",
+        "feedback_updated": "Feedback updated successfully",
+        "result_photos_added": "Photos added to your ride result successfully",
+        "result_photos_limit": "Maximum number of photos reached for this result"
     },
     "communityRide": {
         "not_found": "Community ride not found",

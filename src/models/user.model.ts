@@ -10,6 +10,8 @@ export interface IUserStats {
   totalDistanceKm: number;
   totalRides: number;
   totalEventsParticipated: number;
+  totalPoints: number;
+  completedCount: number;
 }
 
 export interface IUser extends Document {
@@ -105,6 +107,8 @@ const UserSchema = new Schema(
       totalDistanceKm: { type: Number, default: 0 },
       totalRides: { type: Number, default: 0 },
       totalEventsParticipated: { type: Number, default: 0 },
+      totalPoints: { type: Number, default: 0 },
+      completedCount: { type: Number, default: 0 },
     },
   },
   {
