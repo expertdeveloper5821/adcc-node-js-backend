@@ -2,6 +2,7 @@ import express from 'express';
 import { validate } from '@/middleware/validate.middleware';
 import { authenticate } from '@/middleware/auth.middleware';
 import { isAdmin } from '@/middleware/role.middleware';
+import { uploadMultipleImages } from '@/middleware/upload.middleware';
 import {  
     createTrackSchema,
     updateTrackSchema
@@ -18,7 +19,8 @@ import {
     archiveTrack,
     disableTrack,
     enableTrack,
-    deleteGalleryImage
+    deleteGalleryImage,
+    addTrackGalleryImages
 } from '@/controllers/track.controller';
 
 const router = express.Router();
@@ -33,6 +35,7 @@ router.get('/:trackId/communities/results', authenticate, trackCommunityResults)
 router.post('/', authenticate, isAdmin, validate(createTrackSchema), createTrack);
 router.patch('/:trackId', authenticate, isAdmin, validate(updateTrackSchema) , updateTrack);
 router.delete('/:trackId', authenticate, isAdmin, deleteTrack);
+router.post('/:trackId/gallery', authenticate, isAdmin, uploadMultipleImages, addTrackGalleryImages);
 router.delete('/:trackId/gallery', authenticate, deleteGalleryImage);
 router.patch('/:trackId/archive', authenticate, archiveTrack);
 router.patch('/tracks/:trackId/disable', authenticate, disableTrack);

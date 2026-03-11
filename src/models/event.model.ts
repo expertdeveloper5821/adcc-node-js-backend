@@ -236,7 +236,7 @@ const EventSchema = new Schema(
     status: {
       type: String,
       enum: ['Draft', 'Open', 'Full', 'Completed', 'Archived'],
-      default: 'upcoming',
+      default: 'Open',
     },
     galleryImages: {
       type: [String],

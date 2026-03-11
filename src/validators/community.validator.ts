@@ -6,6 +6,17 @@ export const objectIdSchema = z.string().refine(
   { message: 'Invalid MongoDB ObjectId' }
 );
 
+const booleanFromString = z.preprocess(
+  (val) => {
+    if (val === 'true') return true;
+    if (val === 'false') return false;
+    return val;
+  },
+  z.boolean()
+);
+
+const numberFromString = z.coerce.number();
+
 const optionalObjectIdSchema = z.preprocess(
   (val) => {
     if (val === null || val === undefined) return undefined;
@@ -77,22 +88,22 @@ export const createCommunitySchema = z
     joinMode: z.string().optional(),
     location: z.enum(['Abu Dhabi', 'Dubai', 'Al Ain', 'Sharjah']).optional(),
     country: z.string().optional(),
-    image: z.string().optional(),
-    coverImage: z.string().optional(),
-    logo: z.string().optional(),
+    image: imageStringSchema.optional(),
+    coverImage: imageStringSchema.optional(),
+    logo: imageStringSchema.optional(),
     gallery: z.array(imageStringSchema).optional(),
     trackName: z.string().optional(),
-    distance: z.number().min(0, 'Distance cannot be negative').optional(),
+    distance: numberFromString.min(0, 'Distance cannot be negative').optional(),
     terrain: z.string().optional(),
-    isActive: z.boolean().default(true),
-    isPublic: z.boolean().default(false),
-    status: z.boolean().default(false),
-    allowPosts: z.boolean().default(false),
-    allowGallery: z.boolean().default(false),
-    isFeatured: z.boolean().default(false),
-    foundedYear: z.number().optional(),
+    isActive: booleanFromString.default(true),
+    isPublic: booleanFromString.default(false),
+    status: booleanFromString.default(false),
+    allowPosts: booleanFromString.default(false),
+    allowGallery: booleanFromString.default(false),
+    isFeatured: booleanFromString.default(false),
+    foundedYear: numberFromString.optional(),
     members: z.string().optional(),
-    memberCount: z.number().optional(),
+    memberCount: numberFromString.optional(),
     slug: z.string().optional(),
     manager: z.string().optional(),
     area: z.string().optional(),
@@ -116,22 +127,22 @@ export const updateCommunitySchema = z
     joinMode: z.string().optional(),
     location: z.enum(['Abu Dhabi', 'Dubai', 'Al Ain', 'Sharjah']).optional(),
     country: z.string().optional(),
-    image: z.string().optional(),
-    coverImage: z.string().optional(),
-    logo: z.string().optional(),
+    image: imageStringSchema.optional(),
+    coverImage: imageStringSchema.optional(),
+    logo: imageStringSchema.optional(),
     gallery: z.array(imageStringSchema).optional(),
     trackName: z.string().optional(),
-    distance: z.number().min(0, 'Distance cannot be negative').optional(),
+    distance: numberFromString.min(0, 'Distance cannot be negative').optional(),
     terrain: z.string().optional(),
-    isActive: z.boolean().optional(),
-    isPublic: z.boolean().optional(),
-    status: z.boolean().optional(),
-    allowPosts: z.boolean().optional(),
-    allowGallery: z.boolean().optional(),
-    isFeatured: z.boolean().default(false),
-    foundedYear: z.number().optional(),
+    isActive: booleanFromString.optional(),
+    isPublic: booleanFromString.optional(),
+    status: booleanFromString.optional(),
+    allowPosts: booleanFromString.optional(),
+    allowGallery: booleanFromString.optional(),
+    isFeatured: booleanFromString.default(false),
+    foundedYear: numberFromString.optional(),
     members: z.string().optional(),
-    memberCount: z.number().optional(),
+    memberCount: numberFromString.optional(),
     slug: z.string().optional(),
     manager: z.string().optional(),
     area: z.string().optional(),

@@ -71,6 +71,94 @@ const normalizeGalleryImagesInput = (value: unknown): string[] => {
   return [];
 };
 
+const isUrlString = (value: string): boolean => {
+  try {
+    const url = new URL(value);
+    return url.protocol === 'http:' || url.protocol === 'https:';
+  } catch {
+    return false;
+  }
+};
+
+const parseImageDataUri = (value: string): { mimeType: string; base64: string } | null => {
+  const match = /^data:(image\/[a-zA-Z0-9+.-]+);base64,(.+)$/.exec(value);
+  if (!match) return null;
+  return { mimeType: match[1], base64: match[2] };
+};
+
+const isPlainBase64 = (value: string): boolean => /^[A-Za-z0-9+/=]+$/.test(value) && value.length > 100;
+
+const uploadImageStringToS3 = async (
+  value: unknown,
+  fileBaseName: string
+): Promise<string | undefined> => {
+  if (!value || typeof value !== 'string') return undefined;
+  const trimmed = value.trim();
+  if (!trimmed) return undefined;
+  if (isUrlString(trimmed)) return trimmed;
+
+  let base64 = trimmed;
+  let mimeType = 'image/jpeg';
+
+  if (trimmed.startsWith('data:image/')) {
+    const parsed = parseImageDataUri(trimmed);
+    if (!parsed) {
+      throw new AppError('Invalid image data URI format', 400);
+    }
+    base64 = parsed.base64;
+    mimeType = parsed.mimeType;
+  } else if (!isPlainBase64(trimmed)) {
+    return trimmed;
+  }
+
+  const buffer = Buffer.from(base64, 'base64');
+  const extension = mimeType.split('/')[1] || 'jpg';
+  const originalName = `${fileBaseName}.${extension}`;
+
+  const uploaded = await uploadImageBufferToS3(buffer, mimeType, originalName, 'community');
+  return uploaded.url;
+};
+
+const attachCommunityImages = async (req: AuthRequest, data: Record<string, any>) => {
+  const files = req.files as
+    | {
+        [fieldname: string]: Express.Multer.File[];
+      }
+    | undefined;
+
+  if (!files) return data;
+
+  if (files.image?.length) {
+    const uploaded = await uploadImageBufferToS3(
+      files.image[0].buffer,
+      files.image[0].mimetype,
+      files.image[0].originalname,
+      'community'
+    );
+    data.image = uploaded.url;
+  } else if (files.coverImage?.length) {
+    const uploaded = await uploadImageBufferToS3(
+      files.coverImage[0].buffer,
+      files.coverImage[0].mimetype,
+      files.coverImage[0].originalname,
+      'community'
+    );
+    data.image = uploaded.url;
+  }
+
+  if (files.logo?.length) {
+    const uploaded = await uploadImageBufferToS3(
+      files.logo[0].buffer,
+      files.logo[0].mimetype,
+      files.logo[0].originalname,
+      'community'
+    );
+    data.logo = uploaded.url;
+  }
+
+  return data;
+};
+
 /**
  * Create new community
  * POST /v1/communities
@@ -84,9 +172,14 @@ export const createCommunity = asyncHandler(async (req: AuthRequest, res: Respon
     throw new AppError(t(lang, "auth.unauthorized"), 401);
   }
 
-  const communityData = {
+  const imageInput = req.body.image || req.body.coverImage;
+  const imageUrl = await uploadImageStringToS3(imageInput, 'community-image');
+  const logoUrl = await uploadImageStringToS3(req.body.logo, 'community-logo');
+
+  const communityData: Record<string, any> = {
     ...req.body,
-    image: req.body.image || req.body.coverImage,
+    image: imageUrl || imageInput,
+    logo: logoUrl || req.body.logo,
     titleAr: req.body.titleAr || req.body.title,
     descriptionAr: req.body.descriptionAr || req.body.description,
     trackId: normalizeOptionalTrackId(req.body.trackId),
@@ -96,6 +189,8 @@ export const createCommunity = asyncHandler(async (req: AuthRequest, res: Respon
   };
 
   delete (communityData as any).coverImage;
+
+  await attachCommunityImages(req, communityData);
 
   const community = await Community.create(communityData);
   const localizedCommunity = localizeCommunity(community.toObject(), lang);
@@ -247,8 +342,10 @@ export const getCommunityById = asyncHandler(async (req: Request, res: Response)
  * Admin only
  */
 export const updateCommunity = asyncHandler(async (req: AuthRequest, res: Response) => {
+  
   const lang = ((req as any).lang || 'en') as SupportedLanguage;
   const { id } = req.params;
+  // console.log('id',id);
 
   const community = await Community.findById(id);
 
@@ -273,10 +370,26 @@ export const updateCommunity = asyncHandler(async (req: AuthRequest, res: Respon
   }
   delete (req.body as any).coverImage;
 
+  if (req.body.image) {
+    req.body.image = await uploadImageStringToS3(req.body.image, 'community-image');
+  }
+  if (req.body.logo) {
+    req.body.logo = await uploadImageStringToS3(req.body.logo, 'community-logo');
+  }
+
   req.body.trackId = normalizeOptionalTrackId(req.body.trackId);
   if (!req.body.trackId) {
     delete req.body.trackId;
   }
+
+  if (req.body.image) {
+    req.body.image = await uploadImageStringToS3(req.body.image, 'community-image');
+  }
+  if (req.body.logo) {
+    req.body.logo = await uploadImageStringToS3(req.body.logo, 'community-logo');
+  }
+
+  await attachCommunityImages(req, req.body);
 
   Object.assign(community, req.body);
   await community.save();
@@ -547,7 +660,7 @@ export const isMemberOfCommunity = asyncHandler(async (req: AuthRequest, res: Re
 export const addGalleryImages = asyncHandler(async (req: AuthRequest, res: Response) => {
   const lang = ((req as any).lang || 'en') as SupportedLanguage;
   const { id } = req.params;
-
+// console.log('body', req.body);
   const uploadedImageUrls =
     req.files && Array.isArray(req.files)
       ? await Promise.all(

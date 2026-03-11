@@ -6,6 +6,7 @@ import { sendSuccess } from '@/utils/response';
 import { asyncHandler } from '@/utils/async-handler';
 import { AppError } from '@/utils/app-error';
 import { AuthRequest } from '@/middleware/auth.middleware';
+import { uploadImageBufferToS3 } from '@/services/s3-upload.service';
 import {
   incrementStatsOnJoin,
   decrementStatsOnCancel,
@@ -53,6 +54,70 @@ const localizeEventPayload = (event: Record<string, any>, lang: SupportedLanguag
   return localizedEvent;
 };
 
+const normalizeGalleryImagesInput = (value: unknown): string[] => {
+  if (!value) return [];
+
+  if (Array.isArray(value)) {
+    return value
+      .filter((item): item is string => typeof item === 'string')
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed) return [];
+
+    // support form-data where array comes as JSON string
+    if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        if (Array.isArray(parsed)) {
+          return parsed
+            .filter((item): item is string => typeof item === 'string')
+            .map((item) => item.trim())
+            .filter(Boolean);
+        }
+      } catch {
+        return [];
+      }
+    }
+
+    return [trimmed];
+  }
+
+  return [];
+};
+
+const attachEventImages = async (req: AuthRequest, data: Record<string, any>) => {
+  const files = req.files as {
+    [fieldname: string]: Express.Multer.File[];
+  } | undefined;
+
+  if (!files) return data;
+
+  if (files.mainImage?.length) {
+    const uploadResult = await uploadImageBufferToS3(
+      files.mainImage[0].buffer,
+      files.mainImage[0].mimetype,
+      files.mainImage[0].originalname,
+      'events'
+    );
+    data.mainImage = uploadResult.url;
+  }
+  if (files.eventImage?.length) {
+    const uploadResult = await uploadImageBufferToS3(
+      files.eventImage[0].buffer,
+      files.eventImage[0].mimetype,
+      files.eventImage[0].originalname,
+      'events'
+    );
+    data.eventImage = uploadResult.url;
+  }
+
+  return data;
+};
+
 /**
  * Create new event
  * POST /v1/events
@@ -81,6 +146,8 @@ export const createEvent = asyncHandler(async (req: AuthRequest, res: Response) 
     eventDate: req.body.eventDate ? new Date(req.body.eventDate) : undefined,
     createdBy: userId,
   };
+
+  await attachEventImages(req, eventData);
 
   const event = await Event.create(eventData);
   const localizedEvent = localizeEventPayload(event.toObject(), lang);
@@ -166,6 +233,8 @@ export const updateEvent = asyncHandler(async (req: AuthRequest, res: Response) 
   const lang = ((req as any).lang || 'en') as SupportedLanguage;
   const { id } = req.params;
   const updateData = { ...req.body };
+
+  await attachEventImages(req, updateData);
 
   // Convert eventDate string to Date if provided
   if (updateData.eventDate) {
@@ -434,6 +503,78 @@ export const getEventResultsList = asyncHandler(async (req: Request, res: Respon
 
 
   sendSuccess(res, eventResults, t(lang, 'event.results_retrieved'), 201);
+});
+
+/**
+ * Add images to event gallery
+ * POST /v1/events/:eventId/gallery
+ * Admin only
+ */
+export const addEventGalleryImages = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const lang = ((req as any).lang || 'en') as SupportedLanguage;
+  const { eventId } = req.params;
+
+  const uploadedImageUrls =
+    req.files && Array.isArray(req.files)
+      ? await Promise.all(
+          req.files.map(async (file) => {
+            const uploaded = await uploadImageBufferToS3(
+              file.buffer,
+              file.mimetype,
+              file.originalname,
+              'events-galleries'
+            );
+            return uploaded.url;
+          })
+        )
+      : [];
+
+  const bodyImages = normalizeGalleryImagesInput((req.body as any).images);
+  const bodyImage = normalizeGalleryImagesInput((req.body as any).image);
+  const images = [...uploadedImageUrls, ...bodyImages, ...bodyImage];
+
+  if (images.length === 0) {
+    throw new AppError('At least one image is required', 400);
+  }
+
+  const event = await Event.findById(eventId);
+  if (!event) {
+    throw new AppError(t(lang, 'event.not_found'), 404);
+  }
+
+  if (!event.galleryImages) {
+    event.galleryImages = [];
+  }
+
+  const existingImages = new Set(event.galleryImages);
+  const newImages = images.filter((imageUrl: string) => !existingImages.has(imageUrl));
+
+  if (newImages.length === 0) {
+    throw new AppError('All images already exist in gallery', 400);
+  }
+
+  event.galleryImages = [...event.galleryImages, ...newImages];
+  await event.save();
+
+  const updatedEvent = await Event.findById(eventId)
+    .populate('createdBy', 'fullName email')
+    .populate('trackId', 'title titleAr')
+    .populate('communityId', 'title titleAr');
+
+  if (!updatedEvent) {
+    throw new AppError(t(lang, 'event.not_found'), 500);
+  }
+
+  sendSuccess(
+    res,
+    {
+      event: localizeEventPayload(updatedEvent.toObject(), lang),
+      addedImages: newImages,
+      totalImages: updatedEvent.galleryImages?.length || 0,
+    },
+    'Event gallery images added successfully',
+    201
+  );
 });
 
 /**

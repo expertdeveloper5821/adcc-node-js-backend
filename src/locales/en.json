@@ -112,7 +112,8 @@
       "disabled": "Disabled",
       "active": "Active",
       "left": "Left",
-      "banned": "Banned"
+      "banned": "Banned",
+      "upcoming": "Upcoming"
     },
     "communityTypes": {
       "club": "Club",
@@ -136,7 +137,8 @@
       "cityCommunities": "City Communities",
       "specialInterest": "Special Interest",
       "awarenessCharity": "Awareness & Charity",
-      "trainingClinics": "Training & Clinics"
+      "trainingClinics": "Training & Clinics",
+      "awareness": "Awareness"
     },
     "locations": {
       "abuDhabi": "Abu Dhabi",
@@ -196,7 +198,13 @@
       "city": "City",
       "group": "Group",
       "purpose": "Purpose",
-      "type": "Type"
+      "type": "Type",
+      "cityCommunities": "City Communities",
+      "typeCommunities": "Type Communities",
+      "groupCommunities":"Group Communities",
+      "racingPerformance": "Racing & Performance",
+      "familyLeisure": "Family & Leisure",
+      "women(sherides)": "Women(sherides)"
     },
     "difficulties": {
       "easy": "Easy",

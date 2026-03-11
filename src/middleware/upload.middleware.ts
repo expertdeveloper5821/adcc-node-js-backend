@@ -29,3 +29,34 @@ const upload = multer({
 
 export const uploadSingleImage = upload.single('image');
 export const uploadMultipleImages = upload.array('images', 10);
+
+export const uploadEventImages = upload.fields([
+  { name: 'mainImage', maxCount: 1 },
+  { name: 'eventImage', maxCount: 1 },
+
+]);
+
+const communityImageFields = upload.fields([
+  { name: 'image', maxCount: 1 },
+  { name: 'coverImage', maxCount: 1 },
+  { name: 'logo', maxCount: 1 },
+]);
+
+export const uploadCommunityImages = (req: any, res: any, next: any) => {
+  const contentType = (req.headers['content-type'] || '').toString();
+  if (contentType.includes('multipart/form-data')) {
+    return communityImageFields(req, res, next);
+  }
+  return next();
+};
+
+export const requireMultipartFormData = (req: any, _res: any, next: any) => {
+  const contentType = (req.headers['content-type'] || '').toString();
+  if (!contentType.includes('multipart/form-data')) {
+    const error = new Error('Content-Type must be multipart/form-data with boundary');
+    // @ts-ignore
+    error.statusCode = 400;
+    return next(error);
+  }
+  return next();
+};

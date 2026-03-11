@@ -6,10 +6,19 @@ export const validate =
   (schema: ZodType) =>
   (req: Request, _res: Response, next: NextFunction): void => {
 
+    const isBodyMethod = ['POST', 'PUT', 'PATCH'].includes(req.method.toUpperCase());
+    const hasBody = req.body !== undefined;
+    const isBodyEmpty = !req.body || Object.keys(req.body).length === 0;
+
     let data: any = req.body;
 
-    // If no body, fallback to params
-    if (!data || Object.keys(data).length === 0) {
+    // For body methods, never validate params/query with a body schema
+    if (isBodyMethod) {
+      if (!hasBody) {
+        req.body = {};
+        data = req.body;
+      }
+    } else if (!hasBody || isBodyEmpty) {
       if (Object.keys(req.params).length > 0) {
         data = req.params;
       } else {
