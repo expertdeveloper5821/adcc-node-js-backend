@@ -55,11 +55,11 @@ router.delete('/:eventId/gallery', authenticate, deleteGalleryImage);
 
 router.post(
   '/',
+  debugRequestBasics,
   authenticate,
   isAdmin,
   uploadEventImagesIfMultipart,
   requireParsedMultipartBody,
-  debugRequestBasics,
   validate(createEventSchema),
   createEvent
 );
