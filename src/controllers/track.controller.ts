@@ -57,6 +57,36 @@ const normalizeGalleryImagesInput = (value: unknown): string[] => {
   return [];
 };
 
+const attachTrackImages = async (req: AuthRequest, data: Record<string, any>) => {
+  const files = req.files as {
+    [fieldname: string]: Express.Multer.File[];
+  } | undefined;
+
+  if (!files) return data;
+
+  if (files.image?.length) {
+    const uploadResult = await uploadImageBufferToS3(
+      files.image[0].buffer,
+      files.image[0].mimetype,
+      files.image[0].originalname,
+      'tracks'
+    );
+    data.image = uploadResult.url;
+  }
+
+  if (files.coverImage?.length) {
+    const uploadResult = await uploadImageBufferToS3(
+      files.coverImage[0].buffer,
+      files.coverImage[0].mimetype,
+      files.coverImage[0].originalname,
+      'tracks'
+    );
+    data.coverImage = uploadResult.url;
+  }
+
+  return data;
+};
+
 
 /**
  * Create new event
@@ -77,6 +107,7 @@ export const createTrack = asyncHandler(async (req: AuthRequest, res: Response) 
     teackData: req.body.teackData ? new Date(req.body.teackData) : undefined,
     createdBy: userId,
     };
+    await attachTrackImages(req, teackData);
     const event = await Track.create(teackData);
     sendSuccess(res, localizeTrack(event.toObject(), lang), t(lang, "track.created"), 201);
 });
@@ -148,8 +179,11 @@ export const updateTrack = asyncHandler(async (req: AuthRequest, res: Response) 
       req.body.descriptionAr = req.body.description;
     }
 
+    const updateData = { ...req.body };
+    await attachTrackImages(req, updateData);
+
     // console.log('req.body:', req.body);
-    const track = await Track.findByIdAndUpdate(trackId, req.body, { new: true });
+    const track = await Track.findByIdAndUpdate(trackId, updateData, { new: true });
     if (!track) {
          throw new AppError(t(lang, "track.not_found"), 404);
     }

@@ -37,6 +37,19 @@ export const uploadEventImages = upload.fields([
 
 ]);
 
+const trackImageFields = upload.fields([
+  { name: 'image', maxCount: 1 },
+  { name: 'coverImage', maxCount: 1 },
+]);
+
+export const uploadTrackImages = (req: any, res: any, next: any) => {
+  const contentType = (req.headers['content-type'] || '').toString();
+  if (contentType.includes('multipart/form-data')) {
+    return trackImageFields(req, res, next);
+  }
+  return next();
+};
+
 const communityImageFields = upload.fields([
   { name: 'image', maxCount: 1 },
   { name: 'coverImage', maxCount: 1 },

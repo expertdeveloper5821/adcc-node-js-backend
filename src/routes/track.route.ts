@@ -2,7 +2,7 @@ import express from 'express';
 import { validate } from '@/middleware/validate.middleware';
 import { authenticate } from '@/middleware/auth.middleware';
 import { isAdmin } from '@/middleware/role.middleware';
-import { uploadMultipleImages } from '@/middleware/upload.middleware';
+import { uploadMultipleImages, uploadTrackImages } from '@/middleware/upload.middleware';
 import {  
     createTrackSchema,
     updateTrackSchema
@@ -25,6 +25,22 @@ import {
 
 const router = express.Router();
 
+const normalizeTrackFormData = (req: express.Request, _res: express.Response, next: express.NextFunction) => {
+  if (req.body && typeof req.body === 'object') {
+    const body: any = req.body;
+
+    if (body['facilities[]'] !== undefined && body.facilities === undefined) {
+      body.facilities = body['facilities[]'];
+    }
+
+    if (body.type !== undefined && body.trackType === undefined) {
+      body.trackType = body.type;
+    }
+  }
+
+  next();
+};
+
 router.get('/', authenticate, getAllTracks);
 router.get('/:trackId', authenticate, getTrackById);
 router.get('/:trackId/events/results', authenticate, getTrackResults);  // Track-related event results
@@ -32,8 +48,8 @@ router.get('/:trackId/events/:eventId/communities/:Id/photos', authenticate, tra
 router.get('/:trackId/communities/results', authenticate, trackCommunityResults); // Track-related event results with photos for a community
 
 // Admin only routes
-router.post('/', authenticate, isAdmin, validate(createTrackSchema), createTrack);
-router.patch('/:trackId', authenticate, isAdmin, validate(updateTrackSchema) , updateTrack);
+router.post('/', authenticate, isAdmin, uploadTrackImages, normalizeTrackFormData, validate(createTrackSchema), createTrack);
+router.patch('/:trackId', authenticate, isAdmin, uploadTrackImages, normalizeTrackFormData, validate(updateTrackSchema) , updateTrack);
 router.delete('/:trackId', authenticate, isAdmin, deleteTrack);
 router.post('/:trackId/gallery', authenticate, isAdmin, uploadMultipleImages, addTrackGalleryImages);
 router.delete('/:trackId/gallery', authenticate, deleteGalleryImage);
