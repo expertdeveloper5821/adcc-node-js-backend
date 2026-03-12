@@ -9,6 +9,7 @@ import { AppError } from '@/utils/app-error';
 import { AuthRequest } from '@/middleware/auth.middleware';
 import mongoose from 'mongoose';
 import { localizeDocumentFields, SupportedLanguage, localizeTrackStatic } from '@/utils/localization';
+import { uploadImageBufferToS3 } from '@/services/s3-upload.service';
 
 const TRACK_LOCALIZED_FIELDS = {
   title: 'titleAr',
@@ -19,6 +20,71 @@ const localizeTrack = (track: Record<string, any>, lang: SupportedLanguage) => {
   const localized = localizeDocumentFields(track, lang, TRACK_LOCALIZED_FIELDS);
   localizeTrackStatic(localized, lang);
   return localized;
+};
+
+const normalizeGalleryImagesInput = (value: unknown): string[] => {
+  if (!value) return [];
+
+  if (Array.isArray(value)) {
+    return value
+      .filter((item): item is string => typeof item === 'string')
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed) return [];
+
+    // support form-data where array comes as JSON string
+    if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        if (Array.isArray(parsed)) {
+          return parsed
+            .filter((item): item is string => typeof item === 'string')
+            .map((item) => item.trim())
+            .filter(Boolean);
+        }
+      } catch {
+        return [];
+      }
+    }
+
+    return [trimmed];
+  }
+
+  return [];
+};
+
+const attachTrackImages = async (req: AuthRequest, data: Record<string, any>) => {
+  const files = req.files as {
+    [fieldname: string]: Express.Multer.File[];
+  } | undefined;
+
+  if (!files) return data;
+
+  if (files.image?.length) {
+    const uploadResult = await uploadImageBufferToS3(
+      files.image[0].buffer,
+      files.image[0].mimetype,
+      files.image[0].originalname,
+      'tracks'
+    );
+    data.image = uploadResult.url;
+  }
+
+  if (files.coverImage?.length) {
+    const uploadResult = await uploadImageBufferToS3(
+      files.coverImage[0].buffer,
+      files.coverImage[0].mimetype,
+      files.coverImage[0].originalname,
+      'tracks'
+    );
+    data.coverImage = uploadResult.url;
+  }
+
+  return data;
 };
 
 
@@ -41,6 +107,7 @@ export const createTrack = asyncHandler(async (req: AuthRequest, res: Response) 
     teackData: req.body.teackData ? new Date(req.body.teackData) : undefined,
     createdBy: userId,
     };
+    await attachTrackImages(req, teackData);
     const event = await Track.create(teackData);
     sendSuccess(res, localizeTrack(event.toObject(), lang), t(lang, "track.created"), 201);
 });
@@ -112,8 +179,11 @@ export const updateTrack = asyncHandler(async (req: AuthRequest, res: Response) 
       req.body.descriptionAr = req.body.description;
     }
 
+    const updateData = { ...req.body };
+    await attachTrackImages(req, updateData);
+
     // console.log('req.body:', req.body);
-    const track = await Track.findByIdAndUpdate(trackId, req.body, { new: true });
+    const track = await Track.findByIdAndUpdate(trackId, updateData, { new: true });
     if (!track) {
          throw new AppError(t(lang, "track.not_found"), 404);
     }
@@ -370,5 +440,77 @@ export const deleteGalleryImage = asyncHandler(async (req: AuthRequest, res: Res
     res.status(500).json({ message: "Server error" });
     return;
   }
+});
+
+/**
+ * Add images to track gallery
+ * POST /v1/tracks/:trackId/gallery
+ * Admin only
+ */
+export const addTrackGalleryImages = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const lang = ((req as any).lang || 'en') as SupportedLanguage;
+  const { trackId } = req.params;
+  const userId = req.user?.id;
+    
+    if (!userId) {
+      throw new AppError(t(lang, "auth.unauthorized"), 401);
+    }
+  const uploadedImageUrls =
+    req.files && Array.isArray(req.files)
+      ? await Promise.all(
+          req.files.map(async (file) => {
+            const uploaded = await uploadImageBufferToS3(
+              file.buffer,
+              file.mimetype,
+              file.originalname,
+              'tracks-galleries'
+            );
+            return uploaded.url;
+          })
+        )
+      : [];
+
+  const bodyImages = normalizeGalleryImagesInput((req.body as any).images);
+  const bodyImage = normalizeGalleryImagesInput((req.body as any).image);
+  const images = [...uploadedImageUrls, ...bodyImages, ...bodyImage];
+
+  if (images.length === 0) {
+    throw new AppError('At least one image is required', 400);
+  }
+
+  const track = await Track.findById(trackId);
+  if (!track) {
+    throw new AppError(t(lang, 'track.not_found'), 404);
+  }
+
+  if (!track.galleryImages) {
+    track.galleryImages = [];
+  }
+
+  const existingImages = new Set(track.galleryImages);
+  const newImages = images.filter((imageUrl: string) => !existingImages.has(imageUrl));
+
+  if (newImages.length === 0) {
+    throw new AppError('All images already exist in gallery', 400);
+  }
+
+  track.galleryImages = [...track.galleryImages, ...newImages];
+  await track.save();
+
+  const updatedTrack = await Track.findById(trackId).populate('createdBy', 'fullName email');
+  if (!updatedTrack) {
+    throw new AppError(t(lang, 'track.not_found'), 500);
+  }
+
+  sendSuccess(
+    res,
+    {
+      track: localizeTrack(updatedTrack.toObject(), lang),
+      addedImages: newImages,
+      totalImages: updatedTrack.galleryImages?.length || 0,
+    },
+    'Track gallery images added successfully',
+    201
+  );
 });
 
