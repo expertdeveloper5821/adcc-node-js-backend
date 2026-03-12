@@ -51,9 +51,7 @@ router.delete('/:eventId/gallery', authenticate, deleteGalleryImage);
 
 
 // Admin only routes
-<<<<<<< Updated upstream
-router.post('/', authenticate, isAdmin, requireMultipartFormData, uploadEventImages, validate(createEventSchema), createEvent);
-=======
+
 router.post(
   '/',
   authenticate,
@@ -63,7 +61,7 @@ router.post(
   validate(createEventSchema),
   createEvent
 );
->>>>>>> Stashed changes
+
 router.patch('/:id', authenticate, isAdmin, requireMultipartFormData, uploadEventImages, validate(updateEventSchema), updateEvent);
 router.delete('/:id', authenticate, isAdmin, deleteEvent);
 router.patch('/:eventId/close-registration', authenticate, isAdmin, closeEventRegistration);
