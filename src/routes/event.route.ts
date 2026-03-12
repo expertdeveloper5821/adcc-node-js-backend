@@ -28,10 +28,10 @@ import {
 import { 
   joinEventSchema
  } from '@/validators/event-result.validator';
-import { requireMultipartFormData } from '@/middleware/upload.middleware';
+import { requireMultipartFormData, requireParsedMultipartBody } from '@/middleware/upload.middleware';
 import { authenticate } from '@/middleware/auth.middleware';
 import { isAdmin} from '@/middleware/role.middleware';
-import { uploadMultipleImages, uploadEventImages } from '@/middleware/upload.middleware';
+import { uploadMultipleImages, uploadEventImages, uploadEventImagesIfMultipart } from '@/middleware/upload.middleware';
 
 const router = express.Router();
 
@@ -51,7 +51,17 @@ router.delete('/:eventId/gallery', authenticate, deleteGalleryImage);
 
 
 // Admin only routes
-router.post('/', authenticate, isAdmin, uploadEventImages, validate(createEventSchema), createEvent);
+
+router.post(
+  '/',
+  authenticate,
+  isAdmin,
+  uploadEventImagesIfMultipart,
+  requireParsedMultipartBody,
+  validate(createEventSchema),
+  createEvent
+);
+
 router.patch('/:id', authenticate, isAdmin, requireMultipartFormData, uploadEventImages, validate(updateEventSchema), updateEvent);
 router.delete('/:id', authenticate, isAdmin, deleteEvent);
 router.patch('/:eventId/close-registration', authenticate, isAdmin, closeEventRegistration);

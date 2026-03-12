@@ -2,7 +2,7 @@ import express from 'express';
 import { validate } from '@/middleware/validate.middleware';
 import { authenticate } from '@/middleware/auth.middleware';
 import { isAdmin } from '@/middleware/role.middleware';
-import { uploadMultipleImages, uploadTrackImages } from '@/middleware/upload.middleware';
+import { uploadMultipleImages, uploadTrackImages, requireParsedMultipartBody } from '@/middleware/upload.middleware';
 import {  
     createTrackSchema,
     updateTrackSchema
@@ -48,7 +48,16 @@ router.get('/:trackId/events/:eventId/communities/:Id/photos', authenticate, tra
 router.get('/:trackId/communities/results', authenticate, trackCommunityResults); // Track-related event results with photos for a community
 
 // Admin only routes
-router.post('/', authenticate, isAdmin, uploadTrackImages, normalizeTrackFormData, validate(createTrackSchema), createTrack);
+router.post(
+  '/',
+  authenticate,
+  isAdmin,
+  uploadTrackImages,
+  requireParsedMultipartBody,
+  normalizeTrackFormData,
+  validate(createTrackSchema),
+  createTrack
+);
 router.patch('/:trackId', authenticate, isAdmin, uploadTrackImages, normalizeTrackFormData, validate(updateTrackSchema) , updateTrack);
 router.delete('/:trackId', authenticate, isAdmin, deleteTrack);
 router.post('/:trackId/gallery', authenticate, isAdmin, uploadMultipleImages, addTrackGalleryImages);
