@@ -1,6 +1,32 @@
 import { z } from 'zod';
 import mongoose from 'mongoose';
 
+const firstValue = (val: unknown) => (Array.isArray(val) ? val[0] : val);
+
+const stringField = (message: string) =>
+  z.preprocess(firstValue, z.string().min(1, message));
+
+const optionalStringField = (message: string) =>
+  z.preprocess(firstValue, z.string().min(1, message)).optional();
+
+const optionalCoerceNumberField = (message: string) =>
+  z.preprocess(firstValue, z.coerce.number().min(0, message)).optional();
+
+const jsonOrValue = (val: unknown) => {
+  const raw = firstValue(val);
+  if (typeof raw !== 'string') return raw;
+  const trimmed = raw.trim();
+  if (!trimmed) return raw;
+  if ((trimmed.startsWith('{') && trimmed.endsWith('}')) || (trimmed.startsWith('[') && trimmed.endsWith(']'))) {
+    try {
+      return JSON.parse(trimmed);
+    } catch {
+      return raw;
+    }
+  }
+  return raw;
+};
+
 const objectIdSchema = z.string().refine(
   (val) => mongoose.Types.ObjectId.isValid(val),
   { message: 'Invalid MongoDB ObjectId' }
@@ -8,102 +34,95 @@ const objectIdSchema = z.string().refine(
 
 const optionalObjectIdSchema = z.preprocess(
   (val) => {
-    if (val === null || val === undefined) return undefined;
-    if (typeof val === 'string') {
-      const normalized = val.trim().toLowerCase();
+    const value = firstValue(val);
+    if (value === null || value === undefined) return undefined;
+    if (typeof value === 'string') {
+      const normalized = value.trim().toLowerCase();
       if (!normalized || normalized === 'null' || normalized === 'undefined') {
         return undefined;
       }
-      return val;
+      return value;
     }
-    return val;
+    return value;
   },
   objectIdSchema.optional()
 );
 
 export const createEventSchema = z
   .object({
-    title: z.string().min(1, 'Event title is required'),
-    titleAr: z.string().min(1, 'Arabic event title is required').optional(),
-    description: z.string().min(1, 'Event description is required'),
-    descriptionAr: z.string().min(1, 'Arabic event description is required').optional(),
-    mainImage: z.string().optional(),
-    eventImage: z.string().optional(),
-    eventDate: z.string().or(z.date()).refine(
+    title: stringField('Event title is required'),
+    titleAr: optionalStringField('Arabic event title is required'),
+    description: stringField('Event description is required'),
+    descriptionAr: optionalStringField('Arabic event description is required'),
+    mainImage: z.preprocess(firstValue, z.string()).optional(),
+    eventImage: z.preprocess(firstValue, z.string()).optional(),
+    eventDate: z.preprocess(firstValue, z.string().or(z.date())).refine(
       (val) => {
         const date = val instanceof Date ? val : new Date(val);
         return !isNaN(date.getTime());
       },
       { message: 'Invalid event date' }
     ),
-    eventTime: z.string().min(1, 'Event time is required'),
-    address: z.string().min(1, 'Event address is required'),
-    addressAr: z.string().min(1, 'Arabic event address is required').optional(),
-    city: z.string().optional(),
-    country: z.string().optional(),
-    zipCode: z.string().optional(),
-    maxParticipants: z.number().int().min(0, 'Max participants cannot be negative').optional(),
-    minAge: z.number().int().min(0, 'Min age cannot be negative').optional(),
-    maxAge: z.number().int().min(0, 'Max age cannot be negative').optional(),
-    youtubeLink: z.string().url('Invalid YouTube URL').optional().or(z.literal('')),
-    distance: z.number().min(0, 'Distance cannot be negative').optional(),
+    eventTime: stringField('Event time is required'),
+    address: stringField('Event address is required'),
+    addressAr: optionalStringField('Arabic event address is required'),
+    city: z.preprocess(firstValue, z.string()).optional(),
+    country: z.preprocess(firstValue, z.string()).optional(),
+    zipCode: z.preprocess(firstValue, z.string()).optional(),
+    maxParticipants: z.preprocess(firstValue, z.coerce.number().int().min(0, 'Max participants cannot be negative')).optional(),
+    minAge: z.preprocess(firstValue, z.coerce.number().int().min(0, 'Min age cannot be negative')).optional(),
+    maxAge: z.preprocess(firstValue, z.coerce.number().int().min(0, 'Max age cannot be negative')).optional(),
+    youtubeLink: z.preprocess(firstValue, z.string().url('Invalid YouTube URL')).optional().or(z.literal('')),
+    distance: optionalCoerceNumberField('Distance cannot be negative'),
     communityId: optionalObjectIdSchema,
     trackId: optionalObjectIdSchema,
-    amenities: z
-      .array(
-        z.enum({
-          'water': 'water',
-          'toilets': 'toilets',
-          'parking': 'parking',
-          'lighting': 'lighting',
-          'medical support': 'medical support',
-          'bike service': 'bike service',
-        })
-      )
-      .optional(),
-    schedule: z
-      .array(
+    amenities: z.preprocess(
+      jsonOrValue,
+      z.array(z.string().trim().min(1))
+    ).optional(),
+    schedule: z.preprocess(
+      jsonOrValue,
+      z.array(
         z.object({
           time: z.string(),
-          title:z.string(),
+          title: z.string(),
           titleAr: z.string().optional(),
           description: z.string().optional(),
           descriptionAr: z.string().optional(),
-          order: z.number().optional(),
+          order: z.coerce.number().optional(),
         })
       )
-      .optional(),
-    eligibility: z
-      .object({
-        helmetRequired: z.boolean().optional(),
-        roadBikeOnly: z.boolean().optional(),
+    ).optional(),
+    eligibility: z.preprocess(
+      jsonOrValue,
+      z.object({
+        helmetRequired: z.coerce.boolean().optional(),
+        roadBikeOnly: z.coerce.boolean().optional(),
         experinceLevel: z.enum(['beginner', 'intermediate', 'advanced', 'all']).optional(),
         gender: z.enum(['male', 'female', 'other', 'all']).optional()
       })
-      .optional(),
+    ).optional(),
 
-    status: z.enum(['Draft', 'Open', 'Full', 'Completed', 'Archived']).default('Draft'),
-    slug: z.string().optional(),
-    difficulty: z.string().optional(),
-    endTime: z.string().optional(),
-    category: z.string().optional(),
-    isFeatured: z.boolean().default(false),
-    allowCancellation: z.boolean().default(false),
-    galleryImages: z.array(z.string()).optional().default([])
+    status: z.preprocess(firstValue, z.enum(['Draft', 'Open', 'Full', 'Closed', 'Disabled', 'Completed', 'Archived'])).default('Draft'),
+    slug: z.preprocess(firstValue, z.string()).optional(),
+    difficulty: z.preprocess(firstValue, z.string()).optional(),
+    endTime: z.preprocess(firstValue, z.string()).optional(),
+    category: z.preprocess(firstValue, z.string()).optional(),
+    isFeatured: z.preprocess(firstValue, z.coerce.boolean()).default(false),
+    allowCancellation: z.preprocess(firstValue, z.coerce.boolean()).default(false),
+    galleryImages: z.preprocess(jsonOrValue, z.array(z.string())).optional().default([])
   })
   .strict();
 
 export const updateEventSchema = z
   .object({
-    title: z.string().min(1, 'Event title is required').optional(),
-    titleAr: z.string().min(1, 'Arabic event title is required').optional(),
-    description: z.string().min(1, 'Event description is required').optional(),
-    descriptionAr: z.string().min(1, 'Arabic event description is required').optional(),
-    mainImage: z.string().optional(),
-    eventImage: z.string().optional(),
-    eventDate: z
-      .string()
-      .or(z.date())
+    title: optionalStringField('Event title is required'),
+    titleAr: optionalStringField('Arabic event title is required'),
+    description: optionalStringField('Event description is required'),
+    descriptionAr: optionalStringField('Arabic event description is required'),
+    mainImage: z.preprocess(firstValue, z.string()).optional(),
+    eventImage: z.preprocess(firstValue, z.string()).optional(),
+    eventDate: z.preprocess(firstValue, z.string().or(z.date()))
       .refine(
         (val) => {
           const date = val instanceof Date ? val : new Date(val);
@@ -112,66 +131,59 @@ export const updateEventSchema = z
         { message: 'Invalid event date' }
       )
       .optional(),
-    eventTime: z.string().min(1, 'Event time is required').optional(),
-    address: z.string().min(1, 'Event address is required').optional(),
-    addressAr: z.string().min(1, 'Arabic event address is required').optional(),
-    city: z.string().optional(),
-    country: z.string().optional(),
-    zipCode: z.string().optional(),
-    maxParticipants: z.number().int().min(0, 'Max participants cannot be negative').optional(),
-    minAge: z.number().int().min(0, 'Min age cannot be negative').optional(),
-    maxAge: z.number().int().min(0, 'Max age cannot be negative').optional(),
-    youtubeLink: z.string().url('Invalid YouTube URL').optional().or(z.literal('')),
-    status: z.enum(['Draft', 'Open', 'Full', 'Completed', 'Archived']).optional(),
-    distance: z.number().min(0, 'Distance cannot be negative').optional(),
+    eventTime: z.preprocess(firstValue, z.string().min(1, 'Event time is required')).optional(),
+    address: z.preprocess(firstValue, z.string().min(1, 'Event address is required')).optional(),
+    addressAr: z.preprocess(firstValue, z.string().min(1, 'Arabic event address is required')).optional(),
+    city: z.preprocess(firstValue, z.string()).optional(),
+    country: z.preprocess(firstValue, z.string()).optional(),
+    zipCode: z.preprocess(firstValue, z.string()).optional(),
+    maxParticipants: z.preprocess(firstValue, z.coerce.number().int().min(0, 'Max participants cannot be negative')).optional(),
+    minAge: z.preprocess(firstValue, z.coerce.number().int().min(0, 'Min age cannot be negative')).optional(),
+    maxAge: z.preprocess(firstValue, z.coerce.number().int().min(0, 'Max age cannot be negative')).optional(),
+    youtubeLink: z.preprocess(firstValue, z.string().url('Invalid YouTube URL')).optional().or(z.literal('')),
+    status: z.preprocess(firstValue, z.enum(['Draft', 'Open', 'Full', 'Closed', 'Disabled', 'Completed', 'Archived'])).optional(),
+    distance: optionalCoerceNumberField('Distance cannot be negative'),
     communityId: optionalObjectIdSchema,
     trackId: optionalObjectIdSchema,
-    amenities: z
-      .array(
-        z.enum({
-          'water': 'water',
-          'parking': 'parking',
-          'toilets': 'toilets',
-          'medical': 'medical',
-          'lighting': 'lighting',
-          'medical support': 'medical support',
-          'bike service': 'bike service',
-        })
-      )
-      .optional(),
-    schedule: z
-      .array(
+    amenities: z.preprocess(
+      jsonOrValue,
+      z.array(z.string().trim().min(1))
+    ).optional(),
+    schedule: z.preprocess(
+      jsonOrValue,
+      z.array(
         z.object({
           time: z.string(),
-          title:z.string(),
+          title: z.string(),
           titleAr: z.string().optional(),
           description: z.string().optional(),
           descriptionAr: z.string().optional(),
-          order: z.number().optional(),
+          order: z.coerce.number().optional(),
         })
       )
-      .optional(),
-    eligibility: z
-      .object({
-        helmetRequired: z.boolean().optional(),
-        roadBikeOnly: z.boolean().optional(),
+    ).optional(),
+    eligibility: z.preprocess(
+      jsonOrValue,
+      z.object({
+        helmetRequired: z.coerce.boolean().optional(),
+        roadBikeOnly: z.coerce.boolean().optional(),
         experinceLevel: z.enum(['beginner', 'intermediate', 'advanced', 'all']).optional(),
         gender: z.enum(['male', 'female', 'other', 'all']).optional()
       })
-      .optional(),
-    slug: z.string().optional(),
-    difficulty: z.string().optional(),
-    endTime: z.string().optional(),
-    category: z.string().optional(),
-    isFeatured: z.boolean().default(false),
-    allowCancellation: z.boolean().default(false),
-    galleryImages: z.array(z.string()).optional()
+    ).optional(),
+    slug: z.preprocess(firstValue, z.string()).optional(),
+    difficulty: z.preprocess(firstValue, z.string()).optional(),
+    endTime: z.preprocess(firstValue, z.string()).optional(),
+    category: z.preprocess(firstValue, z.string()).optional(),
+    isFeatured: z.preprocess(firstValue, z.coerce.boolean()).default(false),
+    allowCancellation: z.preprocess(firstValue, z.coerce.boolean()).default(false),
+    galleryImages: z.preprocess(jsonOrValue, z.array(z.string())).optional()
 
   })
   .strict();
 
 export const getEventsQuerySchema = z.object({
-  status: z.enum(['Draft', 'Open', 'Full', 'Completed', 'Archived']).optional(),
+  status: z.enum(['Draft', 'Open', 'Full', 'Closed', 'Disabled', 'Completed', 'Archived']).optional(),
   page: z.string().regex(/^\d+$/).transform(Number).optional(),
   limit: z.string().regex(/^\d+$/).transform(Number).optional(),
 });

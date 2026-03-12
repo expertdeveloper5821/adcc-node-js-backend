@@ -91,7 +91,12 @@
         "calendar_link": "Calendar link generated",
         "results_retrieved": "Event results retrieved successfully",
         "invalid_id": "Invalid event ID",
-        "not_joined": "User has not joined this event"
+        "not_joined": "User has not joined this event",
+        "registration_closed": "Event registration closed successfully",
+        "registration_reopened": "Event registration reopened successfully",
+        "marked_completed": "Event marked as completed successfully",
+        "disabled": "Event disabled successfully",
+        "archived": "Event archived successfully"
     },
     "communityRide": {
         "not_found": "Community ride not found",
@@ -112,7 +117,8 @@
       "disabled": "Disabled",
       "active": "Active",
       "left": "Left",
-      "banned": "Banned"
+      "banned": "Banned",
+      "upcoming": "Upcoming"
     },
     "communityTypes": {
       "club": "Club",
@@ -136,7 +142,8 @@
       "cityCommunities": "City Communities",
       "specialInterest": "Special Interest",
       "awarenessCharity": "Awareness & Charity",
-      "trainingClinics": "Training & Clinics"
+      "trainingClinics": "Training & Clinics",
+      "awareness": "Awareness"
     },
     "locations": {
       "abuDhabi": "Abu Dhabi",
@@ -196,7 +203,13 @@
       "city": "City",
       "group": "Group",
       "purpose": "Purpose",
-      "type": "Type"
+      "type": "Type",
+      "cityCommunities": "City Communities",
+      "typeCommunities": "Type Communities",
+      "groupCommunities":"Group Communities",
+      "racingPerformance": "Racing & Performance",
+      "familyLeisure": "Family & Leisure",
+      "women(sherides)": "Women(sherides)"
     },
     "difficulties": {
       "easy": "Easy",

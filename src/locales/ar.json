@@ -90,7 +90,12 @@
         "calendar_link": "تم إنشاء رابط التقويم",
         "results_retrieved": "تم استرجاع نتائج الحدث بنجاح",
         "invalid_id": "معرّف الحدث غير صالح",
-        "not_joined": "المستخدم لم ينضم إلى هذا الحدث"
+        "not_joined": "المستخدم لم ينضم إلى هذا الحدث",
+        "registration_closed": "تم إغلاق التسجيل للحدث بنجاح",
+        "registration_reopened": "تم إعادة فتح التسجيل للحدث بنجاح",
+        "marked_completed": "تم تعليم الحدث كمكتمل بنجاح",
+        "disabled": "تم تعطيل الحدث بنجاح",
+        "archived": "تم أرشفة الحدث بنجاح"
     },
     "communityRide": {
         "not_found": "رحلة المجتمع غير موجودة",
@@ -111,7 +116,8 @@
       "disabled": "معطل",
       "active": "نشط",
       "left": "غادر",
-      "banned": "محظور"
+      "banned": "محظور",
+      "upcoming": "القادمة"
     },
     "communityTypes": {
       "club": "نادي",
@@ -136,7 +142,8 @@
       "awarenessCharity": "الوعي والخيرية",
       "trainingClinics": "ورش التدريب والعيادات",
       "awarenessRides": "ركوب الوعي",
-      "women(sherides)": "نساء (شيريدز)"
+      "women(sherides)": "نساء (شيريدز)",
+      "awareness": "وعي"
     },
     "locations": {
       "abuDhabi": "أبوظبي",
@@ -195,7 +202,13 @@
       "city": "مدينة",
       "group": "مجموعة",
       "purpose": "غرض",
-      "type": "نوع"
+      "type": "نوع",
+      "cityCommunities": "المجتمعات الحضرية",
+      "typeCommunities": "اكتب المجتمعات",
+      "groupCommunities":"المجتمعات الجماعية",
+      "racingPerformance":"السباق والأداء",
+      "familyLeisure":"العائلة والترفيه",
+      "women(sherides)":"نساء (شيريدز)"
     },
     "difficulties": {
       "easy": "سهل",
