@@ -37,6 +37,36 @@ export const uploadEventImages = upload.fields([
 
 ]);
 
+export const uploadEventImagesIfMultipart = (req: any, res: any, next: any) => {
+  const contentType = (req.headers['content-type'] || '').toString();
+  if (contentType.includes('multipart/form-data')) {
+    return uploadEventImages(req, res, next);
+  }
+  return next();
+};
+
+export const requireParsedMultipartBody = (req: any, _res: any, next: any) => {
+  const contentType = (req.headers['content-type'] || '').toString();
+  if (!contentType.includes('multipart/form-data')) {
+    return next();
+  }
+
+  const hasBody = !!req.body && Object.keys(req.body).length > 0;
+  const hasFiles =
+    Array.isArray(req.files) ? req.files.length > 0 : !!req.files && Object.keys(req.files).length > 0;
+
+  if (!hasBody && !hasFiles) {
+    const error = new Error(
+      'Multipart form-data was not parsed. Ensure Content-Type includes the multipart boundary and that your proxy forwards it.'
+    );
+    // @ts-ignore
+    error.statusCode = 400;
+    return next(error);
+  }
+
+  return next();
+};
+
 const trackImageFields = upload.fields([
   { name: 'image', maxCount: 1 },
   { name: 'coverImage', maxCount: 1 },
