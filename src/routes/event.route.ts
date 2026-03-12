@@ -51,7 +51,12 @@ router.delete('/:eventId/gallery', authenticate, deleteGalleryImage);
 
 
 // Admin only routes
-router.post('/', authenticate, isAdmin, requireMultipartFormData, uploadEventImages, validate(createEventSchema), createEvent);
+router.post('/', authenticate, isAdmin, requireMultipartFormData, uploadEventImages,
+   (req, _res, next) => {
+    console.log("BODY:", req.body);
+    console.log("FILES:", req.files);
+    next();
+  }, validate(createEventSchema), createEvent);
 router.patch('/:id', authenticate, isAdmin, requireMultipartFormData, uploadEventImages, validate(updateEventSchema), updateEvent);
 router.delete('/:id', authenticate, isAdmin, deleteEvent);
 router.patch('/:eventId/close-registration', authenticate, isAdmin, closeEventRegistration);
