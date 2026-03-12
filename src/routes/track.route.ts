@@ -3,6 +3,7 @@ import { validate } from '@/middleware/validate.middleware';
 import { authenticate } from '@/middleware/auth.middleware';
 import { isAdmin } from '@/middleware/role.middleware';
 import { uploadMultipleImages, uploadTrackImages, requireParsedMultipartBody } from '@/middleware/upload.middleware';
+import { debugRequestBasics } from '@/middleware/request-debug.middleware';
 import {  
     createTrackSchema,
     updateTrackSchema
@@ -54,6 +55,7 @@ router.post(
   isAdmin,
   uploadTrackImages,
   requireParsedMultipartBody,
+  debugRequestBasics,
   normalizeTrackFormData,
   validate(createTrackSchema),
   createTrack
