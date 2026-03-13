@@ -52,8 +52,8 @@ export const createTrackSchema = z
         titleAr: z.preprocess(firstValue, z.string().min(1, 'Arabic track title is required')).optional(),
         description: z.preprocess(firstValue, z.string().min(1, 'Track description is required')),
         descriptionAr: z.preprocess(firstValue, z.string().min(1, 'Arabic track description is required')).optional(),
-        image: z.preprocess(firstValue, z.string()).optional(),
-        coverImage: z.preprocess(firstValue, z.string()).optional(),
+        image: z.preprocess(firstValue, z.string().url('Invalid image URL')).optional(),
+        coverImage: z.preprocess(firstValue, z.string().url('Invalid image URL')).optional(),
         city: z.preprocess(firstValue, z.string()).optional(),
         address: z.preprocess(firstValue, z.string()).optional(),
         zipcode: z.preprocess(firstValue, z.string()).optional(),
@@ -83,7 +83,7 @@ export const createTrackSchema = z
         country: z.preprocess(firstValue, z.string()).optional(),
         safetyNotes: z.preprocess(firstValue, z.string()).optional(),
         visibility: z.preprocess(firstValue, z.string()).optional(),
-        galleryImages: z.preprocess(arrayFromStringOrJson, z.array(z.string())).optional()
+        galleryImages: z.preprocess(arrayFromStringOrJson, z.array(z.string().url('Invalid image URL'))).optional()
     })
     .strict();
 
@@ -93,8 +93,8 @@ export const updateTrackSchema = z
         titleAr: z.preprocess(firstValue, z.string().min(1, 'Arabic track title is required')).optional(),
         description: z.preprocess(firstValue, z.string().min(1, 'Track description is required')).optional(),
         descriptionAr: z.preprocess(firstValue, z.string().min(1, 'Arabic track description is required')).optional(),
-        image: z.preprocess(firstValue, z.string()).optional(),
-        coverImage: z.preprocess(firstValue, z.string()).optional(),
+        image: z.preprocess(firstValue, z.string().url('Invalid image URL')).optional(),
+        coverImage: z.preprocess(firstValue, z.string().url('Invalid image URL')).optional(),
         city: z.preprocess(firstValue, z.string()).optional(),
         address: z.preprocess(firstValue, z.string()).optional(),
         zipcode: z.preprocess(firstValue, z.string()).optional(),
@@ -124,7 +124,7 @@ export const updateTrackSchema = z
         safetyNotes: z.preprocess(firstValue, z.string()).optional(),
         helmetRequired: z.preprocess(firstValue, z.coerce.boolean()).optional(),
         visibility: z.preprocess(firstValue, z.string()).optional(),
-        galleryImages: z.preprocess(arrayFromStringOrJson, z.array(z.string())).optional()
+        galleryImages: z.preprocess(arrayFromStringOrJson, z.array(z.string().url('Invalid image URL'))).optional()
     })
     .strict();
 
