@@ -27,8 +27,8 @@ export const registerUserSchema = z.object({
   }),
   age: z.coerce.number().int().min(0, 'Age cannot be negative').max(150, 'Age must be realistic').optional(),
   dob: dobSchema,
-  country: z.string().min(1, 'Country is required').trim(),
-  provider: z.string().min(1, 'Provider is required').trim(),
+  country: z.string().min(1, 'Country is required').trim().optional(),
+  provider: z.string().min(1, 'Provider is required').trim().optional(),
 }).strict();
 
 export const refreshTokenSchema = z.object({

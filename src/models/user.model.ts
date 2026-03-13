@@ -24,7 +24,7 @@ export interface IUser extends Document {
   age?: number;
   dob?: Date;
   country?: string;
-  provider: string;
+  provider?: string;
   role: 'Admin' | 'Vendor' | 'Member' | 'Guest';
   isVerified: boolean;
   refreshTokens: IRefreshToken[];
@@ -104,7 +104,6 @@ const UserSchema = new Schema(
     },
     provider: {
       type: String,
-      required: [true, 'Provider is required'],
       trim: true,
     },
     role: {
