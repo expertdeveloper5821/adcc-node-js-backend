@@ -88,6 +88,9 @@ export const verifyFirebaseAuth = asyncHandler(
             email: user.email,
             gender: user.gender,
             age: user.age,
+            dob: user.dob,
+            country: user.country,
+            provider: user.provider,
             role: user.role,
             isVerified: user.isVerified,
           },
@@ -127,18 +130,13 @@ export const verifyFirebaseAuth = asyncHandler(
 export const registerUser = asyncHandler(
   async (req: AuthRequest, res: Response) => {
     const lang = resolveRequestLanguage(req);
-    const { fullName, gender, age } = req.body;
+    const { fullName, gender, age, dob, country, provider } = req.body;
     const uid = req.user?.uid; // From JWT (temporary token)
     const phone = req.user?.phone; // Optional phone from JWT (for phone auth)
     const email = req.user?.email; // Optional email from JWT (for email/password auth)
 
     if (!uid) {
       throw new AppError(t(lang, 'auth.firebase_uid_required'), 400);
-    }
-
-    // Validate that user has either phone or email (required for registration)
-    if (!phone && !email) {
-      throw new AppError(t(lang, 'auth.phone_or_email_required'), 400);
     }
 
     // Check if user already exists by UID
@@ -155,6 +153,9 @@ export const registerUser = asyncHandler(
       email: email || undefined,
       gender,
       age,
+      dob,
+      country,
+      provider,
       isVerified: true,
     });
 
@@ -188,6 +189,10 @@ export const registerUser = asyncHandler(
           phone: user.phone,
           email: user.email,
           gender: user.gender,
+          age: user.age,
+          dob: user.dob,
+          country: user.country,
+          provider: user.provider,
           role: user.role,
           isVerified: user.isVerified,
         },
@@ -347,7 +352,9 @@ export const getCurrentUserStats = asyncHandler(
       s &&
       typeof s.totalDistanceKm === 'number' &&
       typeof s.totalRides === 'number' &&
-      typeof s.totalEventsParticipated === 'number';
+      typeof s.totalEventsParticipated === 'number' &&
+      typeof s.totalPoints === 'number' &&
+      typeof s.completedCount === 'number';
 
     if (hasMaterializedStats) {
       sendSuccess(res, { ...s }, t(lang, 'auth.stats_retrieved'));
@@ -398,6 +405,20 @@ export const getCurrentUserStats = asyncHandler(
               ],
             },
           },
+          totalPoints: {
+            $sum: {
+              $cond: [
+                { $eq: ['$status', 'completed'] },
+                { $ifNull: ['$pointsEarned', 0] },
+                0,
+              ],
+            },
+          },
+          completedCount: {
+            $sum: {
+              $cond: [{ $eq: ['$status', 'completed'] }, 1, 0],
+            },
+          },
         },
       },
     ]);
@@ -407,16 +428,102 @@ export const getCurrentUserStats = asyncHandler(
           totalDistanceKm: Number(results[0].totalDistanceKm ?? 0),
           totalRides: Number(results[0].totalRides ?? 0),
           totalEventsParticipated: Number(results[0].totalEventsParticipated ?? 0),
+          totalPoints: Number(results[0].totalPoints ?? 0),
+          completedCount: Number(results[0].completedCount ?? 0),
         }
       : {
           totalDistanceKm: 0,
           totalRides: 0,
           totalEventsParticipated: 0,
+          totalPoints: 0,
+          completedCount: 0,
         };
 
     await User.findByIdAndUpdate(userId, { $set: { stats } });
 
     sendSuccess(res, stats, t(lang, 'auth.stats_retrieved'));
+  }
+);
+
+/**
+ * Get Performance Insights for event history (average completion rate, average event distance, best category).
+ * GET /v1/auth/me/performance-insights
+ * Uses pre-computed User.stats for rate and distance; runs one aggregation for best category.
+ */
+export const getPerformanceInsights = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const lang = resolveRequestLanguage(req);
+    const userId = req.user?.id;
+    if (!userId) {
+      throw new AppError(t(lang, 'auth.unauthorized'), 401);
+    }
+
+    const user = await User.findById(userId).select('stats').lean();
+    if (!user?.stats) {
+      return sendSuccess(
+        res,
+        {
+          averageCompletionRate: null,
+          averageEventDistanceKm: null,
+          bestCategory: null,
+        },
+        t(lang, 'auth.performance_insights_retrieved'),
+        200
+      );
+    }
+
+    const { totalEventsParticipated, completedCount, totalDistanceKm } = user.stats;
+    const participated = Number(totalEventsParticipated ?? 0);
+    const completed = Number(completedCount ?? 0);
+    const totalKm = Number(totalDistanceKm ?? 0);
+
+    const averageCompletionRate =
+      participated > 0 ? Math.round((completed / participated) * 1000) / 10 : null;
+    const averageEventDistanceKm =
+      completed > 0 ? Math.round((totalKm / completed) * 10) / 10 : null;
+
+    const objectIdUserId = new mongoose.Types.ObjectId(userId);
+    const bestCategoryResult = await EventResult.aggregate([
+      { $match: { userId: objectIdUserId, status: { $in: ['joined', 'completed'] } } },
+      { $lookup: { from: 'events', localField: 'eventId', foreignField: '_id', as: 'event' } },
+      { $unwind: { path: '$event', preserveNullAndEmptyArrays: true } },
+      {
+        $group: {
+          _id: { $ifNull: ['$event.category', 'Other'] },
+          completedCount: { $sum: { $cond: [{ $eq: ['$status', 'completed'] }, 1, 0] } },
+          participatedCount: { $sum: 1 },
+        },
+      },
+      {
+        $addFields: {
+          rate: {
+            $multiply: [{ $divide: ['$completedCount', '$participatedCount'] }, 100],
+          },
+        },
+      },
+      { $sort: { rate: -1 } },
+      { $limit: 1 },
+      { $project: { category: '$_id', rate: 1, _id: 0 } },
+    ]);
+
+    const bestCategory =
+      bestCategoryResult.length > 0
+        ? {
+            category: bestCategoryResult[0].category,
+            rate: Math.round(bestCategoryResult[0].rate * 10) / 10,
+          }
+        : null;
+
+    return sendSuccess(
+      res,
+      {
+        averageCompletionRate,
+        averageEventDistanceKm,
+        bestCategory,
+      },
+      t(lang, 'auth.performance_insights_retrieved'),
+      200
+    );
   }
 );
 
@@ -811,11 +918,13 @@ export const updateMyProfile = asyncHandler(
       throw new AppError(t(lang, 'guest.access_denied'), 403);
     }
 
-    const { fullName, gender, age } = req.body;
+    const { fullName, gender, age, dob, country } = req.body;
     const updates: Record<string, unknown> = {};
     if (fullName !== undefined) updates.fullName = fullName;
     if (gender !== undefined) updates.gender = gender;
     if (age !== undefined) updates.age = age;
+    if (dob !== undefined) updates.dob = dob;
+    if (country !== undefined) updates.country = country;
 
     const user = await User.findByIdAndUpdate(
       userId,

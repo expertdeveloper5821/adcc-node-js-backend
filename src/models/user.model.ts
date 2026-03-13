@@ -10,6 +10,8 @@ export interface IUserStats {
   totalDistanceKm: number;
   totalRides: number;
   totalEventsParticipated: number;
+  totalPoints: number;
+  completedCount: number;
 }
 
 export interface IUser extends Document {
@@ -19,7 +21,10 @@ export interface IUser extends Document {
   email?: string;
   profileImage?: string;
   gender: 'Male' | 'Female';
-  age: number;
+  age?: number;
+  dob?: Date;
+  country?: string;
+  provider?: string;
   role: 'Admin' | 'Vendor' | 'Member' | 'Guest';
   isVerified: boolean;
   refreshTokens: IRefreshToken[];
@@ -87,9 +92,19 @@ const UserSchema = new Schema(
     },
     age: {
       type: Number,
-      required: [true, 'Age is required'],
       min: [0, 'Age cannot be negative'],
       max: [150, 'Age must be realistic'],
+    },
+    dob: {
+      type: Date,
+    },
+    country: {
+      type: String,
+      trim: true,
+    },
+    provider: {
+      type: String,
+      trim: true,
     },
     role: {
       type: String,
@@ -105,6 +120,8 @@ const UserSchema = new Schema(
       totalDistanceKm: { type: Number, default: 0 },
       totalRides: { type: Number, default: 0 },
       totalEventsParticipated: { type: Number, default: 0 },
+      totalPoints: { type: Number, default: 0 },
+      completedCount: { type: Number, default: 0 },
     },
   },
   {

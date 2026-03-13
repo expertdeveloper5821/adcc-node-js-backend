@@ -53,46 +53,8 @@ const optionalObjectIdSchema = z.preprocess(
   objectIdSchema.optional()
 );
 
-// Maximum image size: 2MB (original image size before base64 encoding)
-// Base64 encoding increases size by ~33% (4/3 ratio), so 2MB image ≈ 2.67MB in base64
-// 2MB = 2 * 1024 * 1024 = 2,097,152 bytes
-// Max base64 string size ≈ 2,097,152 * 4/3 ≈ 2,796,203 bytes/characters
-const MAX_IMAGE_SIZE_BYTES = 2 * 1024 * 1024; // 2MB in bytes (original image)
-const MAX_BASE64_SIZE = Math.ceil(MAX_IMAGE_SIZE_BYTES * (4 / 3)); // ~2.67MB for base64 encoded string
-
-// Custom validation for image strings (accepts URLs or base64 data URIs)
-const imageStringSchema = z.string().refine(
-  (val) => {
-    // Check if it's a valid URL
-    try {
-      new URL(val);
-      return true; // URLs don't have size restrictions
-    } catch {
-      // Check if it's a base64 data URI (data:image/...;base64,...)
-      if (val.startsWith('data:image/')) {
-        // Extract the base64 part (after the comma)
-        const base64Part = val.split(',')[1] || '';
-        if (!base64Part) return false;
-        
-        // Calculate size: base64 uses ASCII (1 byte = 1 character)
-        // Check if the base64 string size exceeds the limit
-        const sizeInBytes = Buffer.byteLength(base64Part, 'utf8');
-        return sizeInBytes <= MAX_BASE64_SIZE;
-      }
-      // Check if it's a plain base64 string
-      const base64Regex = /^[A-Za-z0-9+/=]+$/;
-      if (base64Regex.test(val) && val.length > 100) {
-        // Calculate size for plain base64 string
-        const sizeInBytes = Buffer.byteLength(val, 'utf8');
-        return sizeInBytes <= MAX_BASE64_SIZE;
-      }
-      return false;
-    }
-  },
-  {
-    message: `Each image must be a valid URL or base64 data URI (data:image/...). Base64 images must be less than 2MB in original size.`,
-  }
-);
+// Only accept URL strings (files should be uploaded via multipart to S3)
+const imageStringSchema = z.string().url('Each image must be a valid URL.');
 
 export const createCommunitySchema = z
   .object({
@@ -113,6 +75,7 @@ export const createCommunitySchema = z
     coverImage: z.preprocess(firstValue, imageStringSchema).optional(),
     logo: z.preprocess(firstValue, imageStringSchema).optional(),
     gallery: z.preprocess(arrayFromStringOrJson, z.array(imageStringSchema)).optional(),
+    galleryImages: z.preprocess(arrayFromStringOrJson, z.array(imageStringSchema)).optional(),
     trackName: z.preprocess(firstValue, z.string()).optional(),
     distance: numberFromStringMin(0, 'Distance cannot be negative').optional(),
     terrain: z.preprocess(firstValue, z.string()).optional(),
@@ -152,6 +115,7 @@ export const updateCommunitySchema = z
     coverImage: z.preprocess(firstValue, imageStringSchema).optional(),
     logo: z.preprocess(firstValue, imageStringSchema).optional(),
     gallery: z.preprocess(arrayFromStringOrJson, z.array(imageStringSchema)).optional(),
+    galleryImages: z.preprocess(arrayFromStringOrJson, z.array(imageStringSchema)).optional(),
     trackName: z.preprocess(firstValue, z.string()).optional(),
     distance: numberFromStringMin(0, 'Distance cannot be negative').optional(),
     terrain: z.preprocess(firstValue, z.string()).optional(),
@@ -228,4 +192,5 @@ export type GetCommunitiesQueryInput = z.infer<typeof getCommunitiesQuerySchema>
 export type AddGalleryImagesInput = z.infer<typeof addGalleryImagesSchema>;
 export type RemoveGalleryImagesInput = z.infer<typeof removeGalleryImagesSchema>;
 export type FeatureCommunityInput = z.infer<typeof featureCommunitySchema>;
+
 

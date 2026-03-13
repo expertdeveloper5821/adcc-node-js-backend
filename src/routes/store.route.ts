@@ -23,17 +23,88 @@ import {
 } from '@/validators/store.validator';
 import { authenticate } from '@/middleware/auth.middleware';
 import { authenticatedOnly, isAdmin } from '@/middleware/role.middleware';
+import { requireParsedMultipartBody, uploadStoreItemImagesIfMultipart } from '@/middleware/upload.middleware';
 
 const router = express.Router();
+
+const normalizeStoreItemFormData = (req: express.Request, _res: express.Response, next: express.NextFunction) => {
+  if (req.body && typeof req.body === 'object') {
+    const body: any = req.body;
+
+    if (body['photos[]'] !== undefined && body.photos === undefined) {
+      body.photos = body['photos[]'];
+    }
+
+    if (body.price !== undefined && typeof body.price === 'string') {
+      const trimmed = body.price.trim();
+      if (trimmed !== '') {
+        const value = Number(trimmed);
+        if (!Number.isNaN(value)) {
+          body.price = value;
+        }
+      }
+    }
+
+    if (body.photos !== undefined) {
+      if (Array.isArray(body.photos)) {
+        body.photos = body.photos
+          .filter((item: unknown): item is string => typeof item === 'string')
+          .map((item: string) => item.trim())
+          .filter(Boolean);
+      } else if (typeof body.photos === 'string') {
+        const trimmed = body.photos.trim();
+        if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+          try {
+            const parsed = JSON.parse(trimmed);
+            if (Array.isArray(parsed)) {
+              body.photos = parsed
+                .filter((item: unknown): item is string => typeof item === 'string')
+                .map((item: string) => item.trim())
+                .filter(Boolean);
+            }
+          } catch {
+            // leave as-is; validation will catch invalid input
+          }
+        } else if (trimmed) {
+          body.photos = [trimmed];
+        }
+      }
+    }
+
+    if (body.status !== undefined) {
+      delete body.status;
+    }
+  }
+
+  next();
+};
 
 // Public (guest-accessible with token)
 router.get('/items', authenticate, validate(storeItemQuerySchema), getStoreItems);
 router.get('/items/:id', authenticate, getStoreItemById);
 
 // Member/Staff
-router.post('/items', authenticate, authenticatedOnly, validate(createStoreItemSchema), createStoreItem);
+router.post(
+  '/items',
+  authenticate,
+  authenticatedOnly,
+  uploadStoreItemImagesIfMultipart,
+  requireParsedMultipartBody,
+  normalizeStoreItemFormData,
+  validate(createStoreItemSchema),
+  createStoreItem
+);
 router.get('/my-items', authenticate, authenticatedOnly, getMyStoreItems);
-router.patch('/items/:id', authenticate, authenticatedOnly, validate(updateStoreItemSchema), updateStoreItem);
+router.patch(
+  '/items/:id',
+  authenticate,
+  authenticatedOnly,
+  uploadStoreItemImagesIfMultipart,
+  requireParsedMultipartBody,
+  normalizeStoreItemFormData,
+  validate(updateStoreItemSchema),
+  updateStoreItem
+);
 router.delete('/items/:id', authenticate, authenticatedOnly, archiveStoreItem);
 router.post('/items/:id/sold', authenticate, authenticatedOnly, markStoreItemSold);
 

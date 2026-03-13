@@ -9,10 +9,15 @@ export interface IEventResult extends Document {
     pointsEarned?: number;
     badge?: string;
     status: 'joined' | 'cancelled' | 'completed';
-    reason?: string;
+    reason?: string;  
     createdAt: Date;
     updatedAt: Date;
     completedAt: Date;
+    calories?: number;
+    elevationGain?: string;
+    rating?: number;
+    notes?: string;
+    photos?: string[];
 }
 
 const EventResultSchema = new Schema<IEventResult>(
@@ -25,6 +30,11 @@ const EventResultSchema = new Schema<IEventResult>(
         pointsEarned: { type: Number, default: null },
         badge: { type: String },
         reason: { type: String, default: null },
+        calories: { type: Number, default: null },
+        elevationGain: { type: String, default: null },
+        rating: { type: Number, default: null, min: 1, max: 5 },
+        notes: { type: String, default: null },
+        photos: { type: [String], default: [] },
         status: {
             type: String,
             enum: ['joined', 'cancelled', 'completed'],

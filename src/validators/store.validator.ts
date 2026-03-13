@@ -14,7 +14,7 @@ export const createStoreItemSchema = z
     condition: z.string().min(1, 'Item condition is required'),
     currency: z.string().min(1, 'Currency is required').default('AED'),
     price: z.number().min(0, 'Price cannot be negative'),
-    photos: z.array(z.string().min(1)).min(1, 'At least one photo is required'),
+    photos: z.array(z.string().min(1)).optional(),
     coverImage: z.string().min(1).optional(),
     contactMethod: z.enum(['Call', 'WhatsApp', 'InApp']),
     phoneNumber: z.string().min(5, 'Phone number is required').optional(),

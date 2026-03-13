@@ -84,6 +84,21 @@ const attachTrackImages = async (req: AuthRequest, data: Record<string, any>) =>
     data.coverImage = uploadResult.url;
   }
 
+  if (files.galleryImages?.length) {
+    const uploadedGallery = await Promise.all(
+      files.galleryImages.map(async (file) => {
+        const uploaded = await uploadImageBufferToS3(
+          file.buffer,
+          file.mimetype,
+          file.originalname,
+          'tracks-galleries'
+        );
+        return uploaded.url;
+      })
+    );
+    data.galleryImages = [...(data.galleryImages || []), ...uploadedGallery];
+  }
+
   return data;
 };
 
@@ -108,6 +123,11 @@ export const createTrack = asyncHandler(async (req: AuthRequest, res: Response) 
     createdBy: userId,
     };
     await attachTrackImages(req, teackData);
+    const bodyGalleryImages = normalizeGalleryImagesInput((req.body as any).galleryImages);
+    const mergedGalleryImages = [...(teackData.galleryImages || []), ...bodyGalleryImages];
+    if (mergedGalleryImages.length > 0) {
+      teackData.galleryImages = mergedGalleryImages;
+    }
     const event = await Track.create(teackData);
     sendSuccess(res, localizeTrack(event.toObject(), lang), t(lang, "track.created"), 201);
 });

@@ -2,6 +2,8 @@ import { Request, Response } from 'express';
 import { t } from "@/utils/i18n";
 import Event from '@/models/event.model';
 import EventResult from '@/models/eventResult.model';
+import Track from '@/models/track.model';
+import { parseTimeToSeconds } from '@/utils/event-results.util';
 import { sendSuccess } from '@/utils/response';
 import { asyncHandler } from '@/utils/async-handler';
 import { AppError } from '@/utils/app-error';
@@ -11,6 +13,7 @@ import {
   incrementStatsOnJoin,
   decrementStatsOnCancel,
   addDistanceOnComplete,
+  addPointsOnComplete,
 } from '@/services/user-stats.service';
 import dayjs from 'dayjs';
 import mongoose from 'mongoose';
@@ -115,6 +118,21 @@ const attachEventImages = async (req: AuthRequest, data: Record<string, any>) =>
     data.eventImage = uploadResult.url;
   }
 
+  if (files.galleryImages?.length) {
+    const uploadedGallery = await Promise.all(
+      files.galleryImages.map(async (file) => {
+        const uploaded = await uploadImageBufferToS3(
+          file.buffer,
+          file.mimetype,
+          file.originalname,
+          'events-galleries'
+        );
+        return uploaded.url;
+      })
+    );
+    data.galleryImages = [...(data.galleryImages || []), ...uploadedGallery];
+  }
+
   return data;
 };
 
@@ -148,6 +166,17 @@ export const createEvent = asyncHandler(async (req: AuthRequest, res: Response) 
   };
 
   await attachEventImages(req, eventData);
+
+  const bodyGalleryImages = normalizeGalleryImagesInput((req.body as any).galleryImages);
+  const bodyGallery = normalizeGalleryImagesInput((req.body as any).gallery);
+  const mergedGalleryImages = [
+    ...(eventData.galleryImages || []),
+    ...bodyGalleryImages,
+    ...bodyGallery,
+  ];
+  if (mergedGalleryImages.length > 0) {
+    eventData.galleryImages = mergedGalleryImages;
+  }
 
   const event = await Event.create(eventData);
   const localizedEvent = localizeEventPayload(event.toObject(), lang);
@@ -398,16 +427,23 @@ export const getEventResults = asyncHandler(async (req: AuthRequest, res: Respon
   const hasTrack = !!eventDoc?.trackId;
 
   const distanceKm = Number(req.body.distance) || 0;
-  eventResults.set({
+  const defaultCompletionPoints = 30;
+  const updates: Record<string, unknown> = {
     distance: distanceKm,
     time: req.body.time,
     status: 'completed',
-  });
+    pointsEarned: defaultCompletionPoints,
+  };
+  if (req.body.calories != null) updates.calories = req.body.calories;
+  if (req.body.elevationGain != null) updates.elevationGain = String(req.body.elevationGain).trim() || null;
+  if (req.body.rating != null) updates.rating = req.body.rating;
+  if (req.body.notes != null) updates.notes = String(req.body.notes).trim() || null;
+  eventResults.set(updates);
 
   await eventResults.save();
 
-
   await addDistanceOnComplete(userId, distanceKm, hasTrack);
+  await addPointsOnComplete(userId, defaultCompletionPoints);
   sendSuccess(res, eventResults, t(lang, "event.submitted"), 201);
 });
 
@@ -809,6 +845,182 @@ export const getMemberEventStatus = asyncHandler(async (req: AuthRequest, res: R
   );
 });
 
+/**
+ * Get event completed summary (ride summary for "Ride Completed!" screen)
+ * GET /v1/events/:eventId/completed-summary
+ * Returns distance, duration, avg speed, elevation, badge, etc. for the authenticated user's completed result.
+ */
+export const getEventCompletedSummary = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const lang = ((req as any).lang || 'en') as SupportedLanguage;
+  const eventIdParam = Array.isArray(req.params.eventId)
+    ? req.params.eventId[0]
+    : req.params.eventId;
+  const userId = req.user?.id;
+
+  if (!userId) {
+    throw new AppError(t(lang, 'auth.unauthorized'), 401);
+  }
+
+  if (!mongoose.Types.ObjectId.isValid(eventIdParam)) {
+    throw new AppError(t(lang, 'event.invalid_id'), 400);
+  }
+
+  const eventResult = await EventResult.findOne({
+    eventId: eventIdParam,
+    userId,
+    status: 'completed',
+  }).lean();
+
+  if (!eventResult || !eventResult.time) {
+    throw new AppError(t(lang, 'event.completed_summary_not_found'), 404);
+  }
+
+  const event = await Event.findById(eventIdParam)
+    .select('title titleAr eventDate trackId')
+    .lean();
+
+  if (!event) {
+    throw new AppError(t(lang, 'event.not_found'), 404);
+  }
+
+  let elevationGain: string | null = eventResult.elevationGain ?? null;
+  if (elevationGain == null && event.trackId) {
+    const track = await Track.findById(event.trackId).select('elevation').lean();
+    if (track?.elevation != null) {
+      elevationGain = String(track.elevation);
+    }
+  }
+
+  const distanceKm = eventResult.distance ?? 0;
+  const duration = eventResult.time;
+  const seconds = parseTimeToSeconds(eventResult.time);
+  const avgSpeedKmh =
+    seconds != null && seconds > 0 && distanceKm > 0
+      ? Math.round((distanceKm / (seconds / 3600)) * 10) / 10
+      : null;
+
+  const eventTitle =
+    lang === 'ar' ? (event.titleAr || event.title) : event.title;
+
+  const summary = {
+    distance: distanceKm,
+    duration,
+    avgSpeedKmh,
+    calories: eventResult.calories ?? null,
+    elevationGain,
+    badge: eventResult.badge ?? null,
+    pointsEarned: eventResult.pointsEarned ?? null,
+    rank: eventResult.rank ?? null,
+    rating: eventResult.rating ?? null,
+    notes: eventResult.notes ?? null,
+    photos: eventResult.photos ?? [],
+    event: {
+      title: eventTitle,
+      eventDate: event.eventDate,
+    },
+  };
+
+  sendSuccess(
+    res,
+    summary,
+    t(lang, 'event.completed_summary_retrieved'),
+    200
+  );
+});
+
+/**
+ * Update post-ride feedback (rating, notes) for a completed result
+ * PATCH /v1/events/:eventId/results/feedback
+ */
+export const updateResultFeedback = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const lang = ((req as any).lang || 'en') as SupportedLanguage;
+  const eventIdParam = Array.isArray(req.params.eventId)
+    ? req.params.eventId[0]
+    : req.params.eventId;
+  const userId = req.user?.id;
+
+  if (!userId) {
+    throw new AppError(t(lang, 'auth.unauthorized'), 401);
+  }
+
+  if (!mongoose.Types.ObjectId.isValid(eventIdParam)) {
+    throw new AppError(t(lang, 'event.invalid_id'), 400);
+  }
+
+  const eventResult = await EventResult.findOne({
+    eventId: eventIdParam,
+    userId,
+    status: 'completed',
+  });
+
+  if (!eventResult) {
+    throw new AppError(t(lang, 'event.completed_summary_not_found'), 404);
+  }
+
+  const updates: Record<string, unknown> = {};
+  if (req.body.rating != null) updates.rating = req.body.rating;
+  if (req.body.notes != null) updates.notes = String(req.body.notes).trim() || null;
+  eventResult.set(updates);
+  await eventResult.save();
+
+  sendSuccess(
+    res,
+    eventResult,
+    t(lang, 'event.feedback_updated'),
+    200
+  );
+});
+
+/**
+ * Add optional photos to a completed event result (Share your photos)
+ * POST /v1/events/:eventId/results/photos
+ */
+export const addResultPhotos = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const lang = ((req as any).lang || 'en') as SupportedLanguage;
+  const eventIdParam = Array.isArray(req.params.eventId)
+    ? req.params.eventId[0]
+    : req.params.eventId;
+  const userId = req.user?.id;
+
+  if (!userId) {
+    throw new AppError(t(lang, 'auth.unauthorized'), 401);
+  }
+
+  if (!mongoose.Types.ObjectId.isValid(eventIdParam)) {
+    throw new AppError(t(lang, 'event.invalid_id'), 400);
+  }
+
+  const eventResult = await EventResult.findOne({
+    eventId: eventIdParam,
+    userId,
+    status: 'completed',
+  });
+
+  if (!eventResult) {
+    throw new AppError(t(lang, 'event.completed_summary_not_found'), 404);
+  }
+
+  const imageUrls = req.body.imageUrls as string[];
+  const maxPhotos = 20;
+  const currentCount = (eventResult.photos ?? []).length;
+  if (currentCount >= maxPhotos && imageUrls.length > 0) {
+    throw new AppError(t(lang, 'event.result_photos_limit'), 400);
+  }
+
+  const existing = new Set(eventResult.photos ?? []);
+  const newUrls = imageUrls.filter((url) => !existing.has(url));
+  const toAdd = newUrls.slice(0, Math.max(0, maxPhotos - currentCount));
+
+  eventResult.photos = [...(eventResult.photos ?? []), ...toAdd];
+  await eventResult.save();
+
+  sendSuccess(
+    res,
+    { photos: eventResult.photos, added: toAdd.length },
+    t(lang, 'event.result_photos_added'),
+    200
+  );
+});
 
 export const deleteGalleryImage = asyncHandler(async (req: AuthRequest, res: Response) => {
   try {

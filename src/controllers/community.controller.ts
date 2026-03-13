@@ -80,43 +80,57 @@ const isUrlString = (value: string): boolean => {
   }
 };
 
-const parseImageDataUri = (value: string): { mimeType: string; base64: string } | null => {
-  const match = /^data:(image\/[a-zA-Z0-9+.-]+);base64,(.+)$/.exec(value);
-  if (!match) return null;
-  return { mimeType: match[1], base64: match[2] };
-};
-
-const isPlainBase64 = (value: string): boolean => /^[A-Za-z0-9+/=]+$/.test(value) && value.length > 100;
-
-const uploadImageStringToS3 = async (
-  value: unknown,
-  fileBaseName: string
-): Promise<string | undefined> => {
+const uploadImageStringToS3 = async (value: unknown): Promise<string | undefined> => {
   if (!value || typeof value !== 'string') return undefined;
   const trimmed = value.trim();
   if (!trimmed) return undefined;
-  if (isUrlString(trimmed)) return trimmed;
-
-  let base64 = trimmed;
-  let mimeType = 'image/jpeg';
-
-  if (trimmed.startsWith('data:image/')) {
-    const parsed = parseImageDataUri(trimmed);
-    if (!parsed) {
-      throw new AppError('Invalid image data URI format', 400);
-    }
-    base64 = parsed.base64;
-    mimeType = parsed.mimeType;
-  } else if (!isPlainBase64(trimmed)) {
-    return trimmed;
+  if (!isUrlString(trimmed)) {
+    throw new AppError('Image must be a valid URL', 400);
   }
+  return trimmed;
+};
 
-  const buffer = Buffer.from(base64, 'base64');
-  const extension = mimeType.split('/')[1] || 'jpg';
-  const originalName = `${fileBaseName}.${extension}`;
+const attachCommunityGalleryFiles = async (req: AuthRequest): Promise<string[]> => {
+  const files = req.files as
+    | {
+        [fieldname: string]: Express.Multer.File[];
+      }
+    | undefined;
 
-  const uploaded = await uploadImageBufferToS3(buffer, mimeType, originalName, 'community');
-  return uploaded.url;
+  if (!files) return [];
+
+  const galleryFiles = [
+    ...(files.gallery || []),
+    ...(files.galleryImages || []),
+  ];
+
+  if (galleryFiles.length === 0) return [];
+
+  const uploaded = await Promise.all(
+    galleryFiles.map(async (file) => {
+      const result = await uploadImageBufferToS3(
+        file.buffer,
+        file.mimetype,
+        file.originalname,
+        'galleries'
+      );
+      return result.url;
+    })
+  );
+
+  return uploaded;
+};
+
+const uniqueStrings = (values: string[]) => {
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const value of values) {
+    if (!seen.has(value)) {
+      seen.add(value);
+      result.push(value);
+    }
+  }
+  return result;
 };
 
 const attachCommunityImages = async (req: AuthRequest, data: Record<string, any>) => {
@@ -173,8 +187,8 @@ export const createCommunity = asyncHandler(async (req: AuthRequest, res: Respon
   }
 
   const imageInput = req.body.image || req.body.coverImage;
-  const imageUrl = await uploadImageStringToS3(imageInput, 'community-image');
-  const logoUrl = await uploadImageStringToS3(req.body.logo, 'community-logo');
+  const imageUrl = await uploadImageStringToS3(imageInput);
+  const logoUrl = await uploadImageStringToS3(req.body.logo);
 
   const communityData: Record<string, any> = {
     ...req.body,
@@ -191,6 +205,18 @@ export const createCommunity = asyncHandler(async (req: AuthRequest, res: Respon
   delete (communityData as any).coverImage;
 
   await attachCommunityImages(req, communityData);
+
+  const uploadedGalleryFiles = await attachCommunityGalleryFiles(req);
+  const bodyGallery = normalizeGalleryImagesInput((req.body as any).gallery);
+  const bodyGalleryImages = normalizeGalleryImagesInput((req.body as any).galleryImages);
+  const allBodyGallery = [...bodyGallery, ...bodyGalleryImages];
+  const mergedGallery = uniqueStrings([
+    ...uploadedGalleryFiles,
+    ...allBodyGallery,
+  ]);
+  if (mergedGallery.length > 0) {
+    communityData.gallery = mergedGallery;
+  }
 
   const community = await Community.create(communityData);
   const localizedCommunity = localizeCommunity(community.toObject(), lang);
@@ -371,10 +397,10 @@ export const updateCommunity = asyncHandler(async (req: AuthRequest, res: Respon
   delete (req.body as any).coverImage;
 
   if (req.body.image) {
-    req.body.image = await uploadImageStringToS3(req.body.image, 'community-image');
+    req.body.image = await uploadImageStringToS3(req.body.image);
   }
   if (req.body.logo) {
-    req.body.logo = await uploadImageStringToS3(req.body.logo, 'community-logo');
+    req.body.logo = await uploadImageStringToS3(req.body.logo);
   }
 
   req.body.trackId = normalizeOptionalTrackId(req.body.trackId);
@@ -383,13 +409,31 @@ export const updateCommunity = asyncHandler(async (req: AuthRequest, res: Respon
   }
 
   if (req.body.image) {
-    req.body.image = await uploadImageStringToS3(req.body.image, 'community-image');
+    req.body.image = await uploadImageStringToS3(req.body.image);
   }
   if (req.body.logo) {
-    req.body.logo = await uploadImageStringToS3(req.body.logo, 'community-logo');
+    req.body.logo = await uploadImageStringToS3(req.body.logo);
   }
 
   await attachCommunityImages(req, req.body);
+
+  const uploadedGalleryFiles = await attachCommunityGalleryFiles(req);
+  const bodyGallery = normalizeGalleryImagesInput((req.body as any).gallery);
+  const bodyGalleryImages = normalizeGalleryImagesInput((req.body as any).galleryImages);
+  const allBodyGallery = [...bodyGallery, ...bodyGalleryImages];
+  const newGalleryItems = [
+    ...uploadedGalleryFiles,
+    ...allBodyGallery,
+  ];
+  const hasExplicitGallery = Object.prototype.hasOwnProperty.call(req.body, 'gallery');
+  if (newGalleryItems.length > 0) {
+    if (hasExplicitGallery) {
+      req.body.gallery = uniqueStrings(newGalleryItems);
+    } else {
+      req.body.gallery = uniqueStrings([...(community.gallery || []), ...newGalleryItems]);
+    }
+  }
+  delete (req.body as any).galleryImages;
 
   Object.assign(community, req.body);
   await community.save();

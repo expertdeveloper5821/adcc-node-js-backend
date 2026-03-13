@@ -6,6 +6,7 @@ import { asyncHandler } from '@/utils/async-handler';
 import { AppError } from '@/utils/app-error';
 import { AuthRequest } from '@/middleware/auth.middleware';
 import { t } from '@/utils/i18n';
+import { uploadImageBufferToS3 } from '@/services/s3-upload.service';
 
 const isAdmin = (req: AuthRequest): boolean => req.user?.role === 'Admin';
 
@@ -22,6 +23,90 @@ const ensureObjectId = (id: string): mongoose.Types.ObjectId => {
   return new mongoose.Types.ObjectId(id);
 };
 
+const normalizePhotosInput = (value: unknown): string[] => {
+  if (!value) return [];
+
+  if (Array.isArray(value)) {
+    return value
+      .filter((item): item is string => typeof item === 'string')
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed) return [];
+
+    if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        if (Array.isArray(parsed)) {
+          return parsed
+            .filter((item): item is string => typeof item === 'string')
+            .map((item) => item.trim())
+            .filter(Boolean);
+        }
+      } catch {
+        return [];
+      }
+    }
+
+    return [trimmed];
+  }
+
+  return [];
+};
+
+const attachStoreItemImages = async (req: AuthRequest, data: Record<string, any>) => {
+  const files = req.files as {
+    [fieldname: string]: Express.Multer.File[];
+  } | undefined;
+
+  if (!files) return data;
+
+  if (files.coverImage?.length) {
+    const uploadResult = await uploadImageBufferToS3(
+      files.coverImage[0].buffer,
+      files.coverImage[0].mimetype,
+      files.coverImage[0].originalname,
+      'store-items'
+    );
+    data.coverImage = uploadResult.url;
+  }
+
+  if (files.photos?.length) {
+    const uploaded = await Promise.all(
+      files.photos.map(async (file) => {
+        const result = await uploadImageBufferToS3(
+          file.buffer,
+          file.mimetype,
+          file.originalname,
+          'store-items-galleries'
+        );
+        return result.url;
+      })
+    );
+    data.photos = [...(data.photos || []), ...uploaded];
+  }
+
+  if (files['photos[]']?.length) {
+    const uploaded = await Promise.all(
+      files['photos[]'].map(async (file) => {
+        const result = await uploadImageBufferToS3(
+          file.buffer,
+          file.mimetype,
+          file.originalname,
+          'store-items-galleries'
+        );
+        return result.url;
+      })
+    );
+    data.photos = [...(data.photos || []), ...uploaded];
+  }
+
+  return data;
+};
+
 /**
  * Create store item
  * POST /v1/store/items
@@ -34,11 +119,18 @@ export const createStoreItem = asyncHandler(async (req: AuthRequest, res: Respon
     throw new AppError(t(lang, 'auth.unauthorized'), 401);
   }
 
-  const coverImage = req.body.coverImage || (Array.isArray(req.body.photos) ? req.body.photos[0] : undefined);
+  const data: any = { ...req.body };
+  data.photos = normalizePhotosInput(data.photos);
+  await attachStoreItemImages(req, data);
+  if (!data.coverImage && Array.isArray(data.photos) && data.photos.length > 0) {
+    data.coverImage = data.photos[0];
+  }
+  if (!data.photos || data.photos.length === 0) {
+    throw new AppError(t(lang, 'store.photos_required'), 400);
+  }
 
   const item = await StoreItem.create({
-    ...req.body,
-    coverImage,
+    ...data,
     status: 'Pending',
     isFeatured: false,
     createdBy: userId,
@@ -248,6 +340,10 @@ export const updateStoreItem = asyncHandler(async (req: AuthRequest, res: Respon
   }
 
   const updates = { ...req.body } as any;
+  if (updates.photos !== undefined) {
+    updates.photos = normalizePhotosInput(updates.photos);
+  }
+  await attachStoreItemImages(req, updates);
   if (updates.photos && !updates.coverImage) {
     updates.coverImage = updates.photos[0];
   }
