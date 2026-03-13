@@ -71,4 +71,3 @@ router.patch('/:eventId/complete', authenticate, isAdmin, completeEvent);
 router.patch('/:eventId/disable', authenticate, isAdmin, disableEvent);
 
 export default router;
-

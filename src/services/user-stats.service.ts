@@ -21,7 +21,7 @@ export async function decrementStatsOnCancel(userId: string): Promise<void> {
 }
 
 /**
- * Add completed distance and increment totalRides if event has a track.
+ * Add completed distance, increment totalRides if event has a track, and increment completedCount.
  * Call after updating EventResult to status 'completed' with distance.
  */
 export async function addDistanceOnComplete(
@@ -29,14 +29,26 @@ export async function addDistanceOnComplete(
   distanceKm: number,
   hasTrack: boolean
 ): Promise<void> {
-  const inc: Record<string, number> = {};
+  const inc: Record<string, number> = {
+    'stats.completedCount': 1,
+  };
   if (distanceKm > 0) {
     inc['stats.totalDistanceKm'] = distanceKm;
   }
   if (hasTrack) {
     inc['stats.totalRides'] = 1;
   }
-  if (Object.keys(inc).length > 0) {
-    await User.findByIdAndUpdate(userId, { $inc: inc });
+  await User.findByIdAndUpdate(userId, { $inc: inc });
+}
+
+/**
+ * Add points to user's total when an EventResult is completed with pointsEarned.
+ * Call after setting EventResult to status 'completed' with pointsEarned (e.g. on submit with default points or after admin save/publish).
+ */
+export async function addPointsOnComplete(userId: string, points: number): Promise<void> {
+  if (points > 0) {
+    await User.findByIdAndUpdate(userId, {
+      $inc: { 'stats.totalPoints': points },
+    });
   }
 }

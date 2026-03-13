@@ -12,6 +12,7 @@ import {
   getMyUpcomingEvents,
   getMyCancelledEvents,
   getMyCompletedEvents,
+  getPerformanceInsights,
   updateMyProfile,
   guestLogin
 } from '@/controllers/auth.controller';
@@ -42,6 +43,7 @@ router.post('/guestLogin', guestLogin);
 // Protected routes
 router.post('/logout', authenticate, validate(logoutSchema), logout);
 router.get('/me/stats', authenticate, getCurrentUserStats);
+router.get('/me/performance-insights', authenticate, getPerformanceInsights);
 router.get('/me/joined-communities', authenticate, getMyJoinedCommunities);
 router.get('/me/joined-events', authenticate, getMyJoinedEvents);
 router.get('/me/active-participations', authenticate,getMyActiveParticipations);
