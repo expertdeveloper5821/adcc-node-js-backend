@@ -115,6 +115,21 @@ const attachEventImages = async (req: AuthRequest, data: Record<string, any>) =>
     data.eventImage = uploadResult.url;
   }
 
+  if (files.galleryImages?.length) {
+    const uploadedGallery = await Promise.all(
+      files.galleryImages.map(async (file) => {
+        const uploaded = await uploadImageBufferToS3(
+          file.buffer,
+          file.mimetype,
+          file.originalname,
+          'events-galleries'
+        );
+        return uploaded.url;
+      })
+    );
+    data.galleryImages = [...(data.galleryImages || []), ...uploadedGallery];
+  }
+
   return data;
 };
 
@@ -148,6 +163,17 @@ export const createEvent = asyncHandler(async (req: AuthRequest, res: Response) 
   };
 
   await attachEventImages(req, eventData);
+
+  const bodyGalleryImages = normalizeGalleryImagesInput((req.body as any).galleryImages);
+  const bodyGallery = normalizeGalleryImagesInput((req.body as any).gallery);
+  const mergedGalleryImages = [
+    ...(eventData.galleryImages || []),
+    ...bodyGalleryImages,
+    ...bodyGallery,
+  ];
+  if (mergedGalleryImages.length > 0) {
+    eventData.galleryImages = mergedGalleryImages;
+  }
 
   const event = await Event.create(eventData);
   const localizedEvent = localizeEventPayload(event.toObject(), lang);

@@ -54,8 +54,8 @@ export const createEventSchema = z
     titleAr: optionalStringField('Arabic event title is required'),
     description: stringField('Event description is required'),
     descriptionAr: optionalStringField('Arabic event description is required'),
-    mainImage: z.preprocess(firstValue, z.string()).optional(),
-    eventImage: z.preprocess(firstValue, z.string()).optional(),
+    mainImage: z.preprocess(firstValue, z.string().url('Invalid image URL')).optional(),
+    eventImage: z.preprocess(firstValue, z.string().url('Invalid image URL')).optional(),
     eventDate: z.preprocess(firstValue, z.string().or(z.date())).refine(
       (val) => {
         const date = val instanceof Date ? val : new Date(val);
@@ -110,7 +110,7 @@ export const createEventSchema = z
     category: z.preprocess(firstValue, z.string()).optional(),
     isFeatured: z.preprocess(firstValue, z.coerce.boolean()).default(false),
     allowCancellation: z.preprocess(firstValue, z.coerce.boolean()).default(false),
-    galleryImages: z.preprocess(jsonOrValue, z.array(z.string())).optional().default([])
+    galleryImages: z.preprocess(jsonOrValue, z.array(z.string().url('Invalid image URL'))).optional().default([])
   })
   .strict();
 
@@ -120,8 +120,8 @@ export const updateEventSchema = z
     titleAr: optionalStringField('Arabic event title is required'),
     description: optionalStringField('Event description is required'),
     descriptionAr: optionalStringField('Arabic event description is required'),
-    mainImage: z.preprocess(firstValue, z.string()).optional(),
-    eventImage: z.preprocess(firstValue, z.string()).optional(),
+    mainImage: z.preprocess(firstValue, z.string().url('Invalid image URL')).optional(),
+    eventImage: z.preprocess(firstValue, z.string().url('Invalid image URL')).optional(),
     eventDate: z.preprocess(firstValue, z.string().or(z.date()))
       .refine(
         (val) => {
@@ -177,7 +177,7 @@ export const updateEventSchema = z
     category: z.preprocess(firstValue, z.string()).optional(),
     isFeatured: z.preprocess(firstValue, z.coerce.boolean()).default(false),
     allowCancellation: z.preprocess(firstValue, z.coerce.boolean()).default(false),
-    galleryImages: z.preprocess(jsonOrValue, z.array(z.string())).optional()
+    galleryImages: z.preprocess(jsonOrValue, z.array(z.string().url('Invalid image URL'))).optional()
 
   })
   .strict();

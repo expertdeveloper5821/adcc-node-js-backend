@@ -70,6 +70,7 @@ export const requireParsedMultipartBody = (req: any, _res: any, next: any) => {
 const trackImageFields = upload.fields([
   { name: 'image', maxCount: 1 },
   { name: 'coverImage', maxCount: 1 },
+  { name: 'galleryImages', maxCount: 10 },
 ]);
 
 export const uploadTrackImages = (req: any, res: any, next: any) => {
@@ -84,6 +85,8 @@ const communityImageFields = upload.fields([
   { name: 'image', maxCount: 1 },
   { name: 'coverImage', maxCount: 1 },
   { name: 'logo', maxCount: 1 },
+  { name: 'gallery', maxCount: 10 },
+  { name: 'galleryImages', maxCount: 10 },
 ]);
 
 export const uploadCommunityImages = (req: any, res: any, next: any) => {

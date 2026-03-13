@@ -32,7 +32,6 @@ import { requireMultipartFormData, requireParsedMultipartBody } from '@/middlewa
 import { authenticate } from '@/middleware/auth.middleware';
 import { isAdmin} from '@/middleware/role.middleware';
 import { uploadMultipleImages, uploadEventImages, uploadEventImagesIfMultipart } from '@/middleware/upload.middleware';
-import { debugRequestBasics } from '@/middleware/request-debug.middleware';
 
 const router = express.Router();
 

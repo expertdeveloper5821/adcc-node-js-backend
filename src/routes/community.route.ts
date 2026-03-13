@@ -27,7 +27,6 @@ import {
 import { authenticate } from '@/middleware/auth.middleware';
 import { isAdmin } from '@/middleware/role.middleware';
 import { uploadMultipleImages, requireMultipartFormData, uploadCommunityImages, requireParsedMultipartBody } from '@/middleware/upload.middleware';
-import { debugRequestBasics } from '@/middleware/request-debug.middleware';
 
 const router = express.Router();
 
@@ -55,7 +54,6 @@ router.post(
   isAdmin,
   uploadCommunityImages,
   requireParsedMultipartBody,
-  debugRequestBasics,
   validate(createCommunitySchema),
   createCommunity
 );
