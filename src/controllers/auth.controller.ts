@@ -88,6 +88,9 @@ export const verifyFirebaseAuth = asyncHandler(
             email: user.email,
             gender: user.gender,
             age: user.age,
+            dob: user.dob,
+            country: user.country,
+            provider: user.provider,
             role: user.role,
             isVerified: user.isVerified,
           },
@@ -127,18 +130,13 @@ export const verifyFirebaseAuth = asyncHandler(
 export const registerUser = asyncHandler(
   async (req: AuthRequest, res: Response) => {
     const lang = resolveRequestLanguage(req);
-    const { fullName, gender, age } = req.body;
+    const { fullName, gender, age, dob, country, provider } = req.body;
     const uid = req.user?.uid; // From JWT (temporary token)
     const phone = req.user?.phone; // Optional phone from JWT (for phone auth)
     const email = req.user?.email; // Optional email from JWT (for email/password auth)
 
     if (!uid) {
       throw new AppError(t(lang, 'auth.firebase_uid_required'), 400);
-    }
-
-    // Validate that user has either phone or email (required for registration)
-    if (!phone && !email) {
-      throw new AppError(t(lang, 'auth.phone_or_email_required'), 400);
     }
 
     // Check if user already exists by UID
@@ -155,6 +153,9 @@ export const registerUser = asyncHandler(
       email: email || undefined,
       gender,
       age,
+      dob,
+      country,
+      provider,
       isVerified: true,
     });
 
@@ -188,6 +189,10 @@ export const registerUser = asyncHandler(
           phone: user.phone,
           email: user.email,
           gender: user.gender,
+          age: user.age,
+          dob: user.dob,
+          country: user.country,
+          provider: user.provider,
           role: user.role,
           isVerified: user.isVerified,
         },
@@ -913,11 +918,13 @@ export const updateMyProfile = asyncHandler(
       throw new AppError(t(lang, 'guest.access_denied'), 403);
     }
 
-    const { fullName, gender, age } = req.body;
+    const { fullName, gender, age, dob, country } = req.body;
     const updates: Record<string, unknown> = {};
     if (fullName !== undefined) updates.fullName = fullName;
     if (gender !== undefined) updates.gender = gender;
     if (age !== undefined) updates.age = age;
+    if (dob !== undefined) updates.dob = dob;
+    if (country !== undefined) updates.country = country;
 
     const user = await User.findByIdAndUpdate(
       userId,

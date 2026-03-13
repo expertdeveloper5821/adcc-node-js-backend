@@ -21,7 +21,10 @@ export interface IUser extends Document {
   email?: string;
   profileImage?: string;
   gender: 'Male' | 'Female';
-  age: number;
+  age?: number;
+  dob?: Date;
+  country?: string;
+  provider: string;
   role: 'Admin' | 'Vendor' | 'Member' | 'Guest';
   isVerified: boolean;
   refreshTokens: IRefreshToken[];
@@ -89,9 +92,20 @@ const UserSchema = new Schema(
     },
     age: {
       type: Number,
-      required: [true, 'Age is required'],
       min: [0, 'Age cannot be negative'],
       max: [150, 'Age must be realistic'],
+    },
+    dob: {
+      type: Date,
+    },
+    country: {
+      type: String,
+      trim: true,
+    },
+    provider: {
+      type: String,
+      required: [true, 'Provider is required'],
+      trim: true,
     },
     role: {
       type: String,
