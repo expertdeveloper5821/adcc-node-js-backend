@@ -1,0 +1,167 @@
+import { Request, Response } from 'express';
+import Challenge from '@/models/challenge.model';
+import { t } from '@/utils/i18n';
+import { sendSuccess } from '@/utils/response';
+import { asyncHandler } from '@/utils/async-handler';
+import { AppError } from '@/utils/app-error';
+import { AuthRequest } from '@/middleware/auth.middleware';
+import { uploadImageBufferToS3 } from '@/services/s3-upload.service';
+
+const attachChallengeImage = async (req: AuthRequest, data: Record<string, any>) => {
+  const file = (req as any).file as Express.Multer.File | undefined;
+  if (!file) return data;
+
+  const uploadResult = await uploadImageBufferToS3(
+    file.buffer,
+    file.mimetype,
+    file.originalname,
+    'challenges'
+  );
+  data.image = uploadResult.url;
+
+  return data;
+};
+
+/**
+ * Create new challenge
+ * POST /v1/challenges
+ * Admin only
+ */
+export const createChallenge = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const lang = ((req as any).lang || 'en') as any;
+  const userId = req.user?.id;
+
+  if (!userId) {
+    throw new AppError(t(lang, 'auth.unauthorized'), 401);
+  }
+
+  const challengeData: Record<string, any> = {
+    ...req.body,
+    startDate: req.body.startDate ? new Date(req.body.startDate) : undefined,
+    endDate: req.body.endDate ? new Date(req.body.endDate) : undefined,
+    createdBy: userId,
+  };
+
+  await attachChallengeImage(req, challengeData);
+
+  const challenge = await Challenge.create(challengeData);
+
+  sendSuccess(res, challenge, t(lang, 'challenge.created'), 201);
+});
+
+/**
+ * Get all challenges
+ * GET /v1/challenges
+ */
+export const getAllChallenges = asyncHandler(async (req: Request, res: Response) => {
+  const lang = ((req as any).lang || 'en') as any;
+  const { status, type, featured, communityId, page = 1, limit = 10 } = req.query as any;
+
+  const filter: any = {};
+  if (status) filter.status = status;
+  if (type) filter.type = type;
+  if (typeof featured === 'boolean') filter.featured = featured;
+  if (communityId) filter.communities = communityId;
+
+  const pageNum = Math.max(1, Number(page) || 1);
+  const limitNum = Math.min(100, Math.max(1, Number(limit) || 10));
+  const skip = (pageNum - 1) * limitNum;
+
+  const challengesQuery = Challenge.find(filter)
+    .populate('createdBy', 'fullName email')
+    .populate('communities', 'title')
+    .sort({ startDate: 1, createdAt: -1 })
+    .skip(skip)
+    .limit(limitNum)
+    .lean();
+
+  const [challenges, total] = await Promise.all([
+    challengesQuery,
+    Challenge.countDocuments(filter),
+  ]);
+
+  sendSuccess(
+    res,
+    {
+      challenges,
+      pagination: {
+        page: pageNum,
+        limit: limitNum,
+        total,
+        pages: Math.ceil(total / limitNum),
+      },
+    },
+    t(lang, 'challenge.allChallenges'),
+    200
+  );
+});
+
+/**
+ * Get challenge by ID
+ * GET /v1/challenges/:id
+ */
+export const getChallengeById = asyncHandler(async (req: Request, res: Response) => {
+  const lang = ((req as any).lang || 'en') as any;
+  const { id } = req.params;
+
+  const challenge = await Challenge.findById(id)
+    .populate('createdBy', 'fullName email')
+    .populate('communities', 'title');
+
+  if (!challenge) {
+    throw new AppError(t(lang, 'challenge.not_found'), 404);
+  }
+
+  sendSuccess(res, challenge, t(lang, 'challenge.details'));
+});
+
+/**
+ * Update challenge
+ * PATCH /v1/challenges/:id
+ * Admin only
+ */
+export const updateChallenge = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const lang = ((req as any).lang || 'en') as any;
+  const { id } = req.params;
+  const updateData: Record<string, any> = { ...req.body };
+
+  if (updateData.startDate) {
+    updateData.startDate = new Date(updateData.startDate);
+  }
+  if (updateData.endDate) {
+    updateData.endDate = new Date(updateData.endDate);
+  }
+
+  await attachChallengeImage(req, updateData);
+
+  const challenge = await Challenge.findByIdAndUpdate(id, updateData, {
+    new: true,
+    runValidators: true,
+  })
+    .populate('createdBy', 'fullName email')
+    .populate('communities', 'title');
+
+  if (!challenge) {
+    throw new AppError(t(lang, 'challenge.not_found'), 404);
+  }
+
+  sendSuccess(res, challenge, t(lang, 'challenge.updated'));
+});
+
+/**
+ * Delete challenge
+ * DELETE /v1/challenges/:id
+ * Admin only
+ */
+export const deleteChallenge = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const lang = ((req as any).lang || 'en') as any;
+  const { id } = req.params;
+
+  const challenge = await Challenge.findByIdAndDelete(id);
+
+  if (!challenge) {
+    throw new AppError(t(lang, 'challenge.not_found'), 404);
+  }
+
+  sendSuccess(res, null, t(lang, 'challenge.deleted'));
+});
