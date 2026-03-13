@@ -145,9 +145,10 @@ export const createStoreItem = asyncHandler(async (req: AuthRequest, res: Respon
  */
 export const getStoreItems = asyncHandler(async (req: Request, res: Response) => {
   const lang = ((req as any).lang || 'en') as string;
-  const { page = 1, limit = 10, category, condition, city, minPrice, maxPrice, q } = req.query as any;
+  const { page = 1, limit = 10, status, category, condition, city, minPrice, maxPrice, q } = req.query as any;
 
-  const filter: any = { status: 'Approved' };
+  const filter: any = {};
+  if (status) filter.status = status;
   if (category) filter.category = category;
   if (condition) filter.condition = condition;
   if (city) filter.city = city;
