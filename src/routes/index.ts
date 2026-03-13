@@ -7,6 +7,7 @@ import eventRoutes from './event.route';
 import challengeRoutes from './challenge.route';
 import trackRoutes from './track.route';
 import uploadRoutes from './upload.route';
+import storeRoutes from './store.route';
 
 const router = Router();
 
@@ -19,6 +20,7 @@ router.use('/events', eventRoutes);
 router.use('/challenges', challengeRoutes);
 router.use('/tracks', trackRoutes);
 router.use('/uploads', uploadRoutes);
+router.use('/store', storeRoutes);
 
 // Add more routes here as you create them
 // router.use('/users', userRoutes);

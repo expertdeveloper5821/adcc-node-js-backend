@@ -29,6 +29,12 @@ const upload = multer({
 
 export const uploadSingleImage = upload.single('image');
 export const uploadMultipleImages = upload.array('images', 10);
+const uploadStoreItemBody = upload.none();
+const uploadStoreItemImages = upload.fields([
+  { name: 'coverImage', maxCount: 1 },
+  { name: 'photos', maxCount: 10 },
+  { name: 'photos[]', maxCount: 10 },
+]);
 
 export const uploadEventImages = upload.fields([
   { name: 'mainImage', maxCount: 1 },
@@ -41,6 +47,22 @@ export const uploadEventImagesIfMultipart = (req: any, res: any, next: any) => {
   const contentType = (req.headers['content-type'] || '').toString();
   if (contentType.includes('multipart/form-data')) {
     return uploadEventImages(req, res, next);
+  }
+  return next();
+};
+
+export const uploadStoreItemBodyIfMultipart = (req: any, res: any, next: any) => {
+  const contentType = (req.headers['content-type'] || '').toString();
+  if (contentType.includes('multipart/form-data')) {
+    return uploadStoreItemBody(req, res, next);
+  }
+  return next();
+};
+
+export const uploadStoreItemImagesIfMultipart = (req: any, res: any, next: any) => {
+  const contentType = (req.headers['content-type'] || '').toString();
+  if (contentType.includes('multipart/form-data')) {
+    return uploadStoreItemImages(req, res, next);
   }
   return next();
 };
