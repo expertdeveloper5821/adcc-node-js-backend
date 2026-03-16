@@ -102,7 +102,12 @@
         "completed_summary_retrieved": "Event completed summary retrieved successfully",
         "feedback_updated": "Feedback updated successfully",
         "result_photos_added": "Photos added to your ride result successfully",
-        "result_photos_limit": "Maximum number of photos reached for this result"
+        "result_photos_limit": "Maximum number of photos reached for this result",
+        "participant_checked_in": "Participant checked in successfully",
+        "participant_no_show": "Participant marked as no-show",
+        "participant_removed": "Participant removed from event",
+        "participants_checked_in": "All registered participants checked in successfully",
+        "participants_no_show": "All registered participants marked as no-show"
     },
     "challenge": {
         "not_found": "Challenge not found",
@@ -114,6 +119,7 @@
     },
     "badge": {
         "not_found": "Badge not found",
+        "name_required": "Badge name is required",
         "created": "Badge created successfully",
         "updated": "Badge updated successfully",
         "deleted": "Badge deleted successfully",

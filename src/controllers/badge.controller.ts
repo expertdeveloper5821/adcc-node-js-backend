@@ -39,7 +39,7 @@ export const getBadgeIcons = asyncHandler(async (_req: Request, res: Response) =
 export const createBadge = asyncHandler(async (req: AuthRequest, res: Response) => {
   const lang = ((req as any).lang || 'en') as any;
   const userId = req.user?.id;
-
+ console.log('body', req.body);
   if (!userId) {
     throw new AppError(t(lang, 'auth.unauthorized'), 401);
   }
@@ -47,6 +47,12 @@ export const createBadge = asyncHandler(async (req: AuthRequest, res: Response) 
   const badgeData: Record<string, any> = {
     ...req.body,
   };
+
+  const name = typeof badgeData.name === 'string' ? badgeData.name.trim() : '';
+  if (!name) {
+    throw new AppError(t(lang, 'badge.name_required'), 400);
+  }
+  badgeData.name = name;
 
   await attachBadgeImage(req, badgeData);
 

@@ -9,6 +9,12 @@ import {
   cancelRegistration,
   getEventResults,
   getEventResultsList,
+  markParticipantCheckedIn,
+  markParticipantNoShow,
+  removeEventParticipant,
+  exportEventResults,
+  checkInAllRegisteredParticipants,
+  markAllParticipantsNoShow,
   addToCalendar,
   getMemberEventStatus,
   deleteGalleryImage,
@@ -42,12 +48,18 @@ router.get('/', authenticate, validate(getEventsQuerySchema), getAllEvents);
 router.get('/:id', authenticate, getEventById);
 router.post('/:eventId/results', authenticate, getEventResults);
 router.get('/:eventId/results',  authenticate, getEventResultsList);
+router.get('/:eventId/results/export', authenticate, isAdmin, exportEventResults);
 router.post('/:eventId/joinEvent', authenticate, validate(joinEventSchema), joinEvent);
 router.post('/:eventId/cancel', authenticate, cancelRegistration);
 router.post('/:eventId/add-to-calendar', authenticate, addToCalendar);
 router.get('/:eventId/member-status', authenticate, getMemberEventStatus);
 router.post('/:eventId/gallery', authenticate, isAdmin, uploadMultipleImages, addEventGalleryImages);
 router.delete('/:eventId/gallery', authenticate, deleteGalleryImage);
+router.patch('/:eventId/participants/check-in-all', authenticate, isAdmin, checkInAllRegisteredParticipants);
+router.patch('/:eventId/participants/no-show-all', authenticate, isAdmin, markAllParticipantsNoShow);
+router.patch('/:eventId/participants/:userId/check-in', authenticate, isAdmin, markParticipantCheckedIn);
+router.patch('/:eventId/participants/:userId/no-show', authenticate, isAdmin, markParticipantNoShow);
+router.delete('/:eventId/participants/:userId', authenticate, isAdmin, removeEventParticipant);
 
 
 // Admin only routes

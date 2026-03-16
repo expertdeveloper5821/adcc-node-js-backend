@@ -366,7 +366,7 @@ export const getCurrentUserStats = asyncHandler(
       {
         $match: {
           userId: objectIdUserId,
-          status: { $in: ['joined', 'completed'] },
+          status: { $in: ['joined', 'checked_in', 'no_show', 'completed'] },
         },
       },
       {
@@ -484,7 +484,7 @@ export const getPerformanceInsights = asyncHandler(
 
     const objectIdUserId = new mongoose.Types.ObjectId(userId);
     const bestCategoryResult = await EventResult.aggregate([
-      { $match: { userId: objectIdUserId, status: { $in: ['joined', 'completed'] } } },
+      { $match: { userId: objectIdUserId, status: { $in: ['joined', 'checked_in', 'no_show', 'completed'] } } },
       { $lookup: { from: 'events', localField: 'eventId', foreignField: '_id', as: 'event' } },
       { $unwind: { path: '$event', preserveNullAndEmptyArrays: true } },
       {
@@ -561,7 +561,7 @@ export const getMyJoinedEvents = asyncHandler(
     const page = Math.max(1, Number(req.query.page) || 1);
     const limit = Math.max(1, Math.min(100, Number(req.query.limit) || 10));
     const skip = (page - 1) * limit;
-    const filter = { userId, status: { $in: ['joined', 'completed'] } };
+    const filter = { userId, status: { $in: ['joined', 'checked_in', 'no_show', 'completed'] } };
 
     const [results, total] = await Promise.all([
       EventResult.find(filter)
@@ -619,7 +619,7 @@ export const getMyActiveParticipations = asyncHandler(
     const limit = Math.max(1, Math.min(100, Number(req.query.limit) || 10));
     const skip = (page - 1) * limit;
 
-    const filter = { userId, status: 'joined' };
+    const filter = { userId, status: { $in: ['joined', 'checked_in'] } };
 
     const [results, total] = await Promise.all([
       EventResult.find(filter)
@@ -724,7 +724,7 @@ export const getMyUpcomingEvents = asyncHandler(
     const userObjectId = new mongoose.Types.ObjectId(userId);
 
     const basePipeline = [
-      { $match: { userId: userObjectId, status: 'joined' } },
+      { $match: { userId: userObjectId, status: { $in: ['joined', 'checked_in'] } } },
       {
         $lookup: {
           from: 'events',

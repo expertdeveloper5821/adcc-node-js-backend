@@ -9,7 +9,7 @@ export const evenResultSchema = z
     rank: z.number().min(1, 'Rank must be at least 1').optional(),
     pointsEarned: z.number().min(0, 'Points earned cannot be negative').optional(),
     badge: z.string().optional(),
-    status: z.enum(['joined', 'cancelled', 'completed']),
+    status: z.enum(['joined', 'cancelled', 'completed', 'checked_in', 'no_show']),
   })
   .strict();
 
@@ -20,7 +20,7 @@ export const evenResultSchema = z
     rank: z.number().min(1, 'Rank must be at least 1').optional(),
     pointsEarned: z.number().min(0, 'Points earned cannot be negative').optional(),
     badge: z.string().optional(),
-    status: z.enum(['joined', 'cancelled', 'completed']).optional(),
+    status: z.enum(['joined', 'cancelled', 'completed', 'checked_in', 'no_show']).optional(),
   })
   .strict();
 

@@ -8,8 +8,10 @@ export interface IEventResult extends Document {
     rank?: number;
     pointsEarned?: number;
     badge?: string;
-    status: 'joined' | 'cancelled' | 'completed';
+    status: 'joined' | 'cancelled' | 'completed' | 'checked_in' | 'no_show';
     reason?: string;  
+    checkedInAt?: Date | null;
+    noShowAt?: Date | null;
     createdAt: Date;
     updatedAt: Date;
     completedAt: Date;
@@ -30,6 +32,8 @@ const EventResultSchema = new Schema<IEventResult>(
         pointsEarned: { type: Number, default: null },
         badge: { type: String },
         reason: { type: String, default: null },
+        checkedInAt: { type: Date, default: null },
+        noShowAt: { type: Date, default: null },
         calories: { type: Number, default: null },
         elevationGain: { type: String, default: null },
         rating: { type: Number, default: null, min: 1, max: 5 },
@@ -37,7 +41,7 @@ const EventResultSchema = new Schema<IEventResult>(
         photos: { type: [String], default: [] },
         status: {
             type: String,
-            enum: ['joined', 'cancelled', 'completed'],
+            enum: ['joined', 'cancelled', 'completed', 'checked_in', 'no_show'],
             default: 'joined',
         },
     },
