@@ -20,7 +20,7 @@ export interface IChallenge extends Document {
   unit: string;
   startDate: Date;
   endDate: Date;
-  rewardBadge?: string;
+  rewardBadge?: mongoose.Types.ObjectId;
   featured: boolean;
   status: ChallengeStatus;
   participants: number;
@@ -71,8 +71,8 @@ const ChallengeSchema = new Schema(
       required: [true, 'End date is required'],
     },
     rewardBadge: {
-      type: String,
-      trim: true,
+      type: Schema.Types.ObjectId,
+      ref: 'badges',
     },
     featured: {
       type: Boolean,
