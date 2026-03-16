@@ -16,7 +16,7 @@ import {
   addPointsOnComplete,
 } from '@/services/user-stats.service';
 import dayjs from 'dayjs';
-import mongoose from 'mongoose';
+import mongoose, { type PipelineStage } from 'mongoose';
 import { localizeDocumentFields, SupportedLanguage, localizeEventStatic } from '@/utils/localization';
 
 const EVENT_LOCALIZED_FIELDS = {
@@ -134,6 +134,168 @@ const attachEventImages = async (req: AuthRequest, data: Record<string, any>) =>
   }
 
   return data;
+};
+
+const EVENT_RESULT_STATUS_ALIASES: Record<string, string> = {
+  registered: 'joined',
+  'checked-in': 'checked_in',
+  checkedin: 'checked_in',
+  'no-show': 'no_show',
+  noshow: 'no_show',
+};
+
+const EVENT_RESULT_STATUSES = new Set([
+  'joined',
+  'cancelled',
+  'completed',
+  'checked_in',
+  'no_show',
+]);
+
+const normalizeEventResultStatus = (value?: string): string | null => {
+  if (!value) return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  const key = trimmed.toLowerCase();
+  const normalized = EVENT_RESULT_STATUS_ALIASES[key] ?? key;
+  if (!EVENT_RESULT_STATUSES.has(normalized)) return null;
+  return normalized;
+};
+
+const parseStatusFilter = (value: unknown): string[] | null => {
+  if (!value) return null;
+  const rawValues = Array.isArray(value) ? value : String(value).split(',');
+  const statuses = rawValues
+    .map((item) => normalizeEventResultStatus(String(item)))
+    .filter((status): status is string => Boolean(status));
+  if (statuses.length === 0) return null;
+  return Array.from(new Set(statuses));
+};
+
+const escapeCsvValue = (value: unknown): string => {
+  if (value == null) return '';
+  const text = String(value);
+  if (/[",\n]/.test(text)) {
+    return `"${text.replace(/"/g, '""')}"`;
+  }
+  return text;
+};
+
+const getRouteParam = (value?: string | string[]): string => {
+  if (Array.isArray(value)) return value[0] ?? '';
+  return value ?? '';
+};
+
+const buildEventResultsPipeline = (eventId: string, statuses?: string[]): PipelineStage[] => {
+  const matchStage: Record<string, any> = {
+    eventId: new mongoose.Types.ObjectId(eventId),
+  };
+  if (statuses && statuses.length > 0) {
+    matchStage.status = { $in: statuses };
+  }
+
+  return [
+    { $match: matchStage },
+    {
+      $addFields: {
+        eventTimeInSeconds: {
+          $cond: {
+            if: { $and: [{ $ne: ["$time", null] }, { $ne: ["$time", ""] }] },
+            then: {
+              $add: [
+                {
+                  $multiply: [
+                    {
+                      $convert: {
+                        input: { $substr: ["$time", 0, 2] },
+                        to: "int",
+                        onError: 0,
+                        onNull: 0
+                      }
+                    },
+                    3600
+                  ]
+                },
+                {
+                  $multiply: [
+                    {
+                      $convert: {
+                        input: { $substr: ["$time", 3, 2] },
+                        to: "int",
+                        onError: 0,
+                        onNull: 0
+                      }
+                    },
+                    60
+                  ]
+                }
+              ]
+            },
+            else: 0
+          }
+        }
+      }
+    },
+    { $sort: { eventTimeInSeconds: 1 } },
+    {
+      $setWindowFields: {
+        sortBy: { eventTimeInSeconds: 1 },
+        output: {
+          rank: {
+            $rank: {},
+          },
+        },
+      },
+    },
+    {
+      $lookup: {
+        from: 'users',
+        localField: 'userId',
+        foreignField: '_id',
+        as: 'user',
+      },
+    },
+    { $unwind: '$user' },
+    {
+      $lookup: {
+        from: 'events',
+        localField: 'eventId',
+        foreignField: '_id',
+        as: 'event',
+      },
+    },
+    {
+      $unwind: {
+        path: '$event',
+        preserveNullAndEmptyArrays: true,
+      },
+    },
+    {
+      $lookup: {
+        from: 'communities',
+        localField: 'event.communityId',
+        foreignField: '_id',
+        as: 'community',
+      },
+    },
+    {
+      $unwind: {
+        path: '$community',
+        preserveNullAndEmptyArrays: true,
+      },
+    },
+  ];
+};
+
+const ensureEventExists = async (eventId: string, lang: SupportedLanguage) => {
+  if (!mongoose.Types.ObjectId.isValid(eventId)) {
+    throw new AppError(t(lang, 'event.invalid_id'), 400);
+  }
+  const event = await Event.findById(eventId).select('title titleAr eventDate communityId');
+  if (!event) {
+    throw new AppError(t(lang, "event.not_found"), 404);
+  }
+  return event;
 };
 
 /**
@@ -434,6 +596,7 @@ export const getEventResults = asyncHandler(async (req: AuthRequest, res: Respon
     status: 'completed',
     pointsEarned: defaultCompletionPoints,
   };
+  if (eventResults.status === 'no_show') updates.noShowAt = null;
   if (req.body.calories != null) updates.calories = req.body.calories;
   if (req.body.elevationGain != null) updates.elevationGain = String(req.body.elevationGain).trim() || null;
   if (req.body.rating != null) updates.rating = req.body.rating;
@@ -473,11 +636,19 @@ export const joinEvent = asyncHandler(async (req: AuthRequest, res: Response) =>
   });
 
   if (eventJoin) {
-    if (eventJoin.status === 'joined') {
+    if (['joined', 'checked_in', 'no_show'].includes(eventJoin.status)) {
       throw new AppError(t(lang, "event.already_joined"), 400);
     }
 
-    eventJoin.status = 'joined';
+    if (eventJoin.status === 'completed') {
+      throw new AppError(t(lang, "event.completed"), 400);
+    }
+
+    eventJoin.set({
+      status: 'joined',
+      checkedInAt: null,
+      noShowAt: null,
+    });
     await eventJoin.save();
 
     await incrementStatsOnJoin(userId);
@@ -514,113 +685,272 @@ export const joinEvent = asyncHandler(async (req: AuthRequest, res: Response) =>
  */
 export const getEventResultsList = asyncHandler(async (req: Request, res: Response) => {
   const lang = ((req as any).lang || 'en') as SupportedLanguage;
-  const eventIdParam = Array.isArray(req.params.eventId)
-    ? req.params.eventId[0]
-    : req.params.eventId;
-  // console.log('body',req.params);
+  const eventIdParam = getRouteParam(req.params.eventId);
+  if (!mongoose.Types.ObjectId.isValid(eventIdParam)) {
+    throw new AppError(t(lang, 'event.invalid_id'), 400);
+  }
+  const statusFilter = parseStatusFilter(req.query.status);
+
+  const resultsPipeline: PipelineStage[] = [
+    ...buildEventResultsPipeline(eventIdParam, statusFilter || undefined),
+    {
+      $project: {
+        distance: 1,
+        time: 1,
+        rank: 1,
+        createdAt: 1,
+        status: 1,
+        checkedInAt: 1,
+        noShowAt: 1,
+        reason: 1,
+        pointsEarned: 1,
+        'user._id': 1,
+        'user.fullName': 1,
+        'user.email': 1,
+        'event._id': 1,
+        'event.title': 1,
+        'event.eventDate': 1,
+        'community._id': 1,
+        'community.title': 1,
+      },
+    },
+  ];
+
+  const eventResults = await EventResult.aggregate(resultsPipeline);
+
+  sendSuccess(res, eventResults, t(lang, 'event.results_retrieved'), 201);
+});
+
+/**
+ * Mark participant as checked-in
+ * PATCH /v1/events/:eventId/participants/:userId/check-in
+ * Admin only
+ */
+export const markParticipantCheckedIn = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const lang = ((req as any).lang || 'en') as SupportedLanguage;
+  const eventId = getRouteParam(req.params.eventId);
+  const userId = getRouteParam(req.params.userId);
+
+  console.log('body',req.body);
+  await ensureEventExists(eventId, lang);
+
+  const eventResult = await EventResult.findOne({ eventId, userId });
+  if (!eventResult) {
+    throw new AppError(t(lang, "event.not_member"), 400);
+  }
+
+  if (eventResult.status === 'completed') {
+    throw new AppError(t(lang, "event.completed"), 400);
+  }
+
+  eventResult.set({
+    status: 'checked_in',
+    checkedInAt: new Date(),
+    noShowAt: null,
+  });
+
+  await eventResult.save();
+
+  sendSuccess(res, eventResult, t(lang, "event.participant_checked_in"), 200);
+});
+
+/**
+ * Mark participant as no-show
+ * PATCH /v1/events/:eventId/participants/:userId/no-show
+ * Admin only
+ */
+export const markParticipantNoShow = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const lang = ((req as any).lang || 'en') as SupportedLanguage;
+  const eventId = getRouteParam(req.params.eventId);
+  const userId = getRouteParam(req.params.userId);
+
+  await ensureEventExists(eventId, lang);
+
+  const eventResult = await EventResult.findOne({ eventId, userId });
+  if (!eventResult) {
+    throw new AppError(t(lang, "event.not_member"), 400);
+  }
+
+  if (eventResult.status === 'completed') {
+    throw new AppError(t(lang, "event.completed"), 400);
+  }
+
+  eventResult.set({
+    status: 'no_show',
+    noShowAt: new Date(),
+    checkedInAt: null,
+  });
+
+  await eventResult.save();
+
+  sendSuccess(res, eventResult, t(lang, "event.participant_no_show"), 200);
+});
+
+/**
+ * Remove participant from event
+ * DELETE /v1/events/:eventId/participants/:userId
+ * Admin only
+ */
+export const removeEventParticipant = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const lang = ((req as any).lang || 'en') as SupportedLanguage;
+  const eventId = getRouteParam(req.params.eventId);
+  const userId = getRouteParam(req.params.userId);
+
+  await ensureEventExists(eventId, lang);
+
+  const eventResult = await EventResult.findOne({ eventId, userId });
+  if (!eventResult) {
+    throw new AppError(t(lang, "event.not_member"), 400);
+  }
+
+  if (eventResult.status === 'completed') {
+    throw new AppError(t(lang, "event.completed"), 400);
+  }
+
+  await EventResult.deleteOne({ _id: eventResult._id });
+
+  if (['joined', 'checked_in', 'no_show'].includes(eventResult.status)) {
+    await decrementStatsOnCancel(userId);
+  }
+
+  sendSuccess(res, null, t(lang, "event.participant_removed"), 200);
+});
+
+/**
+ * Bulk check-in all registered participants
+ * PATCH /v1/events/:eventId/participants/check-in-all
+ * Admin only
+ */
+export const checkInAllRegisteredParticipants = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const lang = ((req as any).lang || 'en') as SupportedLanguage;
+  const eventId = getRouteParam(req.params.eventId);
+
+  await ensureEventExists(eventId, lang);
+
+  const now = new Date();
+  const result = await EventResult.updateMany(
+    { eventId, status: 'joined' },
+    { $set: { status: 'checked_in', checkedInAt: now, noShowAt: null } }
+  );
+
+  sendSuccess(
+    res,
+    { matched: result.matchedCount, modified: result.modifiedCount },
+    t(lang, "event.participants_checked_in"),
+    200
+  );
+});
+
+/**
+ * Bulk mark all registered participants as no-show
+ * PATCH /v1/events/:eventId/participants/no-show-all
+ * Admin only
+ */
+export const markAllParticipantsNoShow = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const lang = ((req as any).lang || 'en') as SupportedLanguage;
+  const eventId = getRouteParam(req.params.eventId);
+
+  await ensureEventExists(eventId, lang);
+
+  const now = new Date();
+  const result = await EventResult.updateMany(
+    { eventId, status: 'joined' },
+    { $set: { status: 'no_show', noShowAt: now, checkedInAt: null } }
+  );
+
+  sendSuccess(
+    res,
+    { matched: result.matchedCount, modified: result.modifiedCount },
+    t(lang, "event.participants_no_show"),
+    200
+  );
+});
+
+/**
+ * Export event results (CSV)
+ * GET /v1/events/:eventId/results/export
+ * Admin only
+ */
+export const exportEventResults = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const lang = ((req as any).lang || 'en') as SupportedLanguage;
+  const eventIdParam = getRouteParam(req.params.eventId);
+
   if (!mongoose.Types.ObjectId.isValid(eventIdParam)) {
     throw new AppError(t(lang, 'event.invalid_id'), 400);
   }
 
-  const eventResults = await EventResult.aggregate([
-  {
-    $match: {
-      eventId: new mongoose.Types.ObjectId(eventIdParam),
-    },
-  },
+  const statusFilter = parseStatusFilter(req.query.status);
+  const event = await ensureEventExists(eventIdParam, lang);
+
+  const exportPipeline: PipelineStage[] = [
+    ...buildEventResultsPipeline(eventIdParam, statusFilter || undefined),
     {
-      $addFields: {
-        eventTimeInSeconds: {
-          $cond: {
-            if: { $and: [{ $ne: ["$time", null] }, { $ne: ["$time", ""] }] },
-            then: {
-              $add: [
-                {
-                  $multiply: [
-                    {
-                      $convert: {
-                        input: { $substr: ["$time", 0, 2] },
-                        to: "int",
-                        onError: 0,
-                        onNull: 0
-                      }
-                    },
-                    3600
-                  ]
-                },
-                {
-                  $multiply: [
-                    {
-                      $convert: {
-                        input: { $substr: ["$time", 3, 2] },
-                        to: "int",
-                        onError: 0,
-                        onNull: 0
-                      }
-                    },
-                    60
-                  ]
-                }
-              ]
-            },
-            else: 0
-          }
-        }
-      }
-    },
-  { $sort: { eventTimeInSeconds: 1 } },
-  {
-    $setWindowFields: {
-      sortBy: { eventTimeInSeconds: 1 },
-      output: {
-        rank: {
-          $rank: {},
-        },
+      $project: {
+        distance: 1,
+        time: 1,
+        rank: 1,
+        createdAt: 1,
+        status: 1,
+        checkedInAt: 1,
+        noShowAt: 1,
+        reason: 1,
+        pointsEarned: 1,
+        'user.fullName': 1,
+        'user.email': 1,
+        'event.title': 1,
+        'event.eventDate': 1,
+        'community.title': 1,
       },
     },
-  },
-  {
-    $lookup: {
-      from: 'users',
-      localField: 'userId',
-      foreignField: '_id',
-      as: 'user',
-    },
-  },
-  { $unwind: '$user' },
-  {
-    $lookup: {
-      from: 'events',
-      localField: 'eventId',
-      foreignField: '_id',
-      as: 'event',
-    },
-  },
-  // { $unwind: '$event' },
-  {
-    $unwind: {  
-      path: '$event',
-      preserveNullAndEmptyArrays: true
-    }
-  },
-  {
-    $project: {
-      distance: 1,
-      time: 1,
-      rank: 1,
-      createdAt: 1,
-      'user._id': 1,
-      'user.fullName': 1,
-      'user.email': 1,
-      'event._id': 1,
-      'event.title': 1,
-      'event.eventDate': 1,
-    },
-  },
-]);
+  ];
 
+  const rows = await EventResult.aggregate(exportPipeline);
 
-  sendSuccess(res, eventResults, t(lang, 'event.results_retrieved'), 201);
+  const headers = [
+    'Name',
+    'Email',
+    'Status',
+    'RegisteredAt',
+    'CheckedInAt',
+    'NoShowAt',
+    'Rank',
+    'Time',
+    'Distance',
+    'Points',
+    'Reason',
+    'Event',
+    'EventDate',
+    'Community',
+  ];
+
+  const lines = [headers.map(escapeCsvValue).join(',')];
+  for (const row of rows as any[]) {
+    lines.push(
+      [
+        row.user?.fullName ?? '',
+        row.user?.email ?? '',
+        row.status ?? '',
+        row.createdAt ? new Date(row.createdAt).toISOString() : '',
+        row.checkedInAt ? new Date(row.checkedInAt).toISOString() : '',
+        row.noShowAt ? new Date(row.noShowAt).toISOString() : '',
+        row.rank ?? '',
+        row.time ?? '',
+        row.distance ?? '',
+        row.pointsEarned ?? '',
+        row.reason ?? '',
+        row.event?.title ?? (lang === 'ar' ? event.titleAr || event.title : event.title),
+        row.event?.eventDate ? new Date(row.event.eventDate).toISOString() : '',
+        row.community?.title ?? '',
+      ].map(escapeCsvValue).join(',')
+    );
+  }
+
+  const fileNameBase = (event.title || 'event').replace(/[^a-z0-9]+/gi, '_').replace(/^_+|_+$/g, '');
+  const fileName = `${fileNameBase || 'event'}_results.csv`;
+
+  res.setHeader('Content-Type', 'text/csv');
+  res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+  res.status(200).send(lines.join('\n'));
 });
 
 /**
@@ -763,7 +1093,7 @@ export const cancelRegistration = asyncHandler(async (req: AuthRequest, res: Res
     const joined = await EventResult.findOne({
       eventId,
       userId: userId,
-      status: 'joined',
+      status: { $in: ['joined', 'checked_in'] },
     });
 
     if (!joined) {
@@ -817,13 +1147,15 @@ export const getMemberEventStatus = asyncHandler(async (req: AuthRequest, res: R
   let participationDetails = null;
 
   if (eventResult) {
-    status = eventResult.status; // 'joined', 'cancelled', 'completed'
+    status = eventResult.status; // 'joined', 'cancelled', 'completed', 'checked_in', 'no_show'
     participationDetails = {
       joinedAt: eventResult.createdAt?.toISOString(),
       status: eventResult.status,
       distance: eventResult.distance,
       time: eventResult.time,
       reason: eventResult.reason,
+      checkedInAt: eventResult.checkedInAt,
+      noShowAt: eventResult.noShowAt,
     };
   }
 

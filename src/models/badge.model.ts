@@ -9,7 +9,7 @@ import {
 } from '@/constants/badges';
 
 export interface IBadge extends Document {
-  title: string;
+  name: string;
   description: string;
   icon: BadgeIcon;
   category: BadgeCategory;
@@ -24,7 +24,7 @@ export interface IBadge extends Document {
 
 const BadgeSchema = new Schema(
   {
-    title: {
+    name: {
       type: String,
       required: [true, 'Badge title is required'],
       trim: true,

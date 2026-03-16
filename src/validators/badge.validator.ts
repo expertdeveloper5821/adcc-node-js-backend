@@ -13,9 +13,11 @@ const booleanFromString = z.preprocess(
   z.boolean()
 );
 
+const nameField = z.preprocess(firstValue, z.string().min(1, 'Badge name is required'));
+
 export const createBadgeSchema = z
   .object({
-    title: z.preprocess(firstValue, z.string().min(1, 'Badge title is required')),
+    name: nameField,
     description: z.preprocess(firstValue, z.string().min(1, 'Badge description is required')),
     icon: z.preprocess(firstValue, z.enum(BADGE_ICON_KEYS)),
     category: z.preprocess(firstValue, z.enum(BADGE_CATEGORIES)),
@@ -29,7 +31,7 @@ export const createBadgeSchema = z
 
 export const updateBadgeSchema = z
   .object({
-    title: z.preprocess(firstValue, z.string().min(1, 'Badge title is required')).optional(),
+    name: nameField.optional(),
     description: z.preprocess(firstValue, z.string().min(1, 'Badge description is required')).optional(),
     icon: z.preprocess(firstValue, z.enum(BADGE_ICON_KEYS)).optional(),
     category: z.preprocess(firstValue, z.enum(BADGE_CATEGORIES)).optional(),
