@@ -77,7 +77,7 @@ export const approveStoreItemSchema = z
 
 export const rejectStoreItemSchema = z
   .object({
-    reason: z.string().min(1, 'Rejection reason is required'),
+    reason: z.string().min(1, 'Rejection reason is required').optional(),
   })
   .strict();
 

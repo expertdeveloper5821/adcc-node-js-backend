@@ -112,6 +112,14 @@
         "allChallenges": "Challenges retrieved successfully",
         "details": "Challenge details retrieved successfully"
     },
+    "badge": {
+        "not_found": "Badge not found",
+        "created": "Badge created successfully",
+        "updated": "Badge updated successfully",
+        "deleted": "Badge deleted successfully",
+        "allBadges": "Badges retrieved successfully",
+        "details": "Badge details retrieved successfully"
+    },
     "store": {
         "created": "Item created successfully",
         "list": "Items retrieved successfully",

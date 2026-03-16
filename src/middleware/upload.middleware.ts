@@ -75,6 +75,14 @@ export const uploadChallengeImageIfMultipart = (req: any, res: any, next: any) =
   return next();
 };
 
+export const uploadBadgeImageIfMultipart = (req: any, res: any, next: any) => {
+  const contentType = (req.headers['content-type'] || '').toString();
+  if (contentType.includes('multipart/form-data')) {
+    return uploadSingleImage(req, res, next);
+  }
+  return next();
+};
+
 export const requireParsedMultipartBody = (req: any, _res: any, next: any) => {
   const contentType = (req.headers['content-type'] || '').toString();
   if (!contentType.includes('multipart/form-data')) {

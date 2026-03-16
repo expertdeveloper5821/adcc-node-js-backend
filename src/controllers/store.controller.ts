@@ -444,7 +444,7 @@ export const rejectStoreItem = asyncHandler(async (req: AuthRequest, res: Respon
       status: 'Rejected',
       rejectedBy: req.user?.id,
       rejectedAt: new Date(),
-      rejectionReason: req.body.reason,
+      // rejectionReason: req.body.reason,
       isFeatured: false,
     },
     { new: true, runValidators: true }

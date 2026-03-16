@@ -70,6 +70,7 @@ export const getAllChallenges = asyncHandler(async (req: Request, res: Response)
   const challengesQuery = Challenge.find(filter)
     .populate('createdBy', 'fullName email')
     .populate('communities', 'title')
+    .populate('rewardBadge', 'name icon image category rarity')
     .sort({ startDate: 1, createdAt: -1 })
     .skip(skip)
     .limit(limitNum)
@@ -106,7 +107,8 @@ export const getChallengeById = asyncHandler(async (req: Request, res: Response)
 
   const challenge = await Challenge.findById(id)
     .populate('createdBy', 'fullName email')
-    .populate('communities', 'title');
+    .populate('communities', 'title')
+    .populate('rewardBadge', 'name icon image category rarity');
 
   if (!challenge) {
     throw new AppError(t(lang, 'challenge.not_found'), 404);
@@ -139,7 +141,8 @@ export const updateChallenge = asyncHandler(async (req: AuthRequest, res: Respon
     runValidators: true,
   })
     .populate('createdBy', 'fullName email')
-    .populate('communities', 'title');
+    .populate('communities', 'title')
+    .populate('rewardBadge', 'name icon image category rarity');
 
   if (!challenge) {
     throw new AppError(t(lang, 'challenge.not_found'), 404);
