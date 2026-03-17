@@ -36,14 +36,14 @@ const arrayFromStringOrJson = (val: unknown) => {
 };
 
 export const facilityEnum = z.enum([
-  'water',
-  'toilets',
+  'water stations',
+  'restrooms',
   'parking',
-  'lights',
+  'lighting',
   'cafes',
-  'bikeRental',
-  'firstAid',
-  'changingRooms',
+  'bike rental',
+  'first aid',
+  'changing rooms',
 ]);
 
 export const createTrackSchema = z

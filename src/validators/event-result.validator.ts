@@ -24,9 +24,11 @@ export const evenResultSchema = z
   })
   .strict();
 
-  export const joinEventSchema = z.object({
-  eventId: z.string().min(1),
-});
+export const joinEventSchema = z
+  .object({
+    eventId: z.string().min(1, 'Event ID is required'),
+  })
+  .strict();
 
 /** Time in mm:ss or hh:mm:ss for submit result */
 const timePattern = /^(?:\d{1,2}:)?[0-5]\d:[0-5]\d$/;

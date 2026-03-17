@@ -25,7 +25,7 @@ import {
   disableEvent
 
 } from '@/controllers/event.controller';
-import { validate } from '@/middleware/validate.middleware';
+import { validate, validateParams } from '@/middleware/validate.middleware';
 import {
   createEventSchema,
   updateEventSchema,
@@ -47,7 +47,7 @@ router.get('/:id', authenticate, getEventById);
 router.post('/:eventId/results', authenticate, getEventResults);
 router.get('/:eventId/results',  authenticate, getEventResultsList);
 router.get('/:eventId/results/export', authenticate, isAdmin, exportEventResults);
-router.post('/:eventId/joinEvent', authenticate, validate(joinEventSchema), joinEvent);
+router.post('/:eventId/joinEvent', authenticate, validateParams(joinEventSchema), joinEvent);
 router.post('/:eventId/cancel', authenticate, cancelRegistration);
 router.post('/:eventId/add-to-calendar', authenticate, addToCalendar);
 router.get('/:eventId/member-status', authenticate, getMemberEventStatus);
