@@ -175,6 +175,7 @@
       "shop": "Shop",
       "women": "Women",
       "youth": "Youth",
+      "health": "Health",
       "family": "Family",
       "corporate": "Corporate",
       "racingPerformance": "Racing & Performance",
@@ -189,7 +190,10 @@
       "specialInterest": "Special Interest",
       "awarenessCharity": "Awareness & Charity",
       "trainingClinics": "Training & Clinics",
-      "awareness": "Awareness"
+      "awareness": "Awareness",
+      "nightRiders": "Night Riders",
+      "women(sherides)": "Women(sherides)",
+      "mtb/Trail": "MTB / Trail"
     },
     "locations": {
       "abuDhabi": "Abu Dhabi",
@@ -209,7 +213,7 @@
       "firstAid": "First Aid",
       "changingRooms": "Changing Rooms",
       "lights": "Lights",
-      "women(sherides)": "women(sherides)"
+      "women(sherides)": "Women(sherides)"
     },
     "trackTypes": {
       "circuit": "Circuit",

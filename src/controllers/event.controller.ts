@@ -619,7 +619,7 @@ export const joinEvent = asyncHandler(async (req: AuthRequest, res: Response) =>
   const eventId = Array.isArray(req.params.eventId)
     ? req.params.eventId[0]
     : req.params.eventId;
-
+  console.log('body', req.body);
   const userId = req.user?.id;
   if (!userId) {
     throw new AppError(t(lang, "auth.unauthorized"), 401);
