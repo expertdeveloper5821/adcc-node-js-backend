@@ -154,6 +154,14 @@
         "updated": "Community ride updated successfully",
         "deleted": "Community ride deleted successfully"
     },
+    "communityPost": {
+        "not_found": "Community post not found",
+        "created": "Community post created successfully",
+        "list": "Community posts retrieved successfully",
+        "retrieved": "Community post retrieved successfully",
+        "updated": "Community post updated successfully",
+        "deleted": "Community post deleted successfully"
+    },
     "statuses": {
       "open": "Open",
       "draft": "Draft",

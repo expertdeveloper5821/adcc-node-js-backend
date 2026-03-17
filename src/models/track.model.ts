@@ -78,7 +78,7 @@ const TrackSchema = new Schema(
     pace: { type: String, trim: true },
     facilities: {
         type: [String],
-        enum: [ 'water', 'toilets', 'parking', 'lights', 'cafes', 'bikeRental', 'firstAid', 'changingRooms' ],
+        enum: [ 'water stations', 'restrooms', 'parking', 'lighting', 'cafes', 'bike rental', 'first aid', 'changing rooms' ],
         default: [],
       },
     status: { type: String },
