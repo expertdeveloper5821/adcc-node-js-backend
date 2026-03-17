@@ -143,6 +143,10 @@ const EventSchema = new Schema(
       type: String,
       required: [true, 'Event time is required'],
     },
+    endTime: {
+      type: String,
+      required: [true, 'Event time end is required'],
+    },
     address: {
       type: String,
       required: [true, 'Event address is required'],
