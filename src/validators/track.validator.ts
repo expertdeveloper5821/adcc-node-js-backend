@@ -35,6 +35,21 @@ const arrayFromStringOrJson = (val: unknown) => {
   return [trimmed];
 };
 
+const coerceBoolean = (val: unknown) => {
+  const raw = firstValue(val);
+  if (typeof raw === 'boolean') return raw;
+  if (typeof raw === 'number') {
+    if (raw === 1) return true;
+    if (raw === 0) return false;
+    return raw;
+  }
+  if (typeof raw !== 'string') return raw;
+  const normalized = raw.trim().toLowerCase();
+  if (normalized === 'true' || normalized === '1') return true;
+  if (normalized === 'false' || normalized === '0') return false;
+  return raw;
+};
+
 export const facilityEnum = z.enum([
   'water stations',
   'restrooms',
@@ -69,8 +84,8 @@ export const createTrackSchema = z
         difficulty: z.preprocess(firstValue, z.string()).optional(),
         category: z.preprocess(firstValue, z.string()).optional(),
         surfaceType: z.preprocess(firstValue, z.string()).optional(),
-        nightRidingAllowed: z.preprocess(firstValue, z.coerce.boolean()).optional(),
-        helmetRequired: z.preprocess(firstValue, z.coerce.boolean()).optional(),
+        nightRidingAllowed: z.preprocess(coerceBoolean, z.boolean()).optional(),
+        helmetRequired: z.preprocess(coerceBoolean, z.boolean()).optional(),
         mapPreview: z.preprocess(firstValue, z.string()).optional(),
         estimatedTime: z.preprocess(firstValue, z.string()).optional(),
         loopOptions: z.preprocess(jsonOrValue, z.array(z.coerce.number())).optional(),
@@ -110,7 +125,7 @@ export const updateTrackSchema = z
         difficulty: z.preprocess(firstValue, z.string()).optional(),
         category: z.preprocess(firstValue, z.string()).optional(),
         surfaceType: z.preprocess(firstValue, z.string()).optional(),
-        nightRidingAllowed: z.preprocess(firstValue, z.coerce.boolean()).optional(),
+        nightRidingAllowed: z.preprocess(coerceBoolean, z.boolean()).optional(),
         mapPreview: z.preprocess(firstValue, z.string()).optional(),
         estimatedTime: z.preprocess(firstValue, z.string()).optional(),
         loopOptions: z.preprocess(jsonOrValue, z.array(z.coerce.number())).optional(),
@@ -122,7 +137,7 @@ export const updateTrackSchema = z
         slug: z.preprocess(firstValue, z.string()).optional(),
         country: z.preprocess(firstValue, z.string()).optional(),
         safetyNotes: z.preprocess(firstValue, z.string()).optional(),
-        helmetRequired: z.preprocess(firstValue, z.coerce.boolean()).optional(),
+        helmetRequired: z.preprocess(coerceBoolean, z.boolean()).optional(),
         visibility: z.preprocess(firstValue, z.string()).optional(),
         galleryImages: z.preprocess(arrayFromStringOrJson, z.array(z.string().url('Invalid image URL'))).optional()
     })
