@@ -619,7 +619,7 @@ export const joinEvent = asyncHandler(async (req: AuthRequest, res: Response) =>
   const eventId = Array.isArray(req.params.eventId)
     ? req.params.eventId[0]
     : req.params.eventId;
-  console.log('body', req.body);
+  // console.log('body', req.body);
   const userId = req.user?.id;
   if (!userId) {
     throw new AppError(t(lang, "auth.unauthorized"), 401);
@@ -731,7 +731,7 @@ export const markParticipantCheckedIn = asyncHandler(async (req: AuthRequest, re
   const eventId = getRouteParam(req.params.eventId);
   const userId = getRouteParam(req.params.userId);
 
-  console.log('body',req.body);
+  // console.log('body',req.body);
   await ensureEventExists(eventId, lang);
 
   const eventResult = await EventResult.findOne({ eventId, userId });
@@ -824,19 +824,29 @@ export const removeEventParticipant = asyncHandler(async (req: AuthRequest, res:
 export const checkInAllRegisteredParticipants = asyncHandler(async (req: AuthRequest, res: Response) => {
   const lang = ((req as any).lang || 'en') as SupportedLanguage;
   const eventId = getRouteParam(req.params.eventId);
-
+  
   await ensureEventExists(eventId, lang);
 
   const now = new Date();
   const result = await EventResult.updateMany(
     { eventId, status: 'joined' },
-    { $set: { status: 'checked_in', checkedInAt: now, noShowAt: null } }
+    { 
+      $set: { status: 'checked_in', checkedInAt: now, noShowAt: null }
+     }
   );
+
+  let messageKey = "event.participants_checked_in";
+
+  if (result.matchedCount === 0) {
+    messageKey = "event.no_joined_users";
+  }
 
   sendSuccess(
     res,
-    { matched: result.matchedCount, modified: result.modifiedCount },
-    t(lang, "event.participants_checked_in"),
+    { matched: result.matchedCount,
+      modified: result.modifiedCount
+    },
+    t(lang, messageKey),
     200
   );
 });
@@ -855,14 +865,20 @@ export const markAllParticipantsNoShow = asyncHandler(async (req: AuthRequest, r
   const now = new Date();
   const result = await EventResult.updateMany(
     { eventId, status: 'joined' },
-    { $set: { status: 'no_show', noShowAt: now, checkedInAt: null } }
+    { 
+      $set: { status: 'no_show', noShowAt: now, checkedInAt: null }
+    }
   );
+  let messageKey = "event.participants_no_show";
+
+  if (result.matchedCount === 0) {
+    messageKey = "event.no_joined_users_no_show";
+  }
 
   sendSuccess(
     res,
     { matched: result.matchedCount, modified: result.modifiedCount },
-    t(lang, "event.participants_no_show"),
-    200
+    t(lang, messageKey), 200
   );
 });
 

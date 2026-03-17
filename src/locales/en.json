@@ -106,7 +106,9 @@
         "participant_no_show": "Participant marked as no-show",
         "participant_removed": "Participant removed from event",
         "participants_checked_in": "All registered participants checked in successfully",
-        "participants_no_show": "All registered participants marked as no-show"
+        "no_joined_users": "No joined participants found to check in",
+        "participants_no_show": "All registered participants marked as no-show",
+        "no_joined_users_no_show": "No joined participants found to mark as no-show"
     },
     "challenge": {
         "not_found": "Challenge not found",

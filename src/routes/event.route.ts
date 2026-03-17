@@ -31,7 +31,7 @@ import {
   updateEventSchema,
   getEventsQuerySchema,
 } from '@/validators/event.validator';
-// import { joinEventSchema } from '@/validators/event-result.validator';
+import { joinEventSchema } from '@/validators/event-result.validator';
 import { requireMultipartFormData, requireParsedMultipartBody } from '@/middleware/upload.middleware';
 import { authenticate } from '@/middleware/auth.middleware';
 import { isAdmin} from '@/middleware/role.middleware';
@@ -47,7 +47,7 @@ router.get('/:id', authenticate, getEventById);
 router.post('/:eventId/results', authenticate, getEventResults);
 router.get('/:eventId/results',  authenticate, getEventResultsList);
 router.get('/:eventId/results/export', authenticate, isAdmin, exportEventResults);
-router.post('/:eventId/joinEvent', authenticate,  joinEvent);
+router.post('/:eventId/joinEvent', authenticate, validate(joinEventSchema), joinEvent);
 router.post('/:eventId/cancel', authenticate, cancelRegistration);
 router.post('/:eventId/add-to-calendar', authenticate, addToCalendar);
 router.get('/:eventId/member-status', authenticate, getMemberEventStatus);
