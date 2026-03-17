@@ -2,14 +2,14 @@ import mongoose, { Schema, Document } from 'mongoose';
 
 
 export type FacilityType =
-  | 'water'
-  | 'toilets'
+  | 'water stations'
+  | 'restrooms'
   | 'parking'
-  | 'lights'
+  | 'lighting'
   | 'cafes'
-  | 'bikeRental'
-  | 'firstAid'
-  | 'changingRooms';
+  | 'bike rental'
+  | 'first aid'
+  | 'changing rooms';
 
 export interface ITrackFacility {
   facilities?: FacilityType[];

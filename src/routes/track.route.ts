@@ -64,7 +64,7 @@ router.delete('/:trackId', authenticate, isAdmin, deleteTrack);
 router.post('/:trackId/gallery', authenticate, isAdmin, uploadMultipleImages, addTrackGalleryImages);
 router.delete('/:trackId/gallery', authenticate, deleteGalleryImage);
 router.patch('/:trackId/archive', authenticate, archiveTrack);
-router.patch('/tracks/:trackId/disable', authenticate, disableTrack);
-router.patch('/tracks/:trackId/enable', authenticate, enableTrack);
+router.patch('/:trackId/disable', authenticate, disableTrack);
+router.patch('/:trackId/enable', authenticate, enableTrack);
 
 export default router;

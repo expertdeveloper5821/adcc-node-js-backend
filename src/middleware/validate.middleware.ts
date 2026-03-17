@@ -48,3 +48,21 @@ export const validate =
 
     next();
   };
+
+export const validateParams =
+  (schema: ZodType) =>
+  (req: Request, _res: Response, next: NextFunction): void => {
+    const result = schema.safeParse(req.params);
+
+    if (!result.success) {
+      const formattedErrors = result.error.issues.map((issue) => ({
+        field: issue.path.join('.'),
+        message: issue.message,
+      }));
+
+      return next(new AppError(JSON.stringify(formattedErrors, null, 2), 400));
+    }
+
+    Object.assign(req.params, result.data);
+    next();
+  };
