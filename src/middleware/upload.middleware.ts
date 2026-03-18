@@ -151,5 +151,13 @@ export const requireMultipartFormData = (req: any, _res: any, next: any) => {
     error.statusCode = 400;
     return next(error);
   }
+  if (!contentType.includes('boundary=')) {
+    const error = new Error(
+      'Multipart boundary missing. Do not set Content-Type manually; let your client add the boundary.'
+    );
+    // @ts-ignore
+    error.statusCode = 400;
+    return next(error);
+  }
   return next();
 };

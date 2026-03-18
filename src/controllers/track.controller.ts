@@ -102,7 +102,6 @@ const attachTrackImages = async (req: AuthRequest, data: Record<string, any>) =>
   return data;
 };
 
-
 /**
  * Create new event
  * POST /v1/events
@@ -157,9 +156,44 @@ export const createTrack = asyncHandler(async (req: AuthRequest, res: Response) 
     .limit(limitNum);
     const localizedTracks = tracks.map((track) => localizeTrack(track.toObject(), lang));
 
+    const trackIds = tracks.map((track) => track._id).filter(Boolean);
+    const trackIdStrings = trackIds.map((id) => id.toString());
+
+    const [eventCounts, communityCounts] = await Promise.all([
+      Event.aggregate([
+        { $match: { $or: [{ trackId: { $in: trackIds } }, { trackId: { $in: trackIdStrings } }] } },
+        { $project: { trackIdStr: { $toString: '$trackId' } } },
+        { $group: { _id: '$trackIdStr', count: { $sum: 1 } } },
+      ]),
+      Community.aggregate([
+        { $match: { $or: [{ trackId: { $in: trackIds } }, { trackId: { $in: trackIdStrings } }] } },
+        { $project: { trackIdStr: { $toString: '$trackId' } } },
+        { $group: { _id: '$trackIdStr', count: { $sum: 1 } } },
+      ]),
+    ]);
+
+    const eventCountMap = new Map<string, number>();
+    for (const item of eventCounts) {
+      if (item?._id) eventCountMap.set(String(item._id), item.count ?? 0);
+    }
+
+    const communityCountMap = new Map<string, number>();
+    for (const item of communityCounts) {
+      if (item?._id) communityCountMap.set(String(item._id), item.count ?? 0);
+    }
+
+    const tracksWithCounts = localizedTracks.map((track, index) => {
+      const id = trackIdStrings[index];
+      return {
+        ...track,
+        eventCount: eventCountMap.get(id) ?? 0,
+        communityCount: communityCountMap.get(id) ?? 0,
+      };
+    });
+
     // Get total count
     const total = await Track.countDocuments(query);
-    sendSuccess(res, { tracks: localizedTracks, total, page: pageNum, limit: limitNum }, t(lang, "track.allTracks"), 200);
+    sendSuccess(res, { tracks: tracksWithCounts, total, page: pageNum, limit: limitNum }, t(lang, "track.allTracks"), 200);
 });
 
 /**
@@ -179,6 +213,66 @@ export const getTrackById = asyncHandler(async (req: Request, res: Response) => 
         throw new AppError(t(lang, "track.not_found"), 404);
     }
     return sendSuccess(res, localizeTrack(track.toObject(), lang), t(lang, "track.trackDetails"), 201);
+});
+
+/**
+ * Get events for a track
+ * GET /v1/tracks/:trackId/events
+ * Public – guest-accessible.
+ * Optional query params:
+ * - page, limit
+ */
+export const getTrackEvents = asyncHandler(async (req: Request, res: Response) => {
+  const lang = ((req as any).lang || 'en') as SupportedLanguage;
+  const trackIdParam = Array.isArray(req.params.trackId)
+    ? req.params.trackId[0]
+    : req.params.trackId;
+
+  if (!mongoose.Types.ObjectId.isValid(trackIdParam)) {
+    throw new AppError(t(lang, "track.not_found"), 400);
+  }
+
+  const { page = 1, limit = 10 } = req.query;
+
+  const pageNum = Math.max(1, Number(page) || 1);
+  const limitNum = Math.min(100, Math.max(1, Number(limit) || 10));
+  const skip = (pageNum - 1) * limitNum;
+
+  const filter: Record<string, any> = {
+    trackId: {
+      $in: [new mongoose.Types.ObjectId(trackIdParam), trackIdParam],
+    },
+  };
+
+  filter.status = {$nin: ['Completed', 'Closed', 'Draft', 'Disabled', 'Archived']} 
+  const eventsQuery = Event.find(filter)
+    .populate('createdBy', 'fullName email')
+    .populate('communityId', 'title titleAr')
+    .populate('trackId', 'title titleAr')
+    .sort({ eventDate: 1, createdAt: -1 })
+    .skip(skip)
+    .limit(limitNum)
+    .lean();
+
+  const [events, total] = await Promise.all([
+    eventsQuery,
+    Event.countDocuments(filter),
+  ]);
+
+  sendSuccess(
+    res,
+    {
+      events,
+      pagination: {
+        page: pageNum,
+        limit: limitNum,
+        total,
+        pages: Math.ceil(total / limitNum),
+      },
+    },
+    t(lang, "event.allEvents"),
+    200
+  );
 });
 
 /**
@@ -295,8 +389,6 @@ export const getTrackResults = asyncHandler(async (req: Request, res: Response) 
     if (!mongoose.Types.ObjectId.isValid(trackIdParam)) {
         throw new AppError(t(lang, "track.not_found"), 400);
       }
-
-    
 
   const results = await Event.aggregate([
   {
