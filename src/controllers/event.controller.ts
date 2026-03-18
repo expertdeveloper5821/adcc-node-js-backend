@@ -1159,14 +1159,23 @@ export const getMemberEventStatus = asyncHandler(async (req: AuthRequest, res: R
   // Check user's participation status
   const eventResult = await EventResult.findOne({ eventId, userId });
 
-  let status = "not_joined";
+  let status: "joined" | "not_joined" = "not_joined";
   let participationDetails = null;
 
   if (eventResult) {
-    status = eventResult.status; // 'joined', 'cancelled', 'completed', 'checked_in', 'no_show'
+    const rawStatus = eventResult.status;
+
+    // Normalize status for frontend
+    if (rawStatus === "joined" || rawStatus === "checked_in") {
+      status = "joined";
+    } else {
+      status = "not_joined";
+    }
+
+    // status = eventResult.status; // 'joined', 'cancelled', 'completed', 'checked_in', 'no_show'
     participationDetails = {
       joinedAt: eventResult.createdAt?.toISOString(),
-      status: eventResult.status,
+      rawStatus,
       distance: eventResult.distance,
       time: eventResult.time,
       reason: eventResult.reason,
