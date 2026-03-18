@@ -161,13 +161,55 @@ export const createTrack = asyncHandler(async (req: AuthRequest, res: Response) 
 
     const [eventCounts, communityCounts] = await Promise.all([
       Event.aggregate([
-        { $match: { $or: [{ trackId: { $in: trackIds } }, { trackId: { $in: trackIdStrings } }] } },
-        { $project: { trackIdStr: { $toString: '$trackId' } } },
+        {
+          $match: {
+            $or: [
+              { trackId: { $in: trackIds } },
+              { trackId: { $in: trackIdStrings } },
+              { trackId: { $elemMatch: { $in: trackIds } } },
+              { trackId: { $elemMatch: { $in: trackIdStrings } } },
+            ],
+          },
+        },
+        {
+          $project: {
+            trackIdStr: {
+              $toString: {
+                $cond: [
+                  { $isArray: '$trackId' },
+                  { $arrayElemAt: ['$trackId', 0] },
+                  '$trackId',
+                ],
+              },
+            },
+          },
+        },
         { $group: { _id: '$trackIdStr', count: { $sum: 1 } } },
       ]),
       Community.aggregate([
-        { $match: { $or: [{ trackId: { $in: trackIds } }, { trackId: { $in: trackIdStrings } }] } },
-        { $project: { trackIdStr: { $toString: '$trackId' } } },
+        {
+          $match: {
+            $or: [
+              { trackId: { $in: trackIds } },
+              { trackId: { $in: trackIdStrings } },
+              { trackId: { $elemMatch: { $in: trackIds } } },
+              { trackId: { $elemMatch: { $in: trackIdStrings } } },
+            ],
+          },
+        },
+        {
+          $project: {
+            trackIdStr: {
+              $toString: {
+                $cond: [
+                  { $isArray: '$trackId' },
+                  { $arrayElemAt: ['$trackId', 0] },
+                  '$trackId',
+                ],
+              },
+            },
+          },
+        },
         { $group: { _id: '$trackIdStr', count: { $sum: 1 } } },
       ]),
     ]);
@@ -480,7 +522,9 @@ export const trackCommunityResults = asyncHandler(async (req: AuthRequest, res: 
   const results = await Community.aggregate([
   {
     $match: {
-      trackId: { $elemMatch: { $eq: new mongoose.Types.ObjectId(trackIdParam) } }
+      trackId: {
+        $in: [new mongoose.Types.ObjectId(trackIdParam), trackIdParam],
+      },
     },
   },
   {
