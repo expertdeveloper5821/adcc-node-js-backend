@@ -509,36 +509,99 @@ export const trackCommunityPhotos = asyncHandler(async (req: AuthRequest, res: R
  * Public – guest-accessible.
  */
 export const trackCommunityResults = asyncHandler(async (req: AuthRequest, res: Response) => {
-  
   const lang = ((req as any).lang || 'en') as SupportedLanguage;
+
   const trackIdParam = Array.isArray(req.params.trackId)
     ? req.params.trackId[0]
     : req.params.trackId;
 
-    if (!mongoose.Types.ObjectId.isValid(trackIdParam)) {
-        throw new AppError(t(lang, "track.not_found"), 400);
-      } 
+  if (!mongoose.Types.ObjectId.isValid(trackIdParam)) {
+    throw new AppError(t(lang, "track.not_found"), 400);
+  }
+
+  // Pagination params
+  const page = Math.max(1, parseInt((req.query.page as string) || '1'));
+  const limit = Math.max(1, parseInt((req.query.limit as string) || '10'));
+  const skip = (page - 1) * limit;
+
+  const trackObjectId = new mongoose.Types.ObjectId(trackIdParam);
 
   const results = await Community.aggregate([
-  {
-    $match: {
-      trackId: {
-        $in: [new mongoose.Types.ObjectId(trackIdParam), trackIdParam],
+    {
+      $match: {
+        trackId: trackObjectId, // FIXED (no $in)
       },
     },
-  },
-  {
-    $lookup: {
-      from: 'users',
-      localField: 'createdBy',
-      foreignField: '_id',
-      as: 'user',
+
+    // Use facet for pagination + total count
+    {
+      $facet: {
+        data: [
+          {
+            $lookup: {
+              from: 'users',
+              let: { userId: '$createdBy' },
+              pipeline: [
+                {
+                  $match: {
+                    $expr: { $eq: ['$_id', '$$userId'] },
+                  },
+                },
+                {
+                  $project: {
+                    _id: 1,
+                    fullName: 1,
+                    email: 1,
+                    role: 1,
+                  },
+                },
+              ],
+              as: 'user',
+            },
+          },
+          {
+            $unwind: {
+              path: '$user',
+              preserveNullAndEmptyArrays: true,
+            },
+          },
+          {
+            $sort: { createdAt: -1 }, // latest first
+          },
+          {
+            $skip: skip,
+          },
+          {
+            $limit: limit,
+          },
+        ],
+
+        totalCount: [
+          {
+            $count: 'count',
+          },
+        ],
+      },
     },
-  },
-]);
+  ]);
 
-    sendSuccess(res, results, t(lang, "track.communityResult"), 200);
+  const communities = results[0]?.data || [];
+  const total = results[0]?.totalCount[0]?.count || 0;
 
+  sendSuccess(
+    res,
+    {
+      communities,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    },
+    t(lang, "track.communityResult"),
+    200
+  );
 });
 
 export const archiveTrack = asyncHandler(
