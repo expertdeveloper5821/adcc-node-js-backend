@@ -50,6 +50,12 @@
   "guest": {
     "access_denied": "Guest users are not allowed to perform this action"
   },
+  "user": {
+    "not_found": "User not found",
+    "retrieved": "User retrieved successfully",
+    "deleted": "User deleted successfully",
+    "list_retrieved": "Users retrieved successfully"
+  },
   "image": {
     "required": "Image URL is required",
     "invalid": "Invalid image URL",

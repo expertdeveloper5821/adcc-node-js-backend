@@ -10,6 +10,7 @@ import badgeRoutes from './badge.route';
 import trackRoutes from './track.route';
 import uploadRoutes from './upload.route';
 import storeRoutes from './store.route';
+import userRoutes from './user.route';
 
 const router = Router();
 
@@ -25,6 +26,8 @@ router.use('/badges', badgeRoutes);
 router.use('/tracks', trackRoutes);
 router.use('/uploads', uploadRoutes);
 router.use('/store', storeRoutes);
+router.use('/user', userRoutes);
+
 
 // Add more routes here as you create them
 // router.use('/users', userRoutes);
