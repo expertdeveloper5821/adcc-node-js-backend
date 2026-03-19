@@ -562,40 +562,51 @@ export const archiveTrack = asyncHandler(
 
 export const deleteGalleryImage = asyncHandler(async (req: AuthRequest, res: Response) => {
   const lang = ((req as any).lang || 'en') as SupportedLanguage;
-  try {
-    const { trackId } = req.params;
-    const { imageUrl } = req.body;
+  const { trackId } = req.params;
 
-    const track = await Track.findById(trackId);
-    if (!track) {
-      return res.status(404).json({ message: t(lang, "track.not_found") });
-    }
+  const imageUrls = [
+    ...normalizeGalleryImagesInput((req.body as any).imageUrl),
+    ...normalizeGalleryImagesInput((req.body as any).images),
+    ...normalizeGalleryImagesInput((req.body as any).image),
+  ];
 
-    if (!imageUrl) {
-      throw new AppError(t(lang, "image.required"), 400);
-    }
-
-    if (!track.galleryImages || track.galleryImages.length === 0) {
-      throw new AppError(t(lang, "image.not_found"), 400);
-    }
-
-    track.galleryImages = track.galleryImages.filter(
-      (img) => img !== imageUrl
-    );
-
-    await track.save();
-
-    res.status(200).json({
-      success: true,
-      message: t(lang, "image.delted"),
-      galleryImages: track.galleryImages,
-    });
-    return;
-
-  } catch (error) {
-    res.status(500).json({ message: "Server error" });
-    return;
+  const uniqueImages = Array.from(new Set(imageUrls));
+  if (uniqueImages.length === 0) {
+    throw new AppError(t(lang, "image.required"), 400);
   }
+
+  const track = await Track.findById(trackId);
+  if (!track) {
+    throw new AppError(t(lang, "track.not_found"), 404);
+  }
+
+  if (!track.galleryImages || track.galleryImages.length === 0) {
+    throw new AppError(t(lang, "image.not_found"), 400);
+  }
+
+  const imagesToRemove = new Set(uniqueImages);
+  const removedImages = track.galleryImages.filter((img) => imagesToRemove.has(img));
+
+  if (removedImages.length === 0) {
+    throw new AppError(t(lang, "image.not_found"), 400);
+  }
+
+  const updatedTrack = await Track.findByIdAndUpdate(
+    trackId,
+    { $pull: { galleryImages: { $in: removedImages } } },
+    { new: true }
+  );
+
+  if (!updatedTrack) {
+    throw new AppError(t(lang, "track.not_found"), 404);
+  }
+
+  return sendSuccess(
+    res,
+    { galleryImages: updatedTrack.galleryImages, removedImages, totalImages: updatedTrack.galleryImages?.length || 0 },
+    t(lang, "image.delted"),
+    200
+  );
 });
 
 /**
@@ -607,24 +618,26 @@ export const addTrackGalleryImages = asyncHandler(async (req: AuthRequest, res: 
   const lang = ((req as any).lang || 'en') as SupportedLanguage;
   const { trackId } = req.params;
   const userId = req.user?.id;
-    
-    if (!userId) {
-      throw new AppError(t(lang, "auth.unauthorized"), 401);
-    }
-  const uploadedImageUrls =
-    req.files && Array.isArray(req.files)
-      ? await Promise.all(
-          req.files.map(async (file) => {
-            const uploaded = await uploadImageBufferToS3(
-              file.buffer,
-              file.mimetype,
-              file.originalname,
-              'tracks-galleries'
-            );
-            return uploaded.url;
-          })
-        )
-      : [];
+  if (!userId) {
+    throw new AppError(t(lang, "auth.unauthorized"), 401);
+  }
+
+  const files = req.files as {
+    [fieldname: string]: Express.Multer.File[];
+  };
+
+  const galleryFiles = files?.galleryImages || [];
+  const uploadedImageUrls = await Promise.all(
+    galleryFiles.map(async (file) => {
+      const uploaded = await uploadImageBufferToS3(
+        file.buffer,
+        file.mimetype,
+        file.originalname,
+        'tracks-galleries'
+      );
+      return uploaded.url;
+    })
+  );
 
   const bodyImages = normalizeGalleryImagesInput((req.body as any).images);
   const bodyImage = normalizeGalleryImagesInput((req.body as any).image);
@@ -639,21 +652,19 @@ export const addTrackGalleryImages = asyncHandler(async (req: AuthRequest, res: 
     throw new AppError(t(lang, 'track.not_found'), 404);
   }
 
-  if (!track.galleryImages) {
-    track.galleryImages = [];
-  }
-
-  const existingImages = new Set(track.galleryImages);
+  const existingImages = new Set(track.galleryImages || []);
   const newImages = images.filter((imageUrl: string) => !existingImages.has(imageUrl));
 
   if (newImages.length === 0) {
     throw new AppError('All images already exist in gallery', 400);
   }
 
-  track.galleryImages = [...track.galleryImages, ...newImages];
-  await track.save();
+  const updatedTrack = await Track.findByIdAndUpdate(
+    trackId,
+    { $addToSet: { galleryImages: { $each: newImages } } },
+    { new: true }
+  ).populate('createdBy', 'fullName email');
 
-  const updatedTrack = await Track.findById(trackId).populate('createdBy', 'fullName email');
   if (!updatedTrack) {
     throw new AppError(t(lang, 'track.not_found'), 500);
   }

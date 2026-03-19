@@ -705,10 +705,16 @@ export const addGalleryImages = asyncHandler(async (req: AuthRequest, res: Respo
   const lang = ((req as any).lang || 'en') as SupportedLanguage;
   const { id } = req.params;
 // console.log('body', req.body);
+  const allFiles: Express.Multer.File[] = Array.isArray(req.files)
+    ? req.files
+    : req.files
+      ? Object.values(req.files as Record<string, Express.Multer.File[]>).flat()
+      : [];
+
   const uploadedImageUrls =
-    req.files && Array.isArray(req.files)
+    allFiles.length > 0
       ? await Promise.all(
-          req.files.map(async (file) => {
+          allFiles.map(async (file) => {
             const uploaded = await uploadImageBufferToS3(
               file.buffer,
               file.mimetype,
@@ -722,7 +728,9 @@ export const addGalleryImages = asyncHandler(async (req: AuthRequest, res: Respo
 
   const bodyImages = normalizeGalleryImagesInput((req.body as any).images);
   const bodyImage = normalizeGalleryImagesInput((req.body as any).image);
-  const images = [...uploadedImageUrls, ...bodyImages, ...bodyImage];
+  const bodyGallery = normalizeGalleryImagesInput((req.body as any).gallery);
+  const bodyGalleryImages = normalizeGalleryImagesInput((req.body as any).galleryImages);
+  const images = [...uploadedImageUrls, ...bodyImages, ...bodyImage, ...bodyGallery, ...bodyGalleryImages];
 
   if (images.length === 0) {
     throw new AppError('At least one image is required', 400);
@@ -781,7 +789,7 @@ export const removeGalleryImages = asyncHandler(async (req: AuthRequest, res: Re
   const lang = ((req as any).lang || 'en') as SupportedLanguage;
   const { id } = req.params;
   const { imageUrls } = req.body;
-
+  
   const community = await Community.findById(id);
 
   if (!community) {
