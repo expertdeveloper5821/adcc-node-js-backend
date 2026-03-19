@@ -2,7 +2,7 @@ import express from 'express';
 import { validate } from '@/middleware/validate.middleware';
 import { authenticate } from '@/middleware/auth.middleware';
 import { isAdmin } from '@/middleware/role.middleware';
-import { uploadMultipleImages, uploadTrackImages, requireParsedMultipartBody } from '@/middleware/upload.middleware';
+import { requireMultipartFormData, uploadTrackImages, requireParsedMultipartBody } from '@/middleware/upload.middleware';
 
 import {  
     createTrackSchema,
@@ -63,8 +63,22 @@ router.post(
 );
 router.patch('/:trackId', authenticate, isAdmin, uploadTrackImages, normalizeTrackFormData, validate(updateTrackSchema) , updateTrack);
 router.delete('/:trackId', authenticate, isAdmin, deleteTrack);
-router.post('/:trackId/gallery', authenticate, isAdmin, uploadMultipleImages, addTrackGalleryImages);
-router.delete('/:trackId/gallery', authenticate, deleteGalleryImage);
+router.post(
+  '/:trackId/gallery',
+  authenticate,
+  isAdmin,
+  requireMultipartFormData,
+  uploadTrackImages,
+  requireParsedMultipartBody,
+  addTrackGalleryImages
+);
+router.delete(
+  '/:trackId/gallery',
+  authenticate,
+  uploadTrackImages,
+  requireParsedMultipartBody,
+  deleteGalleryImage
+);
 router.patch('/:trackId/archive', authenticate, archiveTrack);
 router.patch('/:trackId/disable', authenticate, disableTrack);
 router.patch('/:trackId/enable', authenticate, enableTrack);

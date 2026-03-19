@@ -26,7 +26,7 @@ import {
 } from '@/validators/community.validator';
 import { authenticate } from '@/middleware/auth.middleware';
 import { isAdmin } from '@/middleware/role.middleware';
-import { uploadMultipleImages, requireMultipartFormData, uploadCommunityImages, requireParsedMultipartBody } from '@/middleware/upload.middleware';
+import { requireMultipartFormData, uploadCommunityImages, requireParsedMultipartBody, uploadCommunityGalleryImages } from '@/middleware/upload.middleware';
 
 const router = express.Router();
 
@@ -59,8 +59,16 @@ router.post(
 );
 router.patch('/:id', authenticate, isAdmin, uploadCommunityImages, validate(updateCommunitySchema), updateCommunity);
 router.delete('/:id', authenticate, isAdmin, deleteCommunity);
-router.post('/:id/gallery', authenticate, isAdmin, requireMultipartFormData, uploadMultipleImages, addGalleryImages);
-router.delete('/:id/gallery', authenticate, isAdmin, validate(removeGalleryImagesSchema), removeGalleryImages);
+router.post('/:id/gallery', authenticate, isAdmin, requireMultipartFormData, uploadCommunityGalleryImages, addGalleryImages);
+router.delete(
+  '/:id/gallery',
+  authenticate,
+  isAdmin,
+  uploadCommunityGalleryImages,
+  requireParsedMultipartBody,
+  validate(removeGalleryImagesSchema),
+  removeGalleryImages
+);
 
 // admin controls for featuring
 router.patch('/:id/feature', authenticate, isAdmin, validate(featureCommunitySchema), featureCommunity);

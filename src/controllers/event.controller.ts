@@ -977,24 +977,34 @@ export const exportEventResults = asyncHandler(async (req: AuthRequest, res: Res
 export const addEventGalleryImages = asyncHandler(async (req: AuthRequest, res: Response) => {
   const lang = ((req as any).lang || 'en') as SupportedLanguage;
   const { eventId } = req.params;
+  const userId = req.user?.id;
+    if (!userId) {
+      throw new AppError(t(lang, "auth.unauthorized"), 401);
+    }
 
-  const uploadedImageUrls =
-    req.files && Array.isArray(req.files)
-      ? await Promise.all(
-          req.files.map(async (file) => {
-            const uploaded = await uploadImageBufferToS3(
-              file.buffer,
-              file.mimetype,
-              file.originalname,
-              'events-galleries'
-            );
-            return uploaded.url;
-          })
-        )
-      : [];
+  const files = req.files as {
+    [fieldname: string]: Express.Multer.File[];
+  } | undefined;
 
-  const bodyImages = normalizeGalleryImagesInput((req.body as any).images);
-  const bodyImage = normalizeGalleryImagesInput((req.body as any).image);
+  const galleryFiles = [
+    ...(files?.galleryImages || []),
+    ...(files?.galleryImage || []),
+  ];
+
+  const uploadedImageUrls = await Promise.all(
+    galleryFiles.map(async (file) => {
+      const uploaded = await uploadImageBufferToS3(
+        file.buffer,
+        file.mimetype,
+        file.originalname,
+        'events-galleries'
+      );
+      return uploaded.url;
+    })
+  );
+      
+  const bodyImages = normalizeGalleryImagesInput((req.body as any)?.images);
+  const bodyImage = normalizeGalleryImagesInput((req.body as any)?.galleryImage);
   const images = [...uploadedImageUrls, ...bodyImages, ...bodyImage];
 
   if (images.length === 0) {
@@ -1006,21 +1016,18 @@ export const addEventGalleryImages = asyncHandler(async (req: AuthRequest, res: 
     throw new AppError(t(lang, 'event.not_found'), 404);
   }
 
-  if (!event.galleryImages) {
-    event.galleryImages = [];
-  }
-
-  const existingImages = new Set(event.galleryImages);
+  const existingImages = new Set(event.galleryImages || []);
   const newImages = images.filter((imageUrl: string) => !existingImages.has(imageUrl));
 
   if (newImages.length === 0) {
     throw new AppError('All images already exist in gallery', 400);
   }
 
-  event.galleryImages = [...event.galleryImages, ...newImages];
-  await event.save();
-
-  const updatedEvent = await Event.findById(eventId)
+  const updatedEvent = await Event.findByIdAndUpdate(
+    eventId,
+    { $addToSet: { galleryImages: { $each: newImages } } },
+    { new: true }
+  )
     .populate('createdBy', 'fullName email')
     .populate('trackId', 'title titleAr')
     .populate('communityId', 'title titleAr');
@@ -1380,39 +1387,49 @@ export const addResultPhotos = asyncHandler(async (req: AuthRequest, res: Respon
 });
 
 export const deleteGalleryImage = asyncHandler(async (req: AuthRequest, res: Response) => {
-  try {
-    const lang = ((req as any).lang || 'en') as SupportedLanguage;
-    const { eventId } = req.params;
-    const { imageUrl } = req.body;
+  const lang = ((req as any).lang || 'en') as SupportedLanguage;
+  const { eventId } = req.params;
 
-    const event = await Event.findById(eventId);
-    if (!event) {
-      return res.status(404).json({ message: t(lang, "event.not_found") });
-    }
+  const imageUrls = [
+    ...normalizeGalleryImagesInput((req.body as any)?.imageUrl),
+    ...normalizeGalleryImagesInput((req.body as any)?.image),
+  ];
 
-    if (!imageUrl) {
-      throw new AppError(t(lang, "image.required"), 400);
-    }
-
-    if (!event.galleryImages || event.galleryImages.length === 0) {
-      throw new AppError(t(lang, "image.not_found"), 400);
-    }
-    
-    event.galleryImages = event.galleryImages.filter(
-      (img) => img !== imageUrl
-    );
-
-    await event.save();
-
-    res.status(200).json({
-      success: true,
-      message: t(lang, "image.delted"),
-      galleryImages: event.galleryImages,
-    });
-    return;
-
-  } catch (error) {
-    res.status(500).json({ message: "Server error" });
-    return;
+  const uniqueImages = Array.from(new Set(imageUrls));
+  if (uniqueImages.length === 0) {
+    throw new AppError(t(lang, "image.required"), 400);
   }
+
+  const event = await Event.findById(eventId);
+  if (!event) {
+    throw new AppError(t(lang, "event.not_found"), 404);
+  }
+
+  if (!event.galleryImages || event.galleryImages.length === 0) {
+    throw new AppError(t(lang, "image.not_found"), 400);
+  }
+
+  const imagesToRemove = new Set(uniqueImages);
+  const removedImages = event.galleryImages.filter((img) => imagesToRemove.has(img));
+
+  if (removedImages.length === 0) {
+    throw new AppError(t(lang, "image.not_found"), 400);
+  }
+
+  const updatedEvent = await Event.findByIdAndUpdate(
+    eventId,
+    { $pull: { galleryImages: { $in: removedImages } } },
+    { new: true }
+  );
+
+  if (!updatedEvent) {
+    throw new AppError(t(lang, "event.not_found"), 404);
+  }
+
+  return sendSuccess(
+    res,
+    { galleryImages: updatedEvent.galleryImages, removedImages, totalImages: updatedEvent.galleryImages?.length || 0 },
+    t(lang, "image.delted"),
+    200
+  );
 });
