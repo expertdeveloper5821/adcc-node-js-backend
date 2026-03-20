@@ -54,7 +54,8 @@
     "not_found": "User not found",
     "retrieved": "User retrieved successfully",
     "deleted": "User deleted successfully",
-    "list_retrieved": "Users retrieved successfully"
+    "list_retrieved": "Users retrieved successfully",
+    "verified_updated": "User verification status updated successfully"
   },
   "image": {
     "required": "Image URL is required",
