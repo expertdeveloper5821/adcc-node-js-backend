@@ -32,10 +32,9 @@ import {
   getEventsQuerySchema,
 } from '@/validators/event.validator';
 import { joinEventSchema } from '@/validators/event-result.validator';
-import { requireMultipartFormData, requireParsedMultipartBody } from '@/middleware/upload.middleware';
 import { authenticate } from '@/middleware/auth.middleware';
 import { isAdmin} from '@/middleware/role.middleware';
-import { uploadMultipleImages, uploadEventImages, uploadEventImagesIfMultipart } from '@/middleware/upload.middleware';
+import { uploadEventImages, requireParsedMultipartBody, uploadEventImagesIfMultipart } from '@/middleware/upload.middleware';
 
 const router = express.Router();
 
@@ -51,8 +50,15 @@ router.post('/:eventId/joinEvent', authenticate, validateParams(joinEventSchema)
 router.post('/:eventId/cancel', authenticate, cancelRegistration);
 router.post('/:eventId/add-to-calendar', authenticate, addToCalendar);
 router.get('/:eventId/member-status', authenticate, getMemberEventStatus);
-router.post('/:eventId/gallery', authenticate, isAdmin, uploadMultipleImages, addEventGalleryImages);
-router.delete('/:eventId/gallery', authenticate, deleteGalleryImage);
+router.post(
+  '/:eventId/gallery',
+  authenticate,
+  isAdmin,
+  uploadEventImagesIfMultipart,
+  requireParsedMultipartBody,
+  addEventGalleryImages
+);
+router.delete('/:eventId/gallery', authenticate, uploadEventImagesIfMultipart, requireParsedMultipartBody, deleteGalleryImage);
 router.patch('/:eventId/participants/check-in-all', authenticate, isAdmin, checkInAllRegisteredParticipants);
 router.patch('/:eventId/participants/no-show-all', authenticate, isAdmin, markAllParticipantsNoShow);
 router.patch('/:eventId/participants/:userId/check-in', authenticate, isAdmin, markParticipantCheckedIn);
@@ -72,7 +78,7 @@ router.post(
   createEvent
 );
 
-router.patch('/:id', authenticate, isAdmin, requireMultipartFormData, uploadEventImages, validate(updateEventSchema), updateEvent);
+router.patch('/:id', authenticate, isAdmin, uploadEventImages, validate(updateEventSchema), updateEvent);
 router.delete('/:id', authenticate, isAdmin, deleteEvent);
 router.patch('/:eventId/close-registration', authenticate, isAdmin, closeEventRegistration);
 router.patch('/:eventId/reopen-registration', authenticate, isAdmin, reopenEventRegistration);

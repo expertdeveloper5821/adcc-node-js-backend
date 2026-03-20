@@ -30,6 +30,7 @@ const upload = multer({
 export const uploadSingleImage = upload.single('image');
 export const uploadMultipleImages = upload.array('images', 10);
 const uploadStoreItemBody = upload.none();
+
 const uploadStoreItemImages = upload.fields([
   { name: 'coverImage', maxCount: 1 },
   { name: 'photos', maxCount: 10 },
@@ -40,6 +41,7 @@ export const uploadEventImages = upload.fields([
   { name: 'mainImage', maxCount: 1 },
   { name: 'eventImage', maxCount: 1 },
   { name: 'galleryImages', maxCount: 10 },
+  { name: 'galleryImage', maxCount: 10 },
 
 ]);
 
@@ -110,8 +112,24 @@ export const uploadFeedPostImageIfMultipart = (req: any, res: any, next: any) =>
     // The multer instance still enforces image mime-types + max file size via upload configuration.
     return upload.any()(req, res, next);
   }
+
   return next();
 };
+
+const settingsFields = upload.fields([
+  { name: 'image', maxCount: 1 },
+  { name: 'images', maxCount: 10 },
+  { name: 'images[]', maxCount: 10 },
+]);
+
+export const uploadSettingsImages = (req: any, res: any, next: any) => {
+  const contentType = (req.headers['content-type'] || '').toString();
+  if (contentType.includes('multipart/form-data')) {
+    return settingsFields(req, res, next);
+  }
+  return next();
+};
+
 
 export const requireParsedMultipartBody = (req: any, _res: any, next: any) => {
   const contentType = (req.headers['content-type'] || '').toString();
@@ -154,13 +172,26 @@ const communityImageFields = upload.fields([
   { name: 'coverImage', maxCount: 1 },
   { name: 'logo', maxCount: 1 },
   { name: 'gallery', maxCount: 10 },
-  { name: 'galleryImages', maxCount: 10 },
 ]);
 
 export const uploadCommunityImages = (req: any, res: any, next: any) => {
   const contentType = (req.headers['content-type'] || '').toString();
   if (contentType.includes('multipart/form-data')) {
     return communityImageFields(req, res, next);
+  }
+  return next();
+};
+
+const communityGalleryFields = upload.fields([
+  { name: 'gallery', maxCount: 10 },
+  { name: 'galleryImages', maxCount: 10 },
+  { name: 'image', maxCount: 1 },
+]);
+
+export const uploadCommunityGalleryImages = (req: any, res: any, next: any) => {
+  const contentType = (req.headers['content-type'] || '').toString();
+  if (contentType.includes('multipart/form-data')) {
+    return communityGalleryFields(req, res, next);
   }
   return next();
 };
