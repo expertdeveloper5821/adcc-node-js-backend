@@ -11,6 +11,7 @@ import trackRoutes from './track.route';
 import uploadRoutes from './upload.route';
 import storeRoutes from './store.route';
 import userRoutes from './user.route';
+import feedPostRoutes from './feed-post.route';
 import globalSettingRoutes from './global-setting.route';
 
 const router = Router();
@@ -28,6 +29,7 @@ router.use('/tracks', trackRoutes);
 router.use('/uploads', uploadRoutes);
 router.use('/store', storeRoutes);
 router.use('/user', userRoutes);
+router.use('/feed-posts', feedPostRoutes);
 router.use('/settings', globalSettingRoutes);
 
 

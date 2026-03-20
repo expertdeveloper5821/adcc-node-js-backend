@@ -61,6 +61,18 @@ export const uploadStoreItemBodyIfMultipart = (req: any, res: any, next: any) =>
   return next();
 };
 
+/**
+ * Parse multipart/form-data fields without expecting any file uploads.
+ * Useful when the frontend sends `FormData` for PATCH/POST endpoints but doesn't upload images.
+ */
+export const uploadBodyIfMultipart = (req: any, res: any, next: any) => {
+  const contentType = (req.headers['content-type'] || '').toString();
+  if (contentType.includes('multipart/form-data')) {
+    return uploadStoreItemBody(req, res, next);
+  }
+  return next();
+};
+
 export const uploadStoreItemImagesIfMultipart = (req: any, res: any, next: any) => {
   const contentType = (req.headers['content-type'] || '').toString();
   if (contentType.includes('multipart/form-data')) {
@@ -90,6 +102,17 @@ export const uploadCommunityPostImageIfMultipart = (req: any, res: any, next: an
   if (contentType.includes('multipart/form-data')) {
     return uploadSingleImage(req, res, next);
   }
+  return next();
+};
+
+export const uploadFeedPostImageIfMultipart = (req: any, res: any, next: any) => {
+  const contentType = (req.headers['content-type'] || '').toString();
+  if (contentType.includes('multipart/form-data')) {
+    // Accept files from any field name to avoid "Unexpected field" when the frontend key differs.
+    // The multer instance still enforces image mime-types + max file size via upload configuration.
+    return upload.any()(req, res, next);
+  }
+
   return next();
 };
 

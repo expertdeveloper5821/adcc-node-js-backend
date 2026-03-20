@@ -118,7 +118,7 @@ export const updateUserVerified = asyncHandler(async (req: AuthRequest, res: Res
     .lean();
 
   if (!user) {
-    throw new AppError(t(lang, 'user.not_found'), 404);
+    throw new AppError(t(lang, 'user.not found'), 404);
   }
 
   sendSuccess(res, user, t(lang, 'user.verified_updated'), 200);
