@@ -92,3 +92,34 @@ export const deleteUser = asyncHandler(async (req: AuthRequest, res: Response) =
 
   sendSuccess(res, null, t(lang, 'user.deleted'), 200);
 });
+
+/**
+ * Update user's verification status
+ * PATCH /user/:userId/verified
+ * Admin only.
+ */
+export const updateUserVerified = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const lang = ((req as AuthRequest & { lang?: string }).lang || 'en') as string;
+  const userId =
+    typeof req.params.userId === 'string' ? req.params.userId : req.params.userId?.[0] ?? '';
+
+  if (!mongoose.Types.ObjectId.isValid(userId)) {
+    throw new AppError(t(lang, 'user.not_found'), 404);
+  }
+
+  const { isVerified } = req.body as { isVerified: boolean };
+
+  const user = await User.findByIdAndUpdate(
+    userId,
+    { isVerified },
+    { new: true, runValidators: true }
+  )
+    .select(USER_PROJECTION)
+    .lean();
+
+  if (!user) {
+    throw new AppError(t(lang, 'user.not_found'), 404);
+  }
+
+  sendSuccess(res, user, t(lang, 'user.verified_updated'), 200);
+});
