@@ -169,6 +169,13 @@
         "updated": "Community post updated successfully",
         "deleted": "Community post deleted successfully"
     },
+    "feedPost": {
+        "not_found": "Feed post not found",
+        "created": "Feed post created successfully",
+        "list": "Feed posts retrieved successfully",
+        "retrieved": "Feed post retrieved successfully",
+        "updated": "Feed post updated successfully"
+    },
     "statuses": {
       "open": "Open",
       "draft": "Draft",

@@ -33,6 +33,7 @@ const FOLDER_MAP: Record<string, string> = {
   challenges: 'challenges',
   badge: 'badges',
   badges: 'badges',
+  'feed-posts': 'feed/posts',
   members: 'members',
   'member-profile': 'members',
   'members-profile': 'members',
@@ -101,7 +102,7 @@ export const resolveUploadFolder = (folderKey: string) => {
   const folder = FOLDER_MAP[normalizedKey];
   if (!folder) {
     throw new AppError(
-      'Invalid upload folder. Allowed folders: events, tracks, store-items, store-items-galleries, community, community-posts, galleries, events-galleries, tracks-galleries, community-galleries, challenges, badges, members-profile.',
+      'Invalid upload folder. Allowed folders: events, tracks, store-items, store-items-galleries, community, community-posts, feed-posts, galleries, events-galleries, tracks-galleries, community-galleries, challenges, badges, members-profile.',
       400
     );
   }
