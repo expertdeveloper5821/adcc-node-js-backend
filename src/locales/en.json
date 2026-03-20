@@ -169,6 +169,14 @@
         "updated": "Community post updated successfully",
         "deleted": "Community post deleted successfully"
     },
+    "contentSetting": {
+        "not_found": "Setting not found",
+        "created": "Setting created successfully",
+        "updated": "Setting updated successfully",
+        "deleted": "Setting deleted successfully",
+        "list": "Settings retrieved successfully",
+        "details": "Setting retrieved successfully"
+    },
     "statuses": {
       "open": "Open",
       "draft": "Draft",
