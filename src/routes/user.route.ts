@@ -1,10 +1,14 @@
 import express from 'express';
 import { authenticate } from '@/middleware/auth.middleware';
-import { isAdmin } from '@/middleware/role.middleware';
+import { isAdmin, authenticatedOnly } from '@/middleware/role.middleware';
 import { validate } from '@/middleware/validate.middleware';
-import { updateUserVerified } from '@/controllers/user.controller';
+import { registerFcmToken, unregisterFcmToken, updateUserVerified } from '@/controllers/user.controller';
 import { getAllUsers, getUserById, deleteUser } from '@/controllers/user.controller';
-import { updateUserVerifiedSchema } from '@/validators/user.validator';
+import {
+  registerFcmTokenSchema,
+  unregisterFcmTokenSchema,
+  updateUserVerifiedSchema,
+} from '@/validators/user.validator';
 
 const router = express.Router();
 
@@ -17,6 +21,23 @@ router.patch(
   isAdmin,
   validate(updateUserVerifiedSchema),
   updateUserVerified
+);
+
+// FCM token registration for authenticated users
+router.post(
+  '/fcm-token',
+  authenticate,
+  authenticatedOnly,
+  validate(registerFcmTokenSchema),
+  registerFcmToken
+);
+
+router.post(
+  '/fcm-token/unregister',
+  authenticate,
+  authenticatedOnly,
+  validate(unregisterFcmTokenSchema),
+  unregisterFcmToken
 );
 
 export default router;

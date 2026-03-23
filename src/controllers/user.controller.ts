@@ -6,6 +6,7 @@ import { sendSuccess } from '@/utils/response';
 import { asyncHandler } from '@/utils/async-handler';
 import { AppError } from '@/utils/app-error';
 import { AuthRequest } from '@/middleware/auth.middleware';
+import { upsertUserFcmToken } from '@/services/push-token.service';
 
 /** Fields to exclude from user response (sensitive data) */
 const USER_PROJECTION = '-refreshTokens';
@@ -122,4 +123,68 @@ export const updateUserVerified = asyncHandler(async (req: AuthRequest, res: Res
   }
 
   sendSuccess(res, user, t(lang, 'user.verified_updated'), 200);
+});
+
+/**
+ * Register/refresh FCM token for current user (Member/Vendor/Admin)
+ * POST /user/fcm-token
+ */
+export const registerFcmToken = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const lang = ((req as AuthRequest & { lang?: string }).lang || 'en') as string;
+  const userId = req.user?.id;
+  if (!userId) {
+    throw new AppError(t(lang, 'auth.unauthorized'), 401);
+  }
+
+  const {
+    token,
+    userAgent,
+    platform,
+    deviceId,
+    deviceModel,
+    osVersion,
+    appVersion,
+    appBuild,
+  } = req.body as {
+    token: string;
+    userAgent?: string;
+    platform?: 'web' | 'android' | 'ios';
+    deviceId?: string;
+    deviceModel?: string;
+    osVersion?: string;
+    appVersion?: string;
+    appBuild?: string;
+  };
+  await upsertUserFcmToken(userId, {
+    token,
+    userAgent,
+    platform,
+    deviceId,
+    deviceModel,
+    osVersion,
+    appVersion,
+    appBuild,
+  });
+
+  sendSuccess(res, { token }, 'FCM token registered', 201);
+});
+
+/**
+ * Unregister FCM token for current user
+ * POST /user/fcm-token/unregister
+ */
+export const unregisterFcmToken = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const lang = ((req as AuthRequest & { lang?: string }).lang || 'en') as string;
+  const userId = req.user?.id;
+  if (!userId) {
+    throw new AppError(t(lang, 'auth.unauthorized'), 401);
+  }
+
+  const { token } = req.body as { token: string };
+
+  await User.findByIdAndUpdate(userId, {
+    $pull: { fcmTokens: { token } },
+  });
+
+  sendSuccess(res, { token }, 'FCM token unregistered');
 });
