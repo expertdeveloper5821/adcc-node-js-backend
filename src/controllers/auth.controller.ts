@@ -17,6 +17,7 @@ import { sendSuccess } from '@/utils/response';
 import { asyncHandler } from '@/utils/async-handler';
 import { AppError } from '@/utils/app-error';
 import { AuthRequest } from '@/middleware/auth.middleware';
+import { upsertUserFcmToken } from '@/services/push-token.service';
 
 /** Guest role and ID prefix - guest users are stateless (no DB record) */
 const GUEST_ROLE = 'Guest';
@@ -35,7 +36,27 @@ function isGuestPayload(id?: string, role?: string): boolean {
 export const verifyFirebaseAuth = asyncHandler(
   async (req: Request, res: Response) => {
     const lang = resolveRequestLanguage(req);
-    const { idToken } = req.body;
+    const {
+      idToken,
+      fcmToken,
+      userAgent,
+      platform,
+      deviceId,
+      deviceModel,
+      osVersion,
+      appVersion,
+      appBuild,
+    } = req.body as {
+      idToken: string;
+      fcmToken?: string;
+      userAgent?: string;
+      platform?: 'web' | 'android' | 'ios';
+      deviceId?: string;
+      deviceModel?: string;
+      osVersion?: string;
+      appVersion?: string;
+      appBuild?: string;
+    };
 
     // Verify Firebase token - get UID, phone (for phone auth), email (for email/password auth)
     const { uid, phone, email } = await verifyFirebaseToken(idToken);
@@ -44,6 +65,19 @@ export const verifyFirebaseAuth = asyncHandler(
     const user = await User.findOne({ firebaseUid: uid });
 
     if (user) {
+      if (fcmToken) {
+        await upsertUserFcmToken(user._id.toString(), {
+          token: fcmToken,
+          userAgent,
+          platform,
+          deviceId,
+          deviceModel,
+          osVersion,
+          appVersion,
+          appBuild,
+        });
+      }
+
       // Clean up expired tokens first
       const now = new Date();
       user.refreshTokens = user.refreshTokens.filter(
@@ -130,7 +164,37 @@ export const verifyFirebaseAuth = asyncHandler(
 export const registerUser = asyncHandler(
   async (req: AuthRequest, res: Response) => {
     const lang = resolveRequestLanguage(req);
-    const { fullName, gender, age, dob, country, provider } = req.body;
+    const {
+      fullName,
+      gender,
+      age,
+      dob,
+      country,
+      provider,
+      fcmToken,
+      userAgent,
+      platform,
+      deviceId,
+      deviceModel,
+      osVersion,
+      appVersion,
+      appBuild,
+    } = req.body as {
+      fullName: string;
+      gender: 'Male' | 'Female';
+      age?: number;
+      dob: Date;
+      country?: string;
+      provider?: string;
+      fcmToken?: string;
+      userAgent?: string;
+      platform?: 'web' | 'android' | 'ios';
+      deviceId?: string;
+      deviceModel?: string;
+      osVersion?: string;
+      appVersion?: string;
+      appBuild?: string;
+    };
     const uid = req.user?.uid; // From JWT (temporary token)
     const phone = req.user?.phone; // Optional phone from JWT (for phone auth)
     const email = req.user?.email; // Optional email from JWT (for email/password auth)
@@ -158,6 +222,19 @@ export const registerUser = asyncHandler(
       provider,
       isVerified: true,
     });
+
+    if (fcmToken) {
+      await upsertUserFcmToken(user._id.toString(), {
+        token: fcmToken,
+        userAgent,
+        platform,
+        deviceId,
+        deviceModel,
+        osVersion,
+        appVersion,
+        appBuild,
+      });
+    }
 
     // Generate new tokens with user ID
     const tokens = generateTokens({
@@ -320,10 +397,15 @@ export const logout = asyncHandler(async (req: AuthRequest, res: Response) => {
     return;
   }
 
-  const { refreshToken } = req.body;
-  await User.findByIdAndUpdate(userId, {
+  const { refreshToken, fcmToken } = req.body as { refreshToken: string; fcmToken?: string };
+  const update: Record<string, unknown> = {
     $pull: { refreshTokens: { token: refreshToken } },
-  });
+  };
+  if (fcmToken) {
+    (update.$pull as any).webPushTokens = { token: fcmToken };
+    (update.$pull as any).fcmTokens = { token: fcmToken };
+  }
+  await User.findByIdAndUpdate(userId, update);
 
   sendSuccess(res, null, t(lang, 'auth.logout_success'));
 });

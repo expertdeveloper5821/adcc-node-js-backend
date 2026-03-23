@@ -116,16 +116,24 @@ export const uploadFeedPostImageIfMultipart = (req: any, res: any, next: any) =>
   return next();
 };
 
-const settingsFields = upload.fields([
-  { name: 'image', maxCount: 1 },
-  { name: 'images', maxCount: 10 },
-  { name: 'images[]', maxCount: 10 },
-]);
+// const settingsFields = upload.fields([
+//   { name: 'image', maxCount: 1 },
+//   { name: 'images', maxCount: 10 },
+//   { name: 'images[]', maxCount: 10 },
+// ]);
 
 export const uploadSettingsImages = (req: any, res: any, next: any) => {
   const contentType = (req.headers['content-type'] || '').toString();
   if (contentType.includes('multipart/form-data')) {
-    return settingsFields(req, res, next);
+    return upload.any()(req, res, next);
+  }
+  return next();
+};
+
+export const uploadSettingsBulkImages = (req: any, res: any, next: any) => {
+  const contentType = (req.headers['content-type'] || '').toString();
+  if (contentType.includes('multipart/form-data')) {
+    return upload.any()(req, res, next);
   }
   return next();
 };
