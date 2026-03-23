@@ -1,7 +1,25 @@
 import { z } from 'zod';
 
+const firstValue = (val: unknown) => (Array.isArray(val) ? val[0] : val);
+
+const optionalStringField = (message: string) =>
+  z.preprocess(firstValue, z.string().min(1, message)).optional();
+
+const optionalPlatformField = z.preprocess(
+  firstValue,
+  z.enum(['web', 'android', 'ios'])
+).optional();
+
 export const verifyFirebaseAuthSchema = z.object({
   idToken: z.string().min(1, 'Firebase ID token is required'),
+  fcmToken: optionalStringField('FCM token is required'),
+  userAgent: optionalStringField('Invalid user agent'),
+  platform: optionalPlatformField,
+  deviceId: optionalStringField('Invalid device id'),
+  deviceModel: optionalStringField('Invalid device model'),
+  osVersion: optionalStringField('Invalid OS version'),
+  appVersion: optionalStringField('Invalid app version'),
+  appBuild: optionalStringField('Invalid app build'),
 });
 
 const isValidDateValue = (val: string) => {
@@ -29,6 +47,14 @@ export const registerUserSchema = z.object({
   dob: dobSchema,
   country: z.string().min(1, 'Country is required').trim().optional(),
   provider: z.string().min(1, 'Provider is required').trim().optional(),
+  fcmToken: optionalStringField('FCM token is required'),
+  userAgent: optionalStringField('Invalid user agent'),
+  platform: optionalPlatformField,
+  deviceId: optionalStringField('Invalid device id'),
+  deviceModel: optionalStringField('Invalid device model'),
+  osVersion: optionalStringField('Invalid OS version'),
+  appVersion: optionalStringField('Invalid app version'),
+  appBuild: optionalStringField('Invalid app build'),
 }).strict();
 
 export const refreshTokenSchema = z.object({
@@ -37,6 +63,7 @@ export const refreshTokenSchema = z.object({
 
 export const logoutSchema = z.object({
   refreshToken: z.string().min(1, 'Refresh token is required'),
+  fcmToken: z.string().min(1, 'FCM token is required').optional(),
 });
 
 export const updateProfileSchema = z.object({

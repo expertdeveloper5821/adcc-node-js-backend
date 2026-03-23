@@ -28,6 +28,30 @@ export interface IUser extends Document {
   role: 'Admin' | 'Vendor' | 'Member' | 'Guest';
   isVerified: boolean;
   refreshTokens: IRefreshToken[];
+  webPushTokens?: Array<{
+    token: string;
+    userAgent?: string;
+    platform?: 'web' | 'android' | 'ios';
+    deviceId?: string;
+    deviceModel?: string;
+    osVersion?: string;
+    appVersion?: string;
+    appBuild?: string;
+    createdAt: Date;
+    lastSeenAt: Date;
+  }>;
+  fcmTokens?: Array<{
+    token: string;
+    userAgent?: string;
+    platform?: 'web' | 'android' | 'ios';
+    deviceId?: string;
+    deviceModel?: string;
+    osVersion?: string;
+    appVersion?: string;
+    appBuild?: string;
+    createdAt: Date;
+    lastSeenAt: Date;
+  }>;
   stats?: IUserStats;
   createdAt: Date;
   updatedAt: Date;
@@ -116,6 +140,34 @@ const UserSchema = new Schema(
       default: false,
     },
     refreshTokens: [RefreshTokenSchema],
+    webPushTokens: [
+      {
+        token: { type: String, required: true, index: true },
+        userAgent: { type: String, trim: true },
+        platform: { type: String, enum: ['web', 'android', 'ios'] },
+        deviceId: { type: String, trim: true },
+        deviceModel: { type: String, trim: true },
+        osVersion: { type: String, trim: true },
+        appVersion: { type: String, trim: true },
+        appBuild: { type: String, trim: true },
+        createdAt: { type: Date, default: Date.now },
+        lastSeenAt: { type: Date, default: Date.now },
+      },
+    ],
+    fcmTokens: [
+      {
+        token: { type: String, required: true, index: true },
+        userAgent: { type: String, trim: true },
+        platform: { type: String, enum: ['web', 'android', 'ios'] },
+        deviceId: { type: String, trim: true },
+        deviceModel: { type: String, trim: true },
+        osVersion: { type: String, trim: true },
+        appVersion: { type: String, trim: true },
+        appBuild: { type: String, trim: true },
+        createdAt: { type: Date, default: Date.now },
+        lastSeenAt: { type: Date, default: Date.now },
+      },
+    ],
     stats: {
       totalDistanceKm: { type: Number, default: 0 },
       totalRides: { type: Number, default: 0 },

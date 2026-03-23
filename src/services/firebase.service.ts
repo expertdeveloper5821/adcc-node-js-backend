@@ -206,3 +206,40 @@ export const getFirebaseUserByEmail = async (
   }
 };
 
+export interface WebPushPayload {
+  title: string;
+  body: string;
+  url?: string;
+}
+
+export const sendWebPushNotification = async (
+  tokens: string[],
+  payload: WebPushPayload
+): Promise<admin.messaging.BatchResponse> => {
+  initializeFirebase();
+
+  if (!tokens.length) {
+    return {
+      successCount: 0,
+      failureCount: 0,
+      responses: [],
+    };
+  }
+
+  return admin.messaging().sendEachForMulticast({
+    tokens,
+    notification: {
+      title: payload.title,
+      body: payload.body,
+    },
+    webpush: {
+      notification: {
+        title: payload.title,
+        body: payload.body,
+      },
+      fcmOptions: payload.url ? { link: payload.url } : undefined,
+    },
+    data: payload.url ? { url: payload.url } : undefined,
+  });
+};
+

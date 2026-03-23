@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { authenticate } from '@/middleware/auth.middleware';
 import { isAdmin } from '@/middleware/role.middleware';
 import { validate, validateParams } from '@/middleware/validate.middleware';
-import { uploadSettingsImages } from '@/middleware/upload.middleware';
+import { uploadSettingsBulkImages, uploadSettingsImages } from '@/middleware/upload.middleware';
 import {
   createGlobalSetting,
   bulkUpsertGlobalSettings,
@@ -38,6 +38,7 @@ router.post(
   '/bulk',
   authenticate,
   isAdmin,
+  uploadSettingsBulkImages,
   validate(bulkGlobalSettingsSchema),
   bulkUpsertGlobalSettings
 );

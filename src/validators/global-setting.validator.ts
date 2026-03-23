@@ -80,7 +80,17 @@ const bulkItemSchema = z
 
 export const bulkGlobalSettingsSchema = z
   .object({
-    items: z.array(bulkItemSchema).min(1, 'Items are required'),
+    items: z.preprocess((value) => {
+      if (typeof value === 'string') {
+        try {
+          const parsed = JSON.parse(value);
+          return parsed;
+        } catch {
+          return value;
+        }
+      }
+      return value;
+    }, z.array(bulkItemSchema).min(1, 'Items are required')),
   })
   .strict();
 

@@ -55,48 +55,105 @@ const normalizeParamValue = (value: string | string[] | undefined): string => {
 };
 
 const attachSettingImages = async (req: AuthRequest, value: any) => {
-  const files = req.files as {
-    [fieldname: string]: Express.Multer.File[];
-  } | undefined;
+  const filesInput = req.files as
+    | Express.Multer.File[]
+    | { [fieldname: string]: Express.Multer.File[] }
+    | undefined;
 
-  if (!files) return value;
+  if (!filesInput) return value;
+
+  const files = Array.isArray(filesInput)
+    ? filesInput
+    : Object.values(filesInput).flat();
 
   let nextValue = value;
   if (!nextValue || typeof nextValue !== 'object' || Array.isArray(nextValue)) {
     nextValue = {};
   }
 
-  if (files.image?.length) {
+  const ensureSectionsArray = () => {
+    if (!Array.isArray(nextValue.sections)) {
+      nextValue.sections = [];
+    }
+  };
+
+  const getOrCreateSection = (sectionKey: string) => {
+    ensureSectionsArray();
+    let section = nextValue.sections.find((item: any) => item?.key === sectionKey);
+    if (!section) {
+      section = { key: sectionKey };
+      nextValue.sections.push(section);
+    }
+    return section;
+  };
+
+  for (const file of files) {
+    const fieldname = file.fieldname || '';
     const uploaded = await uploadImageBufferToS3(
-      files.image[0].buffer,
-      files.image[0].mimetype,
-      files.image[0].originalname,
+      file.buffer,
+      file.mimetype,
+      file.originalname,
       'content-sections'
     );
-    nextValue.image = uploaded.url;
-  }
 
-  const imageFiles = [
-    ...(files.images || []),
-    ...(files['images[]'] || []),
-  ];
+    if (fieldname === 'image') {
+      nextValue.image = uploaded.url;
+      continue;
+    }
 
-  if (imageFiles.length) {
-    const uploadedImages = await Promise.all(
-      imageFiles.map(async (file) => {
-        const uploaded = await uploadImageBufferToS3(
-          file.buffer,
-          file.mimetype,
-          file.originalname,
-          'content-sections'
-        );
-        return uploaded.url;
-      })
-    );
-    nextValue.images = [...(nextValue.images || []), ...uploadedImages];
+    if (fieldname === 'images' || fieldname === 'images[]') {
+      nextValue.images = [...(nextValue.images || []), uploaded.url];
+      continue;
+    }
+
+    if (fieldname.startsWith('image.')) {
+      const sectionKey = fieldname.slice('image.'.length);
+      if (sectionKey) {
+        const section = getOrCreateSection(sectionKey);
+        section.image = uploaded.url;
+      }
+      continue;
+    }
+
+    if (fieldname.startsWith('images.')) {
+      let sectionKey = fieldname.slice('images.'.length);
+      if (sectionKey.endsWith('[]')) {
+        sectionKey = sectionKey.slice(0, -2);
+      }
+      if (sectionKey) {
+        const section = getOrCreateSection(sectionKey);
+        section.images = [...(section.images || []), uploaded.url];
+      }
+      continue;
+    }
   }
 
   return nextValue;
+};
+
+const parseItemsInput = (value: unknown): Array<Record<string, any>> => {
+  if (Array.isArray(value)) return value;
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+};
+
+const parseBulkFileField = (fieldname: string): { key: string; type: 'image' | 'images' } | null => {
+  if (fieldname.startsWith('image.')) {
+    return { key: fieldname.slice('image.'.length), type: 'image' };
+  }
+  if (fieldname.startsWith('images.')) {
+    const raw = fieldname.slice('images.'.length);
+    const key = raw.endsWith('[]') ? raw.slice(0, -2) : raw;
+    return { key, type: 'images' };
+  }
+  return null;
 };
 
 /**
@@ -296,12 +353,57 @@ export const bulkUpsertGlobalSettings = asyncHandler(async (req: AuthRequest, re
     throw new AppError(t(lang, 'auth.unauthorized'), 401);
   }
 
-  const items: Array<Record<string, any>> = Array.isArray(req.body.items) ? req.body.items : [];
+  const items: Array<Record<string, any>> = parseItemsInput(req.body.items);
   if (items.length === 0) {
     throw new AppError('Items are required', 400);
   }
 
+  const files = (req.files as Express.Multer.File[] | undefined) || [];
+  const uploadsByKey = new Map<string, { image?: string; images: string[] }>();
+
+  if (files.length > 0) {
+    for (const file of files) {
+      const mapping = parseBulkFileField(file.fieldname);
+      if (!mapping) {
+        throw new AppError(`Unrecognized file field: ${file.fieldname}`, 400);
+      }
+
+      const uploaded = await uploadImageBufferToS3(
+        file.buffer,
+        file.mimetype,
+        file.originalname,
+        'content-sections'
+      );
+
+      const current = uploadsByKey.get(mapping.key) || { images: [] };
+      if (mapping.type === 'image') {
+        current.image = uploaded.url;
+      } else {
+        current.images.push(uploaded.url);
+      }
+      uploadsByKey.set(mapping.key, current);
+    }
+  }
+
   const ops = items.map((item) => {
+    const key = String(item.key || '').trim();
+    if (!key) {
+      throw new AppError('Key is required', 400);
+    }
+
+    const uploads = uploadsByKey.get(key);
+    if (uploads) {
+      if (!item.value || typeof item.value !== 'object' || Array.isArray(item.value)) {
+        item.value = {};
+      }
+      if (uploads.image) {
+        item.value.image = uploads.image;
+      }
+      if (uploads.images.length) {
+        item.value.images = [...(item.value.images || []), ...uploads.images];
+      }
+    }
+
     const validation = validateSettingValue(item.key, item.value);
     if (validation.errors?.length) {
       throw new AppError(JSON.stringify([{ key: item.key, errors: validation.errors }], null, 2), 400);
