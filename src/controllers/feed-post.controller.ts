@@ -118,7 +118,7 @@ export const getFeedPosts = asyncHandler(async (req: Request, res: Response) => 
 
   const [posts, total] = await Promise.all([
     FeedPost.find(filter)
-      .populate('createdBy', 'fullName profileImage')
+      .populate('createdBy', 'fullName profileImage banFeedPost' )
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limitNum)
