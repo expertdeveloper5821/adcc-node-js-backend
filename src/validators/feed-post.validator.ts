@@ -38,6 +38,12 @@ export const updateFeedPostModerationSchema = z
   })
   .strict();
 
+export const updateUserFeedPostBanSchema = z
+  .object({
+    banFeedPost: z.preprocess(parseBooleanFromFormData, z.boolean()),
+  })
+  .strict();
+
 export const getFeedPostsQuerySchema = z.object({
   status: z.preprocess(normalizedString, feedPostStatusEnum).optional(),
   reported: z.preprocess(parseBooleanFromFormData, z.boolean()).optional(),
@@ -55,4 +61,5 @@ export const getFeedPostsQuerySchema = z.object({
 export type CreateFeedPostInput = z.infer<typeof createFeedPostSchema>;
 export type UpdateFeedPostModerationInput = z.infer<typeof updateFeedPostModerationSchema>;
 export type GetFeedPostsQueryInput = z.infer<typeof getFeedPostsQuerySchema>;
+export type UpdateUserFeedPostBanInput = z.infer<typeof updateUserFeedPostBanSchema>;
 
