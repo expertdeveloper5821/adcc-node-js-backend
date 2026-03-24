@@ -27,6 +27,7 @@ export interface IUser extends Document {
   provider?: string;
   role: 'Admin' | 'Vendor' | 'Member' | 'Guest';
   isVerified: boolean;
+  banFeedPost: boolean;
   refreshTokens: IRefreshToken[];
   webPushTokens?: Array<{
     token: string;
@@ -138,6 +139,11 @@ const UserSchema = new Schema(
     isVerified: {
       type: Boolean,
       default: false,
+    },
+    banFeedPost: {
+      type: Boolean,
+      default: false,
+      index: true,
     },
     refreshTokens: [RefreshTokenSchema],
     webPushTokens: [

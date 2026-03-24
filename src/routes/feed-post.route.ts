@@ -12,12 +12,14 @@ import {
   createFeedPostSchema,
   getFeedPostsQuerySchema,
   updateFeedPostModerationSchema,
+  updateUserFeedPostBanSchema,
 } from '@/validators/feed-post.validator';
 import {
   createFeedPost,
   getFeedPostById,
   getFeedPosts,
   updateFeedPostModeration,
+  updateUserFeedPostBan,
 } from '@/controllers/feed-post.controller';
 
 const router = express.Router();
@@ -44,6 +46,17 @@ router.patch(
   requireParsedMultipartBody,
   validate(updateFeedPostModerationSchema),
   updateFeedPostModeration
+);
+
+router.patch(
+  '/moderation/users/:userId/ban-feed-post',
+  authenticate,
+  isAdmin,
+  requireMultipartFormData,
+  uploadBodyIfMultipart,
+  requireParsedMultipartBody,
+  validate(updateUserFeedPostBanSchema),
+  updateUserFeedPostBan
 );
 
 export default router;

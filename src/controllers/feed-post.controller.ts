@@ -6,6 +6,7 @@ import { asyncHandler } from '@/utils/async-handler';
 import { AppError } from '@/utils/app-error';
 import { t } from '@/utils/i18n';
 import FeedPost from '@/models/feed-post.model';
+import User from '@/models/user.model';
 import { uploadImageBufferToS3 } from '@/services/s3-upload.service';
 
 const getLang = (req: Request) => (((req as any).lang || 'en') as string) ?? 'en';
@@ -65,6 +66,14 @@ export const createFeedPost = asyncHandler(async (req: AuthRequest, res: Respons
     throw new AppError(t(lang, 'auth.unauthorized'), 401);
   }
 
+  const user = await User.findById(userId).select('banFeedPost').lean();
+  if (!user) {
+    throw new AppError(t(lang, 'user.not_found'), 404);
+  }
+  if (user.banFeedPost) {
+    throw new AppError(t(lang, 'feedPost.user_banned'), 403);
+  }
+
   const data: Record<string, any> = {
     ...req.body,
     createdBy: userId,
@@ -109,7 +118,7 @@ export const getFeedPosts = asyncHandler(async (req: Request, res: Response) => 
 
   const [posts, total] = await Promise.all([
     FeedPost.find(filter)
-      .populate('createdBy', 'fullName profileImage')
+      .populate('createdBy', 'fullName profileImage banFeedPost' )
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limitNum)
@@ -183,5 +192,30 @@ export const updateFeedPostModeration = asyncHandler(async (req: AuthRequest, re
   }
 
   sendSuccess(res, updated, t(lang, 'feedPost.updated'));
+});
+
+/**
+ * Admin endpoint to ban/unban user from creating feed posts.
+ * PATCH /v1/feed-posts/moderation/users/:userId/ban-feed-post
+ */
+export const updateUserFeedPostBan = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const lang = getLang(req);
+  const { userId } = req.params;
+  const parsedUserId = ensureObjectId(userId, 'Invalid user ID');
+  const { banFeedPost } = req.body as { banFeedPost: boolean };
+
+  const user = await User.findByIdAndUpdate(
+    parsedUserId,
+    { banFeedPost },
+    { new: true, runValidators: true }
+  )
+    .select('fullName email phone role banFeedPost')
+    .lean();
+
+  if (!user) {
+    throw new AppError(t(lang, 'user.not_found'), 404);
+  }
+
+  sendSuccess(res, user, t(lang, 'feedPost.user_ban_updated'));
 });
 

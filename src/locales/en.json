@@ -174,7 +174,9 @@
         "created": "Feed post created successfully",
         "list": "Feed posts retrieved successfully",
         "retrieved": "Feed post retrieved successfully",
-        "updated": "Feed post updated successfully"
+        "updated": "Feed post updated successfully",
+        "user_banned": "You are banned from creating feed posts",
+        "user_ban_updated": "User feed post ban status updated successfully"
     },
     "contentSetting": {
         "not_found": "Setting not found",
