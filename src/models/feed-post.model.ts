@@ -1,6 +1,6 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
-export type FeedPostStatus = 'pending' | 'approved';
+export type FeedPostStatus = 'pending' | 'approved' | 'rejected';
 
 export interface IFeedPost extends Document {
   title: string;
@@ -27,7 +27,7 @@ const FeedPostSchema = new Schema(
     },
     status: {
       type: String,
-      enum: ['pending', 'approved'],
+      enum: ['pending', 'approved' , 'rejected'],
       required: [true, 'Post status is required'],
       default: 'pending',
       index: true,
