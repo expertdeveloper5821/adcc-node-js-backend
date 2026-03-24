@@ -2,10 +2,11 @@ import mongoose, { Schema, Document } from 'mongoose';
 
 export interface IGlobalSetting extends Document {
   key: string;
-  value: any;
   group?: string;
   label?: string;
+  title?: string;
   description?: string;
+  image?: string;
   active?: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -19,10 +20,6 @@ const GlobalSettingSchema = new Schema<IGlobalSetting>(
       trim: true,
       unique: true,
     },
-    value: {
-      type: Schema.Types.Mixed,
-      required: [true, 'Value is required'],
-    },
     group: {
       type: String,
       trim: true,
@@ -31,7 +28,15 @@ const GlobalSettingSchema = new Schema<IGlobalSetting>(
       type: String,
       trim: true,
     },
+    title: {
+      type: String,
+      trim: true,
+    },
     description: {
+      type: String,
+      trim: true,
+    },
+    image: {
       type: String,
       trim: true,
     },
