@@ -34,7 +34,7 @@ import {
 import { joinEventSchema } from '@/validators/event-result.validator';
 import { authenticate } from '@/middleware/auth.middleware';
 import { isAdmin} from '@/middleware/role.middleware';
-import { uploadEventImages, requireParsedMultipartBody, uploadEventImagesIfMultipart } from '@/middleware/upload.middleware';
+import { requireParsedMultipartBody, uploadEventImagesIfMultipart } from '@/middleware/upload.middleware';
 
 const router = express.Router();
 
@@ -78,7 +78,15 @@ router.post(
   createEvent
 );
 
-router.patch('/:id', authenticate, isAdmin, uploadEventImages, validate(updateEventSchema), updateEvent);
+router.patch(
+  '/:id',
+  authenticate,
+  isAdmin,
+  uploadEventImagesIfMultipart,
+  requireParsedMultipartBody,
+  validate(updateEventSchema),
+  updateEvent
+);
 router.delete('/:id', authenticate, isAdmin, deleteEvent);
 router.patch('/:eventId/close-registration', authenticate, isAdmin, closeEventRegistration);
 router.patch('/:eventId/reopen-registration', authenticate, isAdmin, reopenEventRegistration);

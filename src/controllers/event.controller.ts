@@ -133,6 +133,21 @@ const attachEventImages = async (req: AuthRequest, data: Record<string, any>) =>
     data.galleryImages = [...(data.galleryImages || []), ...uploadedGallery];
   }
 
+  if (files.galleryImage?.length) {
+    const uploadedGallery = await Promise.all(
+      files.galleryImage.map(async (file) => {
+        const uploaded = await uploadImageBufferToS3(
+          file.buffer,
+          file.mimetype,
+          file.originalname,
+          'events-galleries'
+        );
+        return uploaded.url;
+      })
+    );
+    data.galleryImages = [...(data.galleryImages || []), ...uploadedGallery];
+  }
+
   return data;
 };
 
@@ -426,6 +441,17 @@ export const updateEvent = asyncHandler(async (req: AuthRequest, res: Response) 
   const updateData = { ...req.body };
 
   await attachEventImages(req, updateData);
+
+  const bodyGalleryImages = normalizeGalleryImagesInput((req.body as any).galleryImages);
+  const bodyGallery = normalizeGalleryImagesInput((req.body as any).gallery);
+  const mergedGalleryImages = [
+    ...(updateData.galleryImages || []),
+    ...bodyGalleryImages,
+    ...bodyGallery,
+  ];
+  if (mergedGalleryImages.length > 0) {
+    updateData.galleryImages = mergedGalleryImages;
+  }
 
   // Convert eventDate string to Date if provided
   if (updateData.eventDate) {

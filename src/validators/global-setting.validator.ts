@@ -12,32 +12,16 @@ const booleanFromString = z.preprocess(
   z.boolean()
 );
 
-const parseOptionalJson = (value: unknown): any => {
-  const normalized = firstValue(value);
-  if (normalized === undefined || normalized === null || normalized === '') return undefined;
-  if (typeof normalized === 'string') {
-    const trimmed = normalized.trim();
-    if (!trimmed) return undefined;
-    if ((trimmed.startsWith('{') && trimmed.endsWith('}')) || (trimmed.startsWith('[') && trimmed.endsWith(']'))) {
-      try {
-        return JSON.parse(trimmed);
-      } catch {
-        return normalized;
-      }
-    }
-  }
-  return normalized;
-};
-
 const keyField = z.preprocess(firstValue, z.string().min(1, 'Key is required'));
 
 export const createGlobalSettingSchema = z
   .object({
     key: keyField,
-    value: z.preprocess(parseOptionalJson, z.any()),
     group: z.preprocess(firstValue, z.string().min(1, 'Group is required')).optional(),
     label: z.preprocess(firstValue, z.string().min(1, 'Label is required')).optional(),
+    title: z.preprocess(firstValue, z.string().min(1, 'Title is required')).optional(),
     description: z.preprocess(firstValue, z.string().min(1, 'Description is required')).optional(),
+    image: z.preprocess(firstValue, z.string().min(1, 'Image is required')).optional(),
     active: booleanFromString.default(true),
   })
   .strict();
@@ -45,10 +29,11 @@ export const createGlobalSettingSchema = z
 export const updateGlobalSettingSchema = z
   .object({
     key: keyField.optional(),
-    value: z.preprocess(parseOptionalJson, z.any()).optional(),
     group: z.preprocess(firstValue, z.string().min(1, 'Group is required')).optional(),
     label: z.preprocess(firstValue, z.string().min(1, 'Label is required')).optional(),
+    title: z.preprocess(firstValue, z.string().min(1, 'Title is required')).optional(),
     description: z.preprocess(firstValue, z.string().min(1, 'Description is required')).optional(),
+    image: z.preprocess(firstValue, z.string().min(1, 'Image is required')).optional(),
     active: booleanFromString.optional(),
   })
   .strict();
@@ -70,10 +55,11 @@ export const globalSettingKeySchema = z.object({
 const bulkItemSchema = z
   .object({
     key: keyField,
-    value: z.preprocess(parseOptionalJson, z.any()),
     group: z.preprocess(firstValue, z.string().min(1, 'Group is required')).optional(),
     label: z.preprocess(firstValue, z.string().min(1, 'Label is required')).optional(),
+    title: z.preprocess(firstValue, z.string().min(1, 'Title is required')).optional(),
     description: z.preprocess(firstValue, z.string().min(1, 'Description is required')).optional(),
+    image: z.preprocess(firstValue, z.string().min(1, 'Image is required')).optional(),
     active: booleanFromString.optional(),
   })
   .strict();
@@ -94,5 +80,34 @@ export const bulkGlobalSettingsSchema = z
   })
   .strict();
 
+export const createContentSettingSchema = z
+  .object({
+    group: z.preprocess(firstValue, z.string().min(1, 'Group is required')),
+    key: keyField,
+    label: z.preprocess(firstValue, z.string().min(1, 'Label is required')),
+    title: z.preprocess(firstValue, z.string().min(1, 'Title is required')),
+    description: z.preprocess(firstValue, z.string()).optional(),
+    image: z.preprocess(firstValue, z.string()).optional(),
+    active: booleanFromString.optional().default(true),
+  })
+  .strict();
+
+export const updateContentSettingSchema = z
+  .object({
+    title: z.preprocess(firstValue, z.string().min(1, 'Title is required')).optional(),
+    description: z.preprocess(firstValue, z.string()).optional(),
+    image: z.preprocess(firstValue, z.string()).optional(),
+    active: booleanFromString.optional(),
+  })
+  .strict();
+
+export const listContentSettingsQuerySchema = z.object({
+  group: z.string().optional(),
+  key: z.string().optional(),
+  active: z.string().transform((val) => val === 'true').optional(),
+});
+
 export type CreateGlobalSettingInput = z.infer<typeof createGlobalSettingSchema>;
 export type UpdateGlobalSettingInput = z.infer<typeof updateGlobalSettingSchema>;
+export type CreateContentSettingInput = z.infer<typeof createContentSettingSchema>;
+export type UpdateContentSettingInput = z.infer<typeof updateContentSettingSchema>;

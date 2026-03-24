@@ -4,23 +4,59 @@ import { isAdmin } from '@/middleware/role.middleware';
 import { validate, validateParams } from '@/middleware/validate.middleware';
 import { uploadSettingsBulkImages, uploadSettingsImages } from '@/middleware/upload.middleware';
 import {
+  createContentSetting,
   createGlobalSetting,
   bulkUpsertGlobalSettings,
+  deleteContentSetting,
   deleteGlobalSetting,
   getGlobalSettingByKey,
   getGlobalSettings,
+  listContentSettings,
+  updateContentSetting,
   updateGlobalSetting,
   upsertGlobalSetting,
 } from '@/controllers/global-setting.controller';
 import {
   bulkGlobalSettingsSchema,
+  createContentSettingSchema,
   createGlobalSettingSchema,
   getGlobalSettingsQuerySchema,
   globalSettingKeySchema,
+  listContentSettingsQuerySchema,
+  updateContentSettingSchema,
   updateGlobalSettingSchema,
 } from '@/validators/global-setting.validator';
 
 const router = Router();
+
+router.get('/content/list', validate(listContentSettingsQuerySchema), listContentSettings);
+
+router.post(
+  '/content',
+  authenticate,
+  isAdmin,
+  uploadSettingsImages,
+  validate(createContentSettingSchema),
+  createContentSetting
+);
+
+router.patch(
+  '/content/:key',
+  authenticate,
+  isAdmin,
+  uploadSettingsImages,
+  validateParams(globalSettingKeySchema),
+  validate(updateContentSettingSchema),
+  updateContentSetting
+);
+
+router.delete(
+  '/content/:key',
+  authenticate,
+  isAdmin,
+  validateParams(globalSettingKeySchema),
+  deleteContentSetting
+);
 
 router.get('/', validate(getGlobalSettingsQuerySchema), getGlobalSettings);
 router.get('/:key', validateParams(globalSettingKeySchema), getGlobalSettingByKey);

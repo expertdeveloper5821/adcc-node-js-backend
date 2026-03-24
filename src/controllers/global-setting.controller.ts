@@ -5,7 +5,6 @@ import { sendSuccess } from '@/utils/response';
 import { asyncHandler } from '@/utils/async-handler';
 import { AppError } from '@/utils/app-error';
 import { AuthRequest } from '@/middleware/auth.middleware';
-import { validateSettingValue } from '@/validators/setting-schema-registry';
 import { uploadImageBufferToS3 } from '@/services/s3-upload.service';
 
 const normalizeStringArray = (value: unknown): string[] => {
@@ -54,83 +53,6 @@ const normalizeParamValue = (value: string | string[] | undefined): string => {
   return value || '';
 };
 
-const attachSettingImages = async (req: AuthRequest, value: any) => {
-  const filesInput = req.files as
-    | Express.Multer.File[]
-    | { [fieldname: string]: Express.Multer.File[] }
-    | undefined;
-
-  if (!filesInput) return value;
-
-  const files = Array.isArray(filesInput)
-    ? filesInput
-    : Object.values(filesInput).flat();
-
-  let nextValue = value;
-  if (!nextValue || typeof nextValue !== 'object' || Array.isArray(nextValue)) {
-    nextValue = {};
-  }
-
-  const ensureSectionsArray = () => {
-    if (!Array.isArray(nextValue.sections)) {
-      nextValue.sections = [];
-    }
-  };
-
-  const getOrCreateSection = (sectionKey: string) => {
-    ensureSectionsArray();
-    let section = nextValue.sections.find((item: any) => item?.key === sectionKey);
-    if (!section) {
-      section = { key: sectionKey };
-      nextValue.sections.push(section);
-    }
-    return section;
-  };
-
-  for (const file of files) {
-    const fieldname = file.fieldname || '';
-    const uploaded = await uploadImageBufferToS3(
-      file.buffer,
-      file.mimetype,
-      file.originalname,
-      'content-sections'
-    );
-
-    if (fieldname === 'image') {
-      nextValue.image = uploaded.url;
-      continue;
-    }
-
-    if (fieldname === 'images' || fieldname === 'images[]') {
-      nextValue.images = [...(nextValue.images || []), uploaded.url];
-      continue;
-    }
-
-    if (fieldname.startsWith('image.')) {
-      const sectionKey = fieldname.slice('image.'.length);
-      if (sectionKey) {
-        const section = getOrCreateSection(sectionKey);
-        section.image = uploaded.url;
-      }
-      continue;
-    }
-
-    if (fieldname.startsWith('images.')) {
-      let sectionKey = fieldname.slice('images.'.length);
-      if (sectionKey.endsWith('[]')) {
-        sectionKey = sectionKey.slice(0, -2);
-      }
-      if (sectionKey) {
-        const section = getOrCreateSection(sectionKey);
-        section.images = [...(section.images || []), uploaded.url];
-      }
-      continue;
-    }
-  }
-
-  return nextValue;
-};
-
 const parseItemsInput = (value: unknown): Array<Record<string, any>> => {
   if (Array.isArray(value)) return value;
   if (typeof value === 'string') {
@@ -156,6 +78,42 @@ const parseBulkFileField = (fieldname: string): { key: string; type: 'image' | '
   return null;
 };
 
+const attachContentSettingImage = async (
+  req: AuthRequest,
+  payload: { image?: string; [key: string]: any }
+) => {
+  const fileFromSingle = (req as any).file as Express.Multer.File | undefined;
+  const filesFromAny = (req as any).files as
+    | Express.Multer.File[]
+    | Record<string, Express.Multer.File[]>
+    | undefined;
+
+  const flattenedFiles = Array.isArray(filesFromAny)
+    ? filesFromAny
+    : filesFromAny
+      ? Object.values(filesFromAny).flat()
+      : [];
+
+  const imageFile =
+    fileFromSingle ||
+    flattenedFiles.find((file) => (file.fieldname || '').toLowerCase() === 'image') ||
+    flattenedFiles[0];
+
+  if (!imageFile) return payload;
+
+  const uploaded = await uploadImageBufferToS3(
+    imageFile.buffer,
+    imageFile.mimetype,
+    imageFile.originalname,
+    'content-sections'
+  );
+
+  return {
+    ...payload,
+    image: uploaded.url,
+  };
+};
+
 /**
  * Create global setting
  * POST /v1/settings
@@ -166,15 +124,6 @@ export const createGlobalSetting = asyncHandler(async (req: AuthRequest, res: Re
   const userId = req.user?.id;
   if (!userId) {
     throw new AppError(t(lang, 'auth.unauthorized'), 401);
-  }
-
-  req.body.value = await attachSettingImages(req, req.body.value);
-  const validation = validateSettingValue(req.body.key, req.body.value);
-  if (validation.errors?.length) {
-    throw new AppError(JSON.stringify(validation.errors, null, 2), 400);
-  }
-  if (validation.applied) {
-    req.body.value = validation.value;
   }
 
   const existing = await GlobalSetting.findOne({ key: req.body.key });
@@ -200,15 +149,6 @@ export const upsertGlobalSetting = asyncHandler(async (req: AuthRequest, res: Re
 
   const key = normalizeParamValue(req.params.key);
   const updateData = { ...req.body, key };
-
-  updateData.value = await attachSettingImages(req, updateData.value);
-  const validation = validateSettingValue(key, updateData.value);
-  if (validation.errors?.length) {
-    throw new AppError(JSON.stringify(validation.errors, null, 2), 400);
-  }
-  if (validation.applied) {
-    updateData.value = validation.value;
-  }
 
   const setting = await GlobalSetting.findOneAndUpdate(
     { key },
@@ -295,22 +235,6 @@ export const updateGlobalSetting = asyncHandler(async (req: AuthRequest, res: Re
   const lang = ((req as any).lang || 'en') as string;
   const key = normalizeParamValue(req.params.key);
 
-  if (req.body.value !== undefined) {
-    req.body.value = await attachSettingImages(req, req.body.value);
-  } else {
-    req.body.value = await attachSettingImages(req, undefined);
-  }
-
-  if (req.body.value !== undefined) {
-    const validation = validateSettingValue(key, req.body.value);
-    if (validation.errors?.length) {
-      throw new AppError(JSON.stringify(validation.errors, null, 2), 400);
-    }
-    if (validation.applied) {
-      req.body.value = validation.value;
-    }
-  }
-
   const setting = await GlobalSetting.findOneAndUpdate(
     { key },
     req.body,
@@ -393,27 +317,13 @@ export const bulkUpsertGlobalSettings = asyncHandler(async (req: AuthRequest, re
 
     const uploads = uploadsByKey.get(key);
     if (uploads) {
-      if (!item.value || typeof item.value !== 'object' || Array.isArray(item.value)) {
-        item.value = {};
-      }
       if (uploads.image) {
-        item.value.image = uploads.image;
+        item.image = uploads.image;
       }
-      if (uploads.images.length) {
-        item.value.images = [...(item.value.images || []), ...uploads.images];
-      }
-    }
-
-    const validation = validateSettingValue(item.key, item.value);
-    if (validation.errors?.length) {
-      throw new AppError(JSON.stringify([{ key: item.key, errors: validation.errors }], null, 2), 400);
-    }
-    if (validation.applied) {
-      item.value = validation.value;
     }
 
     const updateDoc: Record<string, any> = {};
-    ['value', 'group', 'label', 'description', 'active'].forEach((field) => {
+    ['group', 'label', 'title', 'description', 'image', 'active'].forEach((field) => {
       if (item[field] !== undefined) updateDoc[field] = item[field];
     });
 
@@ -434,4 +344,149 @@ export const bulkUpsertGlobalSettings = asyncHandler(async (req: AuthRequest, re
   const settings = await GlobalSetting.find({ key: { $in: keys } }).lean();
 
   sendSuccess(res, { settings }, t(lang, 'contentSetting.updated'), 200);
+});
+
+/**
+ * Create predefined content setting item
+ * POST /v1/settings/content
+ * Admin only
+ */
+export const createContentSetting = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const lang = ((req as any).lang || 'en') as string;
+  const userId = req.user?.id;
+  if (!userId) {
+    throw new AppError(t(lang, 'auth.unauthorized'), 401);
+  }
+
+  const bodyWithUploadedImage = await attachContentSettingImage(req, req.body as Record<string, any>);
+  const { group, key, label, title, description, image, active } = bodyWithUploadedImage as {
+    group: string;
+    key: string;
+    label: string;
+    title: string;
+    description?: string;
+    image?: string;
+    active?: boolean;
+  };
+
+  const existing = await GlobalSetting.findOne({ key }).lean();
+  if (existing) {
+    throw new AppError('Setting key already exists', 400);
+  }
+
+  const setting = await GlobalSetting.create({
+    group,
+    key,
+    label,
+    title,
+    description,
+    image,
+    active: active ?? true,
+  });
+
+  sendSuccess(res, setting, t(lang, 'contentSetting.created'), 201);
+});
+
+/**
+ * List content settings for CMS-like screens.
+ * GET /v1/settings/content?group=splash-screen
+ * Public
+ */
+export const listContentSettings = asyncHandler(async (req: Request, res: Response) => {
+  const lang = ((req as any).lang || 'en') as string;
+  const { group, key, active } = req.query as {
+    group?: string;
+    key?: string;
+    active?: boolean;
+  };
+
+  const filter: Record<string, any> = {};
+  if (group) filter.group = group;
+  if (key) filter.key = key;
+  if (typeof active === 'boolean') filter.active = active;
+
+  const settings = await GlobalSetting.find(filter)
+    .select('group key label title description image active createdAt updatedAt')
+    .sort({ group: 1, key: 1 })
+    .lean();
+
+  sendSuccess(res, { settings }, t(lang, 'contentSetting.list'), 200);
+});
+
+/**
+ * Update content setting editable fields only.
+ * PATCH /v1/settings/content/:key
+ * Admin only
+ */
+export const updateContentSetting = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const lang = ((req as any).lang || 'en') as string;
+  const userId = req.user?.id;
+  if (!userId) {
+    throw new AppError(t(lang, 'auth.unauthorized'), 401);
+  }
+
+  const key = normalizeParamValue(req.params.key);
+  const bodyWithUploadedImage = await attachContentSettingImage(req, req.body as Record<string, any>);
+  const { title, description, image, active } = bodyWithUploadedImage as {
+    title?: string;
+    description?: string;
+    image?: string;
+    active?: boolean;
+  };
+
+  const updates: Record<string, any> = {};
+  if (title !== undefined) updates.title = title;
+  if (description !== undefined) updates.description = description;
+  if (image !== undefined) updates.image = image;
+  if (active !== undefined) updates.active = active;
+
+  if (Object.keys(updates).length === 0) {
+    throw new AppError('At least one editable field is required: title, description, image, active', 400);
+  }
+
+  const setting = await GlobalSetting.findOne({ key }).lean();
+  if (!setting) {
+    throw new AppError(t(lang, 'contentSetting.not_found'), 404);
+  }
+
+  // Keep the original immutable fields.
+  const immutableFields = {
+    group: setting.group,
+    key: setting.key,
+    label: setting.label,
+  };
+
+  const updated = await GlobalSetting.findOneAndUpdate(
+    { key },
+    {
+      ...updates,
+      ...immutableFields,
+    },
+    { new: true, runValidators: true }
+  )
+    .select('group key label title description image active createdAt updatedAt')
+    .lean();
+
+  sendSuccess(res, updated, t(lang, 'contentSetting.updated'), 200);
+});
+
+/**
+ * Delete content setting by key
+ * DELETE /v1/settings/content/:key
+ * Admin only
+ */
+export const deleteContentSetting = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const lang = ((req as any).lang || 'en') as string;
+  const userId = req.user?.id;
+  if (!userId) {
+    throw new AppError(t(lang, 'auth.unauthorized'), 401);
+  }
+
+  const key = normalizeParamValue(req.params.key);
+  const setting = await GlobalSetting.findOneAndDelete({ key });
+  if (!setting) {
+    throw new AppError(t(lang, 'contentSetting.not_found'), 404);
+  }
+
+  sendSuccess(res, null, t(lang, 'contentSetting.deleted'), 200);
 });
