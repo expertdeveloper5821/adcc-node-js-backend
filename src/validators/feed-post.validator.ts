@@ -17,7 +17,7 @@ const parseBooleanFromFormData = (val: unknown) => {
   return first;
 };
 
-const feedPostStatusEnum = z.enum(['pending', 'approved']);
+const feedPostStatusEnum = z.enum(['pending', 'approved', 'rejected']);
 
 export const createFeedPostSchema = z
   .object({
