@@ -16,6 +16,7 @@ import {
   addPointsOnComplete,
 } from '@/services/user-stats.service';
 import dayjs from 'dayjs';
+import { getEffectiveEventStatus, isEventCalendarDateInPast } from '@/utils/event-date';
 import mongoose, { type PipelineStage } from 'mongoose';
 import { localizeDocumentFields, SupportedLanguage, localizeEventStatic } from '@/utils/localization';
 
@@ -31,7 +32,14 @@ const SCHEDULE_LOCALIZED_FIELDS = {
 };
 
 const localizeEventPayload = (event: Record<string, any>, lang: SupportedLanguage) => {
-  const localizedEvent = localizeDocumentFields(event, lang, EVENT_LOCALIZED_FIELDS);
+  const payload = { ...event };
+  if (payload.eventDate && isEventCalendarDateInPast(new Date(payload.eventDate))) {
+    if (payload.status === 'Open' || payload.status === 'Full') {
+      payload.status = 'Closed';
+    }
+  }
+
+  const localizedEvent = localizeDocumentFields(payload, lang, EVENT_LOCALIZED_FIELDS);
   
   // Localize static values
   localizeEventStatic(localizedEvent, lang);
@@ -340,6 +348,10 @@ export const createEvent = asyncHandler(async (req: AuthRequest, res: Response) 
     eventData.galleryImages = mergedGalleryImages;
   }
 
+  if (eventData.eventDate && isEventCalendarDateInPast(eventData.eventDate)) {
+    throw new AppError(t(lang, 'event.past_date_not_allowed'), 400);
+  }
+
   const event = await Event.create(eventData);
   const localizedEvent = localizeEventPayload(event.toObject(), lang);
 
@@ -359,6 +371,11 @@ export const getAllEvents = asyncHandler(async (req: Request, res: Response) => 
   const filter: any = {};
 
   if (status) filter.status = status;
+
+  // Past events should not appear as "open" or "full" in listings
+  if (status === 'Open' || status === 'Full') {
+    filter.eventDate = { $gte: dayjs().startOf('day').toDate() };
+  }
 
   // Pagination
   const pageNum = Math.max(1, Number(page) || 1);
@@ -430,6 +447,9 @@ export const updateEvent = asyncHandler(async (req: AuthRequest, res: Response) 
   // Convert eventDate string to Date if provided
   if (updateData.eventDate) {
     updateData.eventDate = new Date(updateData.eventDate);
+    if (isEventCalendarDateInPast(updateData.eventDate)) {
+      throw new AppError(t(lang, 'event.past_date_not_allowed'), 400);
+    }
   }
 
   if (updateData.title && !updateData.titleAr) {
@@ -528,6 +548,14 @@ export const reopenEventRegistration = asyncHandler(async (req: AuthRequest, res
   const eventId = Array.isArray(req.params.eventId)
     ? req.params.eventId[0]
     : req.params.eventId;
+
+  const existing = await Event.findById(eventId).select('eventDate');
+  if (!existing) {
+    throw new AppError(t(lang, 'event.not_found'), 404);
+  }
+  if (isEventCalendarDateInPast(existing.eventDate)) {
+    throw new AppError(t(lang, 'event.cannot_reopen_past_event'), 400);
+  }
 
   const event = await updateEventStatus(eventId, 'Open', lang);
   sendSuccess(res, localizeEventPayload(event.toObject(), lang), t(lang, "event.registration_reopened"), 200);
@@ -628,6 +656,13 @@ export const joinEvent = asyncHandler(async (req: AuthRequest, res: Response) =>
   const event = await Event.findById(eventId);
   if (!event) {
     throw new AppError(t(lang, "event.not_found"), 404);
+  }
+
+  if (isEventCalendarDateInPast(event.eventDate)) {
+    throw new AppError(t(lang, 'event.join_not_available'), 400);
+  }
+  if (event.status !== 'Open') {
+    throw new AppError(t(lang, 'event.join_not_available'), 400);
   }
 
   const eventJoin = await EventResult.findOne({
@@ -1201,7 +1236,7 @@ export const getMemberEventStatus = asyncHandler(async (req: AuthRequest, res: R
       event: {
         title: lang === 'ar' ? event.titleAr || event.title : event.title,
         eventDate: event.eventDate,
-        status: event.status,
+        status: getEffectiveEventStatus(event.eventDate, event.status),
       }
     },
     t(lang, "event.status_retrieved"),
