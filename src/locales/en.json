@@ -115,7 +115,10 @@
         "participants_checked_in": "All registered participants checked in successfully",
         "no_joined_users": "No joined participants found to check in",
         "participants_no_show": "All registered participants marked as no-show",
-        "no_joined_users_no_show": "No joined participants found to mark as no-show"
+        "no_joined_users_no_show": "No joined participants found to mark as no-show",
+        "past_date_not_allowed": "Event date cannot be in the past",
+        "join_not_available": "Registration is not open for this event",
+        "cannot_reopen_past_event": "Cannot reopen registration for an event that has already passed"
     },
     "challenge": {
         "not_found": "Challenge not found",
