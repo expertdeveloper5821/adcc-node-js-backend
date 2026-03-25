@@ -32,29 +32,74 @@ export const unregisterWebPushTokenSchema = z
   })
   .strict();
 
+const optionalScheduleDate = z.preprocess(firstValue, z.string().optional());
+const optionalScheduleTime = z.preprocess(firstValue, z.string().optional());
+
+const urlField = optionalStringField('Invalid URL').refine(
+  (val) => {
+    if (!val) return true;
+    try {
+      new URL(val, 'https://example.com');
+      return true;
+    } catch {
+      return false;
+    }
+  },
+  { message: 'Invalid URL' }
+);
+
 export const sendStaffWebPushSchema = z
   .object({
     title: stringField('Notification title is required'),
     body: stringField('Notification message is required'),
     audienceType: stringField('Audience type is required'),
-    scheduleDate: optionalStringField('Invalid schedule date'),
-    scheduleTime: optionalStringField('Invalid schedule time'),
-    url: optionalStringField('Invalid URL').refine(
-      (val) => {
-        if (!val) return true;
-        try {
-          // Allow relative URLs as well as absolute
-          new URL(val, 'https://example.com');
-          return true;
-        } catch {
-          return false;
-        }
-      },
-      { message: 'Invalid URL' }
-    ),
+    scheduleDate: optionalScheduleDate,
+    scheduleTime: optionalScheduleTime,
+    url: urlField,
+  })
+  .strict()
+  .refine(
+    (data) => {
+      const d = data.scheduleDate?.trim();
+      const t = data.scheduleTime?.trim();
+      return Boolean((d && t) || (!d && !t));
+    },
+    { message: 'Provide both schedule date and time, or omit both for immediate send' }
+  );
+
+/** Same payload as send-to-staff: creates a campaign (scheduled or immediate). */
+export const createCampaignSchema = sendStaffWebPushSchema;
+
+export const listCampaignsQuerySchema = z
+  .object({
+    status: z
+      .enum(['all', 'active', 'scheduled', 'sending', 'completed', 'failed', 'cancelled'])
+      .optional(),
+    page: z.coerce.number().int().min(1).optional(),
+    limit: z.coerce.number().int().min(1).max(100).optional(),
+  })
+  .strict();
+
+export const mongoIdParamSchema = z
+  .object({
+    id: z.string().regex(/^[a-f\d]{24}$/i, 'Invalid id'),
+  })
+  .strict();
+
+export const listInboxQuerySchema = z
+  .object({
+    page: z.coerce.number().int().min(1).optional(),
+    limit: z.coerce.number().int().min(1).max(100).optional(),
+    unreadOnly: z
+      .enum(['true', 'false'])
+      .optional()
+      .transform((v) => (v === undefined ? undefined : v === 'true')),
   })
   .strict();
 
 export type RegisterWebPushTokenInput = z.infer<typeof registerWebPushTokenSchema>;
 export type UnregisterWebPushTokenInput = z.infer<typeof unregisterWebPushTokenSchema>;
 export type SendStaffWebPushInput = z.infer<typeof sendStaffWebPushSchema>;
+export type CreateCampaignInput = z.infer<typeof createCampaignSchema>;
+export type ListCampaignsQuery = z.infer<typeof listCampaignsQuerySchema>;
+export type ListInboxQuery = z.infer<typeof listInboxQuerySchema>;

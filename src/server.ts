@@ -10,6 +10,7 @@ import morgan from 'morgan';
 import compression from 'compression';
 import { connectDB } from './data/database';
 import routes from './routes';
+import { startScheduledPushWorker } from './services/push-campaign.service';
 import { errorHandler } from './middleware/error.middleware';
 import { notFound } from './middleware/not-found.middleware';
 import { languageMiddleware } from './middleware/language.middleware';
@@ -51,4 +52,5 @@ app.use(errorHandler as any);
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+  startScheduledPushWorker();
 });
