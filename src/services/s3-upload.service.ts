@@ -9,11 +9,13 @@ const FOLDER_MAP: Record<string, string> = {
   'event-galleries': 'events/galleries',
   'events-gallery': 'events/galleries',
   'events-galleries': 'events/galleries',
+     
   tracks: 'tracks',
   'track-gallery': 'tracks/galleries',
   'track-galleries': 'tracks/galleries',
   'tracks-gallery': 'tracks/galleries',
   'tracks-galleries': 'tracks/galleries',
+
   store: 'store',
   'store-items': 'store/items',
   'store-item': 'store/items',
@@ -40,6 +42,7 @@ const FOLDER_MAP: Record<string, string> = {
   content: 'content',
   'content-section': 'content/sections',
   'content-sections': 'content/sections',
+  'badge-images' : 'badge-images'
 };
 
 let s3Client: S3Client | null = null;

@@ -133,6 +133,17 @@ const attachEventImages = async (req: AuthRequest, data: Record<string, any>) =>
     data.galleryImages = [...(data.galleryImages || []), ...uploadedGallery];
   }
 
+  if(files.badgeImage?.length){
+    const uploadResult = await uploadImageBufferToS3(
+      files.badgeImage[0].buffer,
+      files.badgeImage[0].mimetype,
+      files.badgeImage[0].originalname,
+      "badge-images"
+    )
+
+     data.badgeImage = uploadResult.url
+  }
+
   if (files.galleryImage?.length) {
     const uploadedGallery = await Promise.all(
       files.galleryImage.map(async (file) => {
