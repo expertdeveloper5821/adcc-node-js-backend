@@ -42,6 +42,7 @@ export const uploadEventImages = upload.fields([
   { name: 'eventImage', maxCount: 1 },
   { name: 'galleryImages', maxCount: 10 },
   { name: 'galleryImage', maxCount: 10 },
+  { name: 'badgeImage' , maxCount: 1},
 
 ]);
 
