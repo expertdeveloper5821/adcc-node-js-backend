@@ -27,16 +27,39 @@ const localizeCommunity = (community: Record<string, any>, lang: SupportedLangua
   return localized;
 };
 
-const normalizeOptionalTrackId = (value: unknown): string | undefined => {
-  if (value === null || value === undefined) return undefined;
-  if (typeof value === 'string') {
-    const normalized = value.trim().toLowerCase();
-    if (!normalized || normalized === 'null' || normalized === 'undefined') {
-      return undefined;
+const uniqueStrings = (values: string[]) => {
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const value of values) {
+    if (!seen.has(value)) {
+      seen.add(value);
+      result.push(value);
     }
-    return value;
   }
-  return String(value);
+  return result;
+};
+
+const uniqueObjectIds = (ids: mongoose.Types.ObjectId[]) => {
+  const seen = new Set<string>();
+  const out: mongoose.Types.ObjectId[] = [];
+  for (const id of ids) {
+    if (!(id instanceof mongoose.Types.ObjectId)) continue;
+    const s = id.toString();
+    if (!seen.has(s)) {
+      seen.add(s);
+      out.push(id);
+    }
+  }
+  return out;
+};
+
+/** Normalizes validated `trackId` from body (array of ObjectIds). */
+const resolveTrackIdFromBody = (body: Record<string, any>): mongoose.Types.ObjectId[] | undefined => {
+  if (!Object.prototype.hasOwnProperty.call(body, 'trackId')) return undefined;
+  const v = body.trackId;
+  if (v === undefined) return undefined;
+  if (!Array.isArray(v)) return undefined;
+  return uniqueObjectIds(v.filter((id: unknown): id is mongoose.Types.ObjectId => id instanceof mongoose.Types.ObjectId));
 };
 
 const normalizeGalleryImagesInput = (value: unknown): string[] => {
@@ -121,18 +144,6 @@ const attachCommunityGalleryFiles = async (req: AuthRequest): Promise<string[]> 
   return uploaded;
 };
 
-const uniqueStrings = (values: string[]) => {
-  const seen = new Set<string>();
-  const result: string[] = [];
-  for (const value of values) {
-    if (!seen.has(value)) {
-      seen.add(value);
-      result.push(value);
-    }
-  }
-  return result;
-};
-
 const attachCommunityImages = async (req: AuthRequest, data: Record<string, any>) => {
   const files = req.files as
     | {
@@ -196,13 +207,17 @@ export const createCommunity = asyncHandler(async (req: AuthRequest, res: Respon
     logo: logoUrl || req.body.logo,
     titleAr: req.body.titleAr || req.body.title,
     descriptionAr: req.body.descriptionAr || req.body.description,
-    trackId: normalizeOptionalTrackId(req.body.trackId),
     createdBy: userId,
     members: [], // Start with no members
     memberCount: 0,
   };
 
   delete (communityData as any).coverImage;
+  const resolvedTrackId = resolveTrackIdFromBody(req.body as Record<string, any>);
+  delete communityData.trackId;
+  if (resolvedTrackId !== undefined) {
+    communityData.trackId = resolvedTrackId;
+  }
 
   await attachCommunityImages(req, communityData);
 
@@ -276,7 +291,7 @@ export const getAllCommunities = asyncHandler(async (req: Request, res: Response
 
   const communities = await Community.find(query)
     .populate('createdBy', 'fullName email')
-    .populate('trackId', 'title titleAr')
+    .populate('trackId', 'title titleAr distance difficulty trackType category image city')
     // members array is not populated here to reduce payload; use memberCount instead
     .sort(search ? { score: { $meta: 'textScore' } } : { createdAt: -1 })
     .skip(skip)
@@ -336,7 +351,7 @@ export const getCommunityById = asyncHandler(async (req: Request, res: Response)
 
   const community = await Community.findById(id)
     .populate('createdBy', 'fullName email')
-    .populate('trackId', 'title titleAr')
+    .populate('trackId', 'title titleAr distance difficulty trackType category image city description descriptionAr')
     .populate('members', 'fullName email age gender');
 
   if (!community) {
@@ -379,11 +394,6 @@ export const updateCommunity = asyncHandler(async (req: AuthRequest, res: Respon
     throw new AppError(t(lang, "community.not_found"), 404);
   }
 
-  const existingTrackId = normalizeOptionalTrackId((community as any).trackId);
-  if (!existingTrackId) {
-    (community as any).trackId = undefined;
-  }
-
   // Update fields
   if (req.body.title && !req.body.titleAr && !community.titleAr) {
     req.body.titleAr = req.body.title;
@@ -403,9 +413,9 @@ export const updateCommunity = asyncHandler(async (req: AuthRequest, res: Respon
     req.body.logo = await uploadImageStringToS3(req.body.logo);
   }
 
-  req.body.trackId = normalizeOptionalTrackId(req.body.trackId);
-  if (!req.body.trackId) {
-    delete req.body.trackId;
+  const resolvedTrackId = resolveTrackIdFromBody(req.body as Record<string, any>);
+  if (resolvedTrackId !== undefined) {
+    (req.body as any).trackId = resolvedTrackId;
   }
 
   if (req.body.image) {
@@ -440,6 +450,7 @@ export const updateCommunity = asyncHandler(async (req: AuthRequest, res: Respon
 
   const updatedCommunity = await Community.findById(id)
     .populate('createdBy', 'fullName email')
+    .populate('trackId', 'title titleAr distance difficulty trackType category image city description descriptionAr')
     .populate('members', 'fullName email');
 
   const localizedCommunity = updatedCommunity
