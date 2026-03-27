@@ -33,7 +33,7 @@ import {
 } from '@/validators/event.validator';
 import { joinEventSchema } from '@/validators/event-result.validator';
 import { authenticate } from '@/middleware/auth.middleware';
-import { isAdmin} from '@/middleware/role.middleware';
+import { requireStaffPermission } from '@/middleware/rbac.middleware';
 import { requireParsedMultipartBody, uploadEventImagesIfMultipart } from '@/middleware/upload.middleware';
 
 const router = express.Router();
@@ -45,7 +45,7 @@ router.get('/', authenticate, validate(getEventsQuerySchema), getAllEvents);
 router.get('/:id', authenticate, getEventById);
 router.post('/:eventId/results', authenticate, getEventResults);
 router.get('/:eventId/results',  authenticate, getEventResultsList);
-router.get('/:eventId/results/export', authenticate, isAdmin, exportEventResults);
+router.get('/:eventId/results/export', authenticate, requireStaffPermission('manage_events'), exportEventResults);
 router.post('/:eventId/joinEvent', authenticate, validateParams(joinEventSchema), joinEvent);
 router.post('/:eventId/cancel', authenticate, cancelRegistration);
 router.post('/:eventId/add-to-calendar', authenticate, addToCalendar);
@@ -53,17 +53,24 @@ router.get('/:eventId/member-status', authenticate, getMemberEventStatus);
 router.post(
   '/:eventId/gallery',
   authenticate,
-  isAdmin,
+  requireStaffPermission('manage_events'),
   uploadEventImagesIfMultipart,
   requireParsedMultipartBody,
   addEventGalleryImages
 );
-router.delete('/:eventId/gallery', authenticate, uploadEventImagesIfMultipart, requireParsedMultipartBody, deleteGalleryImage);
-router.patch('/:eventId/participants/check-in-all', authenticate, isAdmin, checkInAllRegisteredParticipants);
-router.patch('/:eventId/participants/no-show-all', authenticate, isAdmin, markAllParticipantsNoShow);
-router.patch('/:eventId/participants/:userId/check-in', authenticate, isAdmin, markParticipantCheckedIn);
-router.patch('/:eventId/participants/:userId/no-show', authenticate, isAdmin, markParticipantNoShow);
-router.delete('/:eventId/participants/:userId', authenticate, isAdmin, removeEventParticipant);
+router.delete(
+  '/:eventId/gallery',
+  authenticate,
+  requireStaffPermission('manage_events'),
+  uploadEventImagesIfMultipart,
+  requireParsedMultipartBody,
+  deleteGalleryImage
+);
+router.patch('/:eventId/participants/check-in-all', authenticate, requireStaffPermission('manage_events'), checkInAllRegisteredParticipants);
+router.patch('/:eventId/participants/no-show-all', authenticate, requireStaffPermission('manage_events'), markAllParticipantsNoShow);
+router.patch('/:eventId/participants/:userId/check-in', authenticate, requireStaffPermission('manage_events'), markParticipantCheckedIn);
+router.patch('/:eventId/participants/:userId/no-show', authenticate, requireStaffPermission('manage_events'), markParticipantNoShow);
+router.delete('/:eventId/participants/:userId', authenticate, requireStaffPermission('manage_events'), removeEventParticipant);
 
 
 // Admin only routes
@@ -71,7 +78,7 @@ router.delete('/:eventId/participants/:userId', authenticate, isAdmin, removeEve
 router.post(
   '/',
   authenticate,
-  isAdmin,
+  requireStaffPermission('manage_events'),
   uploadEventImagesIfMultipart,
   requireParsedMultipartBody,
   validate(createEventSchema),
@@ -81,16 +88,16 @@ router.post(
 router.patch(
   '/:id',
   authenticate,
-  isAdmin,
+  requireStaffPermission('manage_events'),
   uploadEventImagesIfMultipart,
   requireParsedMultipartBody,
   validate(updateEventSchema),
   updateEvent
 );
-router.delete('/:id', authenticate, isAdmin, deleteEvent);
-router.patch('/:eventId/close-registration', authenticate, isAdmin, closeEventRegistration);
-router.patch('/:eventId/reopen-registration', authenticate, isAdmin, reopenEventRegistration);
-router.patch('/:eventId/complete', authenticate, isAdmin, completeEvent);
-router.patch('/:eventId/disable', authenticate, isAdmin, disableEvent);
+router.delete('/:id', authenticate, requireStaffPermission('manage_events'), deleteEvent);
+router.patch('/:eventId/close-registration', authenticate, requireStaffPermission('manage_events'), closeEventRegistration);
+router.patch('/:eventId/reopen-registration', authenticate, requireStaffPermission('manage_events'), reopenEventRegistration);
+router.patch('/:eventId/complete', authenticate, requireStaffPermission('manage_events'), completeEvent);
+router.patch('/:eventId/disable', authenticate, requireStaffPermission('manage_events'), disableEvent);
 
 export default router;

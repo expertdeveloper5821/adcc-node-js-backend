@@ -14,6 +14,7 @@ import userRoutes from './user.route';
 import feedPostRoutes from './feed-post.route';
 import globalSettingRoutes from './global-setting.route';
 import pushNotificationRoutes from './push-notification.route';
+import rbacRoutes from './rbac.route';
 
 const router = Router();
 
@@ -33,7 +34,7 @@ router.use('/user', userRoutes);
 router.use('/feed-posts', feedPostRoutes);
 router.use('/settings', globalSettingRoutes);
 router.use('/push-notifications', pushNotificationRoutes);
-
+router.use('/rbac', rbacRoutes);
 
 // Add more routes here as you create them
 // router.use('/users', userRoutes);

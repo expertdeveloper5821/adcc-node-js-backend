@@ -1,6 +1,7 @@
 import express from 'express';
 import { authenticate } from '@/middleware/auth.middleware';
-import { isAdmin, authenticatedOnly } from '@/middleware/role.middleware';
+import { authenticatedOnly } from '@/middleware/role.middleware';
+import { requireStaffPermission } from '@/middleware/rbac.middleware';
 import { validate } from '@/middleware/validate.middleware';
 import { registerFcmToken, unregisterFcmToken, updateUserVerified } from '@/controllers/user.controller';
 import { getAllUsers, getUserById, deleteUser } from '@/controllers/user.controller';
@@ -12,13 +13,13 @@ import {
 
 const router = express.Router();
 
-router.get('/', authenticate, isAdmin, getAllUsers);
+router.get('/', authenticate, requireStaffPermission('manage_users'), getAllUsers);
 router.get('/:userId', authenticate, getUserById);
-router.delete('/:userId', authenticate, isAdmin, deleteUser);
+router.delete('/:userId', authenticate, requireStaffPermission('manage_users'), deleteUser);
 router.patch(
   '/:userId/verified',
   authenticate,
-  isAdmin,
+  requireStaffPermission('manage_users'),
   validate(updateUserVerifiedSchema),
   updateUserVerified
 );

@@ -1,17 +1,17 @@
 import { Response, NextFunction } from 'express';
 import { AuthRequest } from './auth.middleware';
 import User from '@/models/user.model';
+import { userHasAnyPermission } from '@/services/rbac.service';
 
 /**
- * Middleware to check if user is admin
+ * Middleware for legacy “admin panel” access: legacy `Admin` users without an RBAC role,
+ * or users with the `admin.panel` permission on their assigned role.
  */
 export const isAdmin = async (
   req: AuthRequest,
   res: Response,
   next: NextFunction
 ): Promise<void> => {
-
-  // Guests cannot be admins
   if (req.user?.isGuest) {
     res.status(403).json({
       success: false,
@@ -19,7 +19,7 @@ export const isAdmin = async (
     });
     return;
   }
-  
+
   try {
     const userId = req.user?.id;
 
@@ -31,8 +31,7 @@ export const isAdmin = async (
       return;
     }
 
-    // Get user from database to check role
-    const user = await User.findById(userId);
+    const user = await User.findById(userId).select('role roleId');
 
     if (!user) {
       res.status(404).json({
@@ -42,19 +41,25 @@ export const isAdmin = async (
       return;
     }
 
-    if (user.role !== 'Admin') {
-      res.status(403).json({
-        success: false,
-        message: 'Access denied. Admin privileges required.',
-      });
+    if (!user.roleId && user.role === 'Admin') {
+      next();
       return;
     }
 
-    next();
-  } catch (error: any) {
+    if (user.roleId && (await userHasAnyPermission(userId, ['admin.panel']))) {
+      next();
+      return;
+    }
+
+    res.status(403).json({
+      success: false,
+      message: 'Access denied. Admin privileges required.',
+    });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Error checking admin status';
     res.status(500).json({
       success: false,
-      message: error.message || 'Error checking admin status',
+      message,
     });
   }
 };
