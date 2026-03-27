@@ -192,25 +192,36 @@ export const createTrack = asyncHandler(async (req: AuthRequest, res: Response) 
             $or: [
               { trackId: { $in: trackIds } },
               { trackId: { $in: trackIdStrings } },
-              { trackId: { $elemMatch: { $in: trackIds } } },
-              { trackId: { $elemMatch: { $in: trackIdStrings } } },
+              { trackIds: { $in: trackIds } },
+              { trackIds: { $in: trackIdStrings } },
             ],
           },
         },
         {
           $project: {
-            trackIdStr: {
-              $toString: {
-                $cond: [
-                  { $isArray: '$trackId' },
-                  { $arrayElemAt: ['$trackId', 0] },
-                  '$trackId',
-                ],
-              },
+            mergedRefs: {
+              $concatArrays: [
+                {
+                  $cond: [
+                    { $isArray: '$trackId' },
+                    { $ifNull: ['$trackId', []] },
+                    { $cond: [{ $ifNull: ['$trackId', false] }, ['$trackId'], []] },
+                  ],
+                },
+                { $ifNull: ['$trackIds', []] },
+              ],
             },
           },
         },
-        { $group: { _id: '$trackIdStr', count: { $sum: 1 } } },
+        { $unwind: '$mergedRefs' },
+        {
+          $match: {
+            mergedRefs: {
+              $in: [...trackIds, ...trackIdStrings],
+            },
+          },
+        },
+        { $group: { _id: { $toString: '$mergedRefs' }, count: { $sum: 1 } } },
       ]),
     ]);
 

@@ -1,12 +1,17 @@
 import { z } from 'zod';
 import mongoose from 'mongoose';
 
-export const objectIdSchema = z.string().refine(
-  (val) => mongoose.Types.ObjectId.isValid(val),
-  { message: 'Invalid MongoDB ObjectId' }
-);
-
 const firstValue = (val: unknown) => (Array.isArray(val) ? val[0] : val);
+
+/** Form-data often repeats the same key (`trackId` × N); parsers give a string[] — do not take only [0]. */
+const arrayOrScalar = (val: unknown) => (Array.isArray(val) ? val : firstValue(val));
+
+/** Validates hex string and stores as MongoDB ObjectId. */
+const mongoObjectIdSchema = z
+  .string()
+  .trim()
+  .refine((val) => mongoose.Types.ObjectId.isValid(val), { message: 'Invalid MongoDB ObjectId' })
+  .transform((val) => new mongoose.Types.ObjectId(val));
 
 const arrayFromStringOrJson = (val: unknown) => {
   const raw = firstValue(val);
@@ -37,21 +42,49 @@ const numberFromString = z.preprocess(firstValue, z.coerce.number());
 const numberFromStringMin = (min: number, message: string) =>
   z.preprocess(firstValue, z.coerce.number().min(min, message));
 
-const optionalObjectIdSchema = z.preprocess(
-  (val) => {
-    const value = firstValue(val);
-    if (value === null || value === undefined) return undefined;
-    if (typeof value === 'string') {
-      const normalized = value.trim().toLowerCase();
-      if (!normalized || normalized === 'null' || normalized === 'undefined') {
-        return undefined;
+const trackIdArrayFromInput = z.preprocess((val) => {
+  const raw = arrayOrScalar(val);
+  if (raw === undefined || raw === null) return undefined;
+  let arr: unknown[];
+  if (Array.isArray(raw)) {
+    arr = raw;
+  } else if (typeof raw === 'string') {
+    const trimmed = raw.trim();
+    if (!trimmed) return undefined;
+    if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        arr = Array.isArray(parsed) ? parsed : [parsed];
+      } catch {
+        return [trimmed];
       }
-      return value;
+    } else {
+      arr = [trimmed];
     }
-    return value;
-  },
-  objectIdSchema.optional()
-);
+  } else {
+    arr = [raw];
+  }
+  const ids = arr
+    .map((x) => {
+      if (x instanceof mongoose.Types.ObjectId) return x.toString();
+      if (typeof x === 'string') return x.trim();
+      return '';
+    })
+    .filter((s) => s && mongoose.Types.ObjectId.isValid(s));
+  return ids;
+}, z.array(mongoObjectIdSchema).optional().transform((arr) => {
+  if (!arr?.length) return arr;
+  const seen = new Set<string>();
+  const out: mongoose.Types.ObjectId[] = [];
+  for (const id of arr) {
+    const s = id.toString();
+    if (!seen.has(s)) {
+      seen.add(s);
+      out.push(id);
+    }
+  }
+  return out;
+}));
 
 // Only accept URL strings (files should be uploaded via multipart to S3)
 const imageStringSchema = z.string().url('Each image must be a valid URL.');
@@ -92,7 +125,8 @@ export const createCommunitySchema = z
     manager: z.preprocess(firstValue, z.string()).optional(),
     area: z.preprocess(firstValue, z.string()).optional(),
     city: z.preprocess(firstValue, z.string()).optional(),
-    trackId: optionalObjectIdSchema,
+    /** Primary track refs (array of ObjectIds). */
+    trackId: trackIdArrayFromInput,
   })
   .strict();
 
@@ -132,7 +166,7 @@ export const updateCommunitySchema = z
     manager: z.preprocess(firstValue, z.string()).optional(),
     area: z.preprocess(firstValue, z.string()).optional(),
     city: z.preprocess(firstValue, z.string()).optional(),
-    trackId: optionalObjectIdSchema,
+    trackId: trackIdArrayFromInput,
   })
   .strict();
 

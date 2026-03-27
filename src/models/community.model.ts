@@ -34,7 +34,8 @@ export interface ICommunity extends Document {
   allowPosts: boolean;
   allowGallery: boolean;
   foundedYear: number;
-  trackId?: mongoose.Types.ObjectId;
+  /** Primary cycling tracks (array of refs). */
+  trackId?: mongoose.Types.ObjectId[];
   createdBy: mongoose.Types.ObjectId;
   manager?: string;
 }
@@ -131,10 +132,6 @@ const CommunitySchema = new Schema(
       default: 0,
       min: [0, 'Member count cannot be negative'],
     },
-    tackId: {
-      type: String,
-      trim: true,
-    },
     manager: {
       type: String,
       trim: true,
@@ -152,18 +149,9 @@ const CommunitySchema = new Schema(
       default: true,
     },
     trackId: {
-      type: Schema.Types.ObjectId,
+      type: [Schema.Types.ObjectId],
       ref: 'track',
-      set: (value: unknown) => {
-        if (value === null || value === undefined) return undefined;
-        if (typeof value === 'string') {
-          const normalized = value.trim().toLowerCase();
-          if (!normalized || normalized === 'null' || normalized === 'undefined') {
-            return undefined;
-          }
-        }
-        return value;
-      },
+      default: [],
     },
     isPublic: {
       type: Boolean,
@@ -208,10 +196,16 @@ CommunitySchema.index({ isActive: 1 });
 CommunitySchema.index({ isPublic: 1 });
 CommunitySchema.index({ isFeatured: 1 });
 CommunitySchema.index({ title: 'text', description: 'text', trackName: 'text', terrain: 'text' });
+CommunitySchema.index({ trackId: 1 });
 
-// Update memberCount when members array changes
+// Update memberCount when members array changes; coerce legacy single ObjectId to array
 CommunitySchema.pre('save', async function () {
   this.memberCount = this.members.length;
+  const doc = this as mongoose.Document & ICommunity;
+  const tid = doc.trackId as unknown;
+  if (tid != null && !Array.isArray(tid)) {
+    doc.trackId = [tid as mongoose.Types.ObjectId];
+  }
 });
 
 export default mongoose.model<ICommunity>('communities', CommunitySchema);
