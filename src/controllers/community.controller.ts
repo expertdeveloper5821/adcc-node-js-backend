@@ -27,18 +27,6 @@ const localizeCommunity = (community: Record<string, any>, lang: SupportedLangua
   return localized;
 };
 
-const uniqueStrings = (values: string[]) => {
-  const seen = new Set<string>();
-  const result: string[] = [];
-  for (const value of values) {
-    if (!seen.has(value)) {
-      seen.add(value);
-      result.push(value);
-    }
-  }
-  return result;
-};
-
 const uniqueObjectIds = (ids: mongoose.Types.ObjectId[]) => {
   const seen = new Set<string>();
   const out: mongoose.Types.ObjectId[] = [];
@@ -51,6 +39,18 @@ const uniqueObjectIds = (ids: mongoose.Types.ObjectId[]) => {
     }
   }
   return out;
+};
+
+const uniqueStrings = (values: string[]) => {
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const value of values) {
+    if (!seen.has(value)) {
+      seen.add(value);
+      result.push(value);
+    }
+  }
+  return result;
 };
 
 /** Normalizes validated `trackId` from body (array of ObjectIds). */
