@@ -182,6 +182,36 @@ export const setRolePermissions = asyncHandler(async (req: AuthRequest, res: Res
   sendSuccess(res, populated, 'Role permissions updated');
 });
 
+/**
+ * Remove one permission from a role (does not delete the Permission document).
+ * DELETE /rbac/roles/:roleId/permissions/:permissionId
+ */
+export const removePermissionFromRole = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const roleId = getRouteParam(req.params.roleId);
+  const permissionId = getRouteParam(req.params.permissionId);
+
+  const perm = await Permission.findById(permissionId);
+  if (!perm) {
+    throw new AppError('Permission not found', 404);
+  }
+
+  const role = await Role.findById(roleId);
+  if (!role) {
+    throw new AppError('Role not found', 404);
+  }
+
+  const pid = toId(permissionId);
+  const had = role.permissions.some((id) => id.equals(pid));
+  if (!had) {
+    throw new AppError('This permission is not assigned to the role', 404);
+  }
+
+  await Role.updateOne({ _id: role._id }, { $pull: { permissions: pid } });
+
+  const populated = await Role.findById(role._id).populate('permissions').lean();
+  sendSuccess(res, populated, 'Permission removed from role');
+});
+
 export const getPermissionMatrix = asyncHandler(async (_req: AuthRequest, res: Response) => {
   const [permissions, roles] = await Promise.all([
     Permission.find().sort({ sortOrder: 1, name: 1 }).lean(),

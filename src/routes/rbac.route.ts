@@ -17,6 +17,7 @@ import {
   listRoles,
   seedRbacDefaults,
   setRolePermissions,
+  removePermissionFromRole,
   updatePermission,
   updateRole,
 } from '@/controllers/rbac.controller';
@@ -26,6 +27,7 @@ import {
   createRoleSchema,
   permissionIdParamsSchema,
   roleIdParamsSchema,
+  rolePermissionParamsSchema,
   setRolePermissionsSchema,
   updatePermissionSchema,
   updateRoleSchema,
@@ -89,6 +91,13 @@ router.put(
   parseMultipartFields,
   validate(setRolePermissionsSchema),
   setRolePermissions
+);
+
+router.delete(
+  '/roles/:roleId/permissions/:permissionId',
+  ...rbacManage,
+  validateParams(rolePermissionParamsSchema),
+  removePermissionFromRole
 );
 
 router.patch(
