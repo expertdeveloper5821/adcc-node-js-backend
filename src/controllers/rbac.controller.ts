@@ -183,6 +183,31 @@ export const setRolePermissions = asyncHandler(async (req: AuthRequest, res: Res
 });
 
 /**
+ * Add one permission to a role (idempotent if already present).
+ * POST /rbac/roles/:roleId/permissions/:permissionId
+ */
+export const addPermissionToRole = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const roleId = getRouteParam(req.params.roleId);
+  const permissionId = getRouteParam(req.params.permissionId);
+
+  const perm = await Permission.findById(permissionId);
+  if (!perm) {
+    throw new AppError('Permission not found', 404);
+  }
+
+  const role = await Role.findById(roleId);
+  if (!role) {
+    throw new AppError('Role not found', 404);
+  }
+
+  const pid = toId(permissionId);
+  await Role.updateOne({ _id: role._id }, { $addToSet: { permissions: pid } });
+
+  const populated = await Role.findById(role._id).populate('permissions').lean();
+  sendSuccess(res, populated, 'Permission added to role');
+});
+
+/**
  * Remove one permission from a role (does not delete the Permission document).
  * DELETE /rbac/roles/:roleId/permissions/:permissionId
  */
