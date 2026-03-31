@@ -2,6 +2,28 @@ import { z } from 'zod';
 
 const objectIdString = z.string().regex(/^[a-fA-F0-9]{24}$/, 'Invalid id');
 
+/** Form-data sends one string, repeated keys, or a JSON array string */
+const parsePermissionIdsInput = (val: unknown): unknown => {
+  if (val === undefined || val === null) return [];
+  if (Array.isArray(val)) return val;
+  if (typeof val === 'string') {
+    const t = val.trim();
+    if (!t) return [];
+    if (t.startsWith('[')) {
+      try {
+        const parsed = JSON.parse(t) as unknown;
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return [];
+      }
+    }
+    return t.split(',').map((s) => s.trim()).filter(Boolean);
+  }
+  return [];
+};
+
+const permissionIdArray = z.array(objectIdString);
+
 export const createPermissionSchema = z.object({
   key: z
     .string()
@@ -33,7 +55,7 @@ export const createRoleSchema = z.object({
     .max(80)
     .regex(/^[a-z0-9][a-z0-9_-]*$/, 'Use lowercase letters, numbers, underscores, hyphens'),
   description: z.string().max(500).optional(),
-  permissionIds: z.array(objectIdString).optional().default([]),
+  permissionIds: z.preprocess(parsePermissionIdsInput, permissionIdArray.optional().default([])),
 });
 
 export const updateRoleSchema = z.object({
@@ -46,11 +68,21 @@ export const roleIdParamsSchema = z.object({
 });
 
 export const setRolePermissionsSchema = z.object({
-  permissionIds: z.array(objectIdString),
+  permissionIds: z.preprocess(parsePermissionIdsInput, permissionIdArray),
 });
 
+const parseNullableRoleId = (val: unknown): unknown => {
+  if (val === undefined || val === null) return null;
+  if (typeof val === 'string') {
+    const t = val.trim();
+    if (t === '' || t.toLowerCase() === 'null') return null;
+    return t;
+  }
+  return val;
+};
+
 export const assignUserRoleSchema = z.object({
-  roleId: objectIdString.nullable(),
+  roleId: z.preprocess(parseNullableRoleId, z.union([objectIdString, z.null()])),
 });
 
 export const userIdParamsSchema = z.object({

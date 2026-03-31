@@ -1,4 +1,5 @@
-import { Router } from 'express';
+import { NextFunction, Request, Response, Router } from 'express';
+import multer from 'multer';
 import { authenticate } from '@/middleware/auth.middleware';
 import { authenticatedOnly } from '@/middleware/role.middleware';
 import { requireStaffPermission } from '@/middleware/rbac.middleware';
@@ -32,6 +33,19 @@ import {
 } from '@/validators/rbac.validator';
 
 const router = Router();
+const upload = multer();
+
+/**
+ * Parses multipart/form-data into `req.body`. Skips JSON/urlencoded so `express.json()` output is kept.
+ */
+const parseMultipartFields = (req: Request, res: Response, next: NextFunction): void => {
+  const ct = (req.headers['content-type'] || '').toLowerCase();
+  if (ct.includes('multipart/form-data')) {
+    upload.none()(req, res, next);
+    return;
+  }
+  next();
+};
 
 const rbacManage = [authenticate, requireStaffPermission('admin.manage_roles')];
 
@@ -40,11 +54,12 @@ router.get('/me/permissions', authenticate, authenticatedOnly, getMyPermissions)
 router.get('/matrix', ...rbacManage, getPermissionMatrix);
 
 router.get('/permissions', ...rbacManage, listPermissions);
-router.post('/permissions', ...rbacManage, validate(createPermissionSchema), createPermission);
+router.post('/permissions', ...rbacManage, parseMultipartFields, validate(createPermissionSchema), createPermission);
 router.patch(
   '/permissions/:permissionId',
   ...rbacManage,
   validateParams(permissionIdParamsSchema),
+  parseMultipartFields,
   validate(updatePermissionSchema),
   updatePermission
 );
@@ -56,12 +71,13 @@ router.delete(
 );
 
 router.get('/roles', ...rbacManage, listRoles);
-router.post('/roles', ...rbacManage, validate(createRoleSchema), createRole);
+router.post('/roles', ...rbacManage, parseMultipartFields, validate(createRoleSchema), createRole);
 router.get('/roles/:roleId', ...rbacManage, validateParams(roleIdParamsSchema), getRoleById);
 router.patch(
   '/roles/:roleId',
   ...rbacManage,
   validateParams(roleIdParamsSchema),
+  parseMultipartFields,
   validate(updateRoleSchema),
   updateRole
 );
@@ -70,6 +86,7 @@ router.put(
   '/roles/:roleId/permissions',
   ...rbacManage,
   validateParams(roleIdParamsSchema),
+  parseMultipartFields,
   validate(setRolePermissionsSchema),
   setRolePermissions
 );
@@ -78,6 +95,7 @@ router.patch(
   '/users/:userId/role',
   ...rbacManage,
   validateParams(userIdParamsSchema),
+  parseMultipartFields,
   validate(assignUserRoleSchema),
   assignUserRole
 );
