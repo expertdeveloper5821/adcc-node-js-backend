@@ -67,6 +67,12 @@ export const roleIdParamsSchema = z.object({
   roleId: objectIdString,
 });
 
+/** Path: /roles/:roleId/permissions/:permissionId */
+export const rolePermissionParamsSchema = z.object({
+  roleId: objectIdString,
+  permissionId: objectIdString,
+});
+
 export const setRolePermissionsSchema = z.object({
   permissionIds: z.preprocess(parsePermissionIdsInput, permissionIdArray),
 });
