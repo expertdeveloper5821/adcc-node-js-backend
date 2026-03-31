@@ -1,7 +1,8 @@
 import express from 'express';
 import multer from 'multer';
 import { authenticate } from '@/middleware/auth.middleware';
-import { isAdmin, authenticatedOnly } from '@/middleware/role.middleware';
+import { authenticatedOnly } from '@/middleware/role.middleware';
+import { requireStaffPermission } from '@/middleware/rbac.middleware';
 import { validate } from '@/middleware/validate.middleware';
 import {
   registerWebPushTokenSchema,
@@ -58,7 +59,7 @@ router.post(
 router.post(
   '/web/send-to-staff',
   authenticate,
-  isAdmin,
+  requireStaffPermission('app_configuration'),
   upload.none(),
   validate(sendStaffWebPushSchema),
   sendWebPushToStaff

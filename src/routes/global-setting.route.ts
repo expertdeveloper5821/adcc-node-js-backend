@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { authenticate } from '@/middleware/auth.middleware';
-import { isAdmin } from '@/middleware/role.middleware';
+import { requireStaffPermission } from '@/middleware/rbac.middleware';
 import { validate, validateParams } from '@/middleware/validate.middleware';
 import { uploadSettingsBulkImages, uploadSettingsImages } from '@/middleware/upload.middleware';
 import {
@@ -34,7 +34,7 @@ router.get('/content/list', validate(listContentSettingsQuerySchema), listConten
 router.post(
   '/content',
   authenticate,
-  isAdmin,
+  requireStaffPermission('app_configuration'),
   uploadSettingsImages,
   validate(createContentSettingSchema),
   createContentSetting
@@ -43,7 +43,7 @@ router.post(
 router.patch(
   '/content/:key',
   authenticate,
-  isAdmin,
+  requireStaffPermission('app_configuration'),
   uploadSettingsImages,
   validateParams(globalSettingKeySchema),
   validate(updateContentSettingSchema),
@@ -53,7 +53,7 @@ router.patch(
 router.delete(
   '/content/:key',
   authenticate,
-  isAdmin,
+  requireStaffPermission('app_configuration'),
   validateParams(globalSettingKeySchema),
   deleteContentSetting
 );
@@ -64,7 +64,7 @@ router.get('/:key', validateParams(globalSettingKeySchema), getGlobalSettingByKe
 router.post(
   '/',
   authenticate,
-  isAdmin,
+  requireStaffPermission('app_configuration'),
   uploadSettingsImages,
   validate(createGlobalSettingSchema),
   createGlobalSetting
@@ -73,7 +73,7 @@ router.post(
 router.post(
   '/bulk',
   authenticate,
-  isAdmin,
+  requireStaffPermission('app_configuration'),
   uploadSettingsBulkImages,
   validate(bulkGlobalSettingsSchema),
   bulkUpsertGlobalSettings
@@ -82,7 +82,7 @@ router.post(
 router.put(
   '/:key',
   authenticate,
-  isAdmin,
+  requireStaffPermission('app_configuration'),
   uploadSettingsImages,
   validateParams(globalSettingKeySchema),
   validate(updateGlobalSettingSchema),
@@ -92,7 +92,7 @@ router.put(
 router.patch(
   '/:key',
   authenticate,
-  isAdmin,
+  requireStaffPermission('app_configuration'),
   uploadSettingsImages,
   validateParams(globalSettingKeySchema),
   validate(updateGlobalSettingSchema),
@@ -102,7 +102,7 @@ router.patch(
 router.delete(
   '/:key',
   authenticate,
-  isAdmin,
+  requireStaffPermission('app_configuration'),
   validateParams(globalSettingKeySchema),
   deleteGlobalSetting
 );

@@ -1,4 +1,4 @@
-import mongoose, { Schema, Document } from 'mongoose';
+import mongoose, { Schema, Document, Types } from 'mongoose';
 
 export interface IRefreshToken {
   token: string;
@@ -26,6 +26,8 @@ export interface IUser extends Document {
   country?: string;
   provider?: string;
   role: 'Admin' | 'Vendor' | 'Member' | 'Guest';
+  /** Optional RBAC role; when set, authorization uses RBAC permissions. Legacy `role` remains for app/JWT. */
+  roleId?: Types.ObjectId;
   isVerified: boolean;
   banFeedPost: boolean;
   refreshTokens: IRefreshToken[];
@@ -135,6 +137,12 @@ const UserSchema = new Schema(
       type: String,
       enum: ['Admin', 'Vendor', 'Member'],
       default: 'Member',
+    },
+    roleId: {
+      type: Schema.Types.ObjectId,
+      ref: 'Role',
+      sparse: true,
+      index: true,
     },
     isVerified: {
       type: Boolean,
