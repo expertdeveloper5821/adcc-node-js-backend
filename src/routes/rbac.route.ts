@@ -17,6 +17,7 @@ import {
   listRoles,
   seedRbacDefaults,
   setRolePermissions,
+  addPermissionToRole,
   removePermissionFromRole,
   updatePermission,
   updateRole,
@@ -91,6 +92,13 @@ router.put(
   parseMultipartFields,
   validate(setRolePermissionsSchema),
   setRolePermissions
+);
+
+router.post(
+  '/roles/:roleId/permissions/:permissionId',
+  ...rbacManage,
+  validateParams(rolePermissionParamsSchema),
+  addPermissionToRole
 );
 
 router.delete(
