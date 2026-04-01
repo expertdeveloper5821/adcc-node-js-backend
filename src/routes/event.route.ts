@@ -2,6 +2,7 @@ import express from 'express';
 import {
   createEvent,
   getAllEvents,
+  getCompletedEventStats,
   getEventById,
   updateEvent,
   deleteEvent,
@@ -42,6 +43,12 @@ const router = express.Router();
 // Public routes – guest-accessible (no auth required)
 
 router.get('/', authenticate, validate(getEventsQuerySchema), getAllEvents);
+router.get(
+  '/completed-stats',
+  authenticate,
+  requireStaffPermission('manage_events'),
+  getCompletedEventStats
+);
 router.get('/:id', authenticate, getEventById);
 router.post('/:eventId/results', authenticate, getEventResults);
 router.get('/:eventId/results',  authenticate, getEventResultsList);
