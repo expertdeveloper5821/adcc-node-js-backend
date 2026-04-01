@@ -13,7 +13,7 @@ import {
   getCommunityPostsQuerySchema,
 } from '@/validators/community-post.validator';
 import { authenticate } from '@/middleware/auth.middleware';
-import { isAdmin } from '@/middleware/role.middleware';
+import { requireStaffPermission } from '@/middleware/rbac.middleware';
 import {
   uploadCommunityPostImageIfMultipart,
   requireParsedMultipartBody,
@@ -27,7 +27,7 @@ router.get('/:id', authenticate, getCommunityPostById);
 router.post(
   '/',
   authenticate,
-  isAdmin,
+  requireStaffPermission('manage_communities'),
   uploadCommunityPostImageIfMultipart,
   requireParsedMultipartBody,
   validate(createCommunityPostSchema),
@@ -37,12 +37,12 @@ router.post(
 router.patch(
   '/:id',
   authenticate,
-  isAdmin,
+  requireStaffPermission('manage_communities'),
   uploadCommunityPostImageIfMultipart,
   validate(updateCommunityPostSchema),
   updateCommunityPost
 );
 
-router.delete('/:id', authenticate, isAdmin, deleteCommunityPost);
+router.delete('/:id', authenticate, requireStaffPermission('manage_communities'), deleteCommunityPost);
 
 export default router;

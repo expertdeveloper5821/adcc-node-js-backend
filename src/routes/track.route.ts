@@ -1,7 +1,7 @@
 import express from 'express';
 import { validate } from '@/middleware/validate.middleware';
 import { authenticate } from '@/middleware/auth.middleware';
-import { isAdmin } from '@/middleware/role.middleware';
+import { requireStaffPermission } from '@/middleware/rbac.middleware';
 import { requireMultipartFormData, uploadTrackImages, requireParsedMultipartBody } from '@/middleware/upload.middleware';
 
 import {  
@@ -54,19 +54,19 @@ router.get('/:trackId/communities/results', authenticate, trackCommunityResults)
 router.post(
   '/',
   authenticate,
-  isAdmin,
+  requireStaffPermission('manage_events'),
   uploadTrackImages,
   requireParsedMultipartBody,
   normalizeTrackFormData,
   validate(createTrackSchema),
   createTrack
 );
-router.patch('/:trackId', authenticate, isAdmin, uploadTrackImages, normalizeTrackFormData, validate(updateTrackSchema) , updateTrack);
-router.delete('/:trackId', authenticate, isAdmin, deleteTrack);
+router.patch('/:trackId', authenticate, requireStaffPermission('manage_events'), uploadTrackImages, normalizeTrackFormData, validate(updateTrackSchema) , updateTrack);
+router.delete('/:trackId', authenticate, requireStaffPermission('manage_events'), deleteTrack);
 router.post(
   '/:trackId/gallery',
   authenticate,
-  isAdmin,
+  requireStaffPermission('manage_events'),
   requireMultipartFormData,
   uploadTrackImages,
   requireParsedMultipartBody,
@@ -75,12 +75,28 @@ router.post(
 router.delete(
   '/:trackId/gallery',
   authenticate,
+  requireStaffPermission('manage_events'),
   uploadTrackImages,
   requireParsedMultipartBody,
   deleteGalleryImage
 );
-router.patch('/:trackId/archive', authenticate, archiveTrack);
-router.patch('/:trackId/disable', authenticate, disableTrack);
-router.patch('/:trackId/enable', authenticate, enableTrack);
+router.patch(
+  '/:trackId/archive',
+  authenticate,
+  requireStaffPermission('manage_events'),
+  archiveTrack
+);
+router.patch(
+  '/:trackId/disable',
+  authenticate,
+  requireStaffPermission('manage_events'),
+  disableTrack
+);
+router.patch(
+  '/:trackId/enable',
+  authenticate,
+  requireStaffPermission('manage_events'),
+  enableTrack
+);
 
 export default router;

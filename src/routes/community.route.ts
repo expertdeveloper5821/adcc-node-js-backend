@@ -25,7 +25,7 @@ import {
   removeGalleryImagesSchema,
 } from '@/validators/community.validator';
 import { authenticate } from '@/middleware/auth.middleware';
-import { isAdmin } from '@/middleware/role.middleware';
+import { requireStaffPermission } from '@/middleware/rbac.middleware';
 import { requireMultipartFormData, uploadCommunityImages, requireParsedMultipartBody, uploadCommunityGalleryImages } from '@/middleware/upload.middleware';
 
 const router = express.Router();
@@ -51,19 +51,19 @@ router.post('/:id/isMemberOfCommunity', authenticate, isMemberOfCommunity);
 router.post(
   '/',
   authenticate,
-  isAdmin,
+  requireStaffPermission('manage_communities'),
   uploadCommunityImages,
   requireParsedMultipartBody,
   validate(createCommunitySchema),
   createCommunity
 );
-router.patch('/:id', authenticate, isAdmin, uploadCommunityImages, validate(updateCommunitySchema), updateCommunity);
-router.delete('/:id', authenticate, isAdmin, deleteCommunity);
-router.post('/:id/gallery', authenticate, isAdmin, requireMultipartFormData, uploadCommunityGalleryImages, addGalleryImages);
+router.patch('/:id', authenticate, requireStaffPermission('manage_communities'), uploadCommunityImages, validate(updateCommunitySchema), updateCommunity);
+router.delete('/:id', authenticate, requireStaffPermission('manage_communities'), deleteCommunity);
+router.post('/:id/gallery', authenticate, requireStaffPermission('manage_communities'), requireMultipartFormData, uploadCommunityGalleryImages, addGalleryImages);
 router.delete(
   '/:id/gallery',
   authenticate,
-  isAdmin,
+  requireStaffPermission('manage_communities'),
   uploadCommunityGalleryImages,
   requireParsedMultipartBody,
   validate(removeGalleryImagesSchema),
@@ -71,7 +71,7 @@ router.delete(
 );
 
 // admin controls for featuring
-router.patch('/:id/feature', authenticate, isAdmin, validate(featureCommunitySchema), featureCommunity);
+router.patch('/:id/feature', authenticate, requireStaffPermission('manage_communities'), validate(featureCommunitySchema), featureCommunity);
 // router.patch('/:id/members/:userId/role', authenticate, updateMemberRole);
 // router.patch('/:id/members/:userId/ban', authenticate, banMember);
 
