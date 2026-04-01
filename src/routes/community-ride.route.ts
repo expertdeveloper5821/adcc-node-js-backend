@@ -14,7 +14,7 @@ import {
   getCommunityRidesQuerySchema,
 } from '@/validators/community-ride.validator';
 import { authenticate } from '@/middleware/auth.middleware';
-import { isAdmin } from '@/middleware/role.middleware';
+import { requireStaffPermission } from '@/middleware/rbac.middleware';
 
 const router = express.Router();
 
@@ -26,18 +26,18 @@ router.get('/:id', getCommunityRideById);
 router.post(
   '/',
   authenticate,
-  isAdmin,
+  requireStaffPermission('manage_communities'),
   validate(createCommunityRideSchema),
   createCommunityRide
 );
 router.patch(
   '/:id',
   authenticate,
-  isAdmin,
+  requireStaffPermission('manage_communities'),
   validate(updateCommunityRideSchema),
   updateCommunityRide
 );
-router.delete('/:id', authenticate, isAdmin, deleteCommunityRide);
+router.delete('/:id', authenticate, requireStaffPermission('manage_communities'), deleteCommunityRide);
 router.get('/:id/member-status', authenticate, communityMemberStatus);
 
 export default router;

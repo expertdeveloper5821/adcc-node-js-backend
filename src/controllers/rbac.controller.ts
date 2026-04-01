@@ -270,6 +270,45 @@ export const getPermissionMatrix = asyncHandler(async (_req: AuthRequest, res: R
   );
 });
 
+/**
+ * Current user’s RBAC context: legacy `role` string, assigned RBAC role (if any), effective keys.
+ * GET /rbac/me
+ */
+export const getMyRbacContext = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const userId = req.user?.id;
+  if (!userId || req.user?.isGuest) {
+    throw new AppError('Unauthorized', 401);
+  }
+
+  const user = await User.findById(userId)
+    .select('role roleId')
+    .populate({
+      path: 'roleId',
+      populate: { path: 'permissions' },
+    })
+    .lean();
+
+  if (!user) {
+    throw new AppError('User not found', 404);
+  }
+
+  const permissionKeys = [...(await getEffectivePermissionKeys(userId))].sort();
+
+  const roleDoc = user.roleId;
+  const role =
+    roleDoc && typeof roleDoc === 'object' && '_id' in roleDoc ? roleDoc : null;
+
+  sendSuccess(
+    res,
+    {
+      legacyRole: user.role,
+      role,
+      permissionKeys,
+    },
+    'Current role and permissions retrieved'
+  );
+});
+
 export const getMyPermissions = asyncHandler(async (req: AuthRequest, res: Response) => {
   const userId = req.user?.id;
   if (!userId || req.user?.isGuest) {
