@@ -3,7 +3,12 @@ import { authenticate } from '@/middleware/auth.middleware';
 import { authenticatedOnly } from '@/middleware/role.middleware';
 import { requireStaffPermission } from '@/middleware/rbac.middleware';
 import { validate } from '@/middleware/validate.middleware';
-import { registerFcmToken, unregisterFcmToken, updateUserVerified } from '@/controllers/user.controller';
+import {
+  getUserRegistrationStats,
+  registerFcmToken,
+  unregisterFcmToken,
+  updateUserVerified,
+} from '@/controllers/user.controller';
 import { getAllUsers, getUserById, deleteUser } from '@/controllers/user.controller';
 import {
   registerFcmTokenSchema,
@@ -14,6 +19,12 @@ import {
 const router = express.Router();
 
 router.get('/', authenticate, requireStaffPermission('manage_users'), getAllUsers);
+router.get(
+  '/registration-stats',
+  authenticate,
+  requireStaffPermission('manage_users'),
+  getUserRegistrationStats
+);
 router.get('/:userId', authenticate, getUserById);
 router.delete('/:userId', authenticate, requireStaffPermission('manage_users'), deleteUser);
 router.patch(

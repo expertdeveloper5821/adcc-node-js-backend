@@ -438,6 +438,83 @@ export const getAllEvents = asyncHandler(async (req: Request, res: Response) => 
 });
 
 /**
+ * Get completed event analytics for graphing in frontend.
+ * GET /v1/events/completed-stats?from=2026-01-01&to=2026-04-01&groupBy=day
+ * Staff only.
+ */
+export const getCompletedEventStats = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const lang = ((req as any).lang || 'en') as SupportedLanguage;
+
+  const fromQuery = typeof req.query.from === 'string' ? req.query.from : undefined;
+  const toQuery = typeof req.query.to === 'string' ? req.query.to : undefined;
+  const groupByQuery = typeof req.query.groupBy === 'string' ? req.query.groupBy : 'day';
+
+  const groupBy = groupByQuery === 'month' ? 'month' : 'day';
+  const toDate = toQuery ? new Date(toQuery) : new Date();
+  const fromDate = fromQuery
+    ? new Date(fromQuery)
+    : new Date(toDate.getTime() - 29 * 24 * 60 * 60 * 1000);
+
+  if (Number.isNaN(fromDate.getTime()) || Number.isNaN(toDate.getTime())) {
+    throw new AppError(t(lang, 'common.bad_request'), 400);
+  }
+  if (fromDate > toDate) {
+    throw new AppError(t(lang, 'common.bad_request'), 400);
+  }
+
+  const rangeFilter = {
+    status: 'Completed',
+    updatedAt: {
+      $gte: fromDate,
+      $lte: toDate,
+    },
+  };
+
+  const format = groupBy === 'month' ? '%Y-%m' : '%Y-%m-%d';
+  const series = await Event.aggregate([
+    { $match: rangeFilter },
+    {
+      $group: {
+        _id: {
+          $dateToString: {
+            format,
+            date: '$updatedAt',
+          },
+        },
+        count: { $sum: 1 },
+      },
+    },
+    { $sort: { _id: 1 } },
+  ]);
+
+  const [totalCompletedEvents, rangeCompletedEvents] = await Promise.all([
+    Event.countDocuments({ status: 'Completed' }),
+    Event.countDocuments(rangeFilter),
+  ]);
+
+  sendSuccess(
+    res,
+    {
+      summary: {
+        totalCompletedEvents,
+        rangeCompletedEvents,
+      },
+      range: {
+        from: fromDate.toISOString(),
+        to: toDate.toISOString(),
+        groupBy,
+      },
+      series: series.map((item) => ({
+        label: String(item._id),
+        count: Number(item.count || 0),
+      })),
+    },
+    'Completed event stats retrieved',
+    200
+  );
+});
+
+/**
  * Get event by ID
  * GET /v1/events/:id
  * Public – guest-accessible.
