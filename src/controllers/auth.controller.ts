@@ -992,6 +992,7 @@ export const getMyCompletedEvents = asyncHandler(
 export const updateMyProfile = asyncHandler(
   async (req: AuthRequest, res: Response) => {
     const lang = resolveRequestLanguage(req);
+    
     const userId = req.user?.id;
     if (!userId) {
       throw new AppError(t(lang, 'auth.unauthorized'), 401);
@@ -999,7 +1000,7 @@ export const updateMyProfile = asyncHandler(
     if (req.user?.isGuest) {
       throw new AppError(t(lang, 'guest.access_denied'), 403);
     }
-
+    
     const { fullName, gender, age, dob, country } = req.body;
     const updates: Record<string, unknown> = {};
     if (fullName !== undefined) updates.fullName = fullName;
