@@ -8,6 +8,7 @@ import { t } from '@/utils/i18n';
 import FeedPost from '@/models/feed-post.model';
 import User from '@/models/user.model';
 import { uploadImageBufferToS3 } from '@/services/s3-upload.service';
+import { notifyAdminFeedPostPending } from '@/services/admin-notification.service';
 
 const getLang = (req: Request) => (((req as any).lang || 'en') as string) ?? 'en';
 
@@ -88,6 +89,13 @@ export const createFeedPost = asyncHandler(async (req: AuthRequest, res: Respons
   const populated = await FeedPost.findById(created._id)
     .populate('createdBy', 'fullName profileImage')
     .lean();
+
+  const author = populated?.createdBy as { fullName?: string } | undefined;
+  void notifyAdminFeedPostPending({
+    postTitle: created.title,
+    postId: created._id.toString(),
+    authorName: author?.fullName?.trim() || 'Member',
+  });
 
   sendSuccess(res, populated, t(lang, 'feedPost.created'), 201);
 });
