@@ -16,6 +16,7 @@ import globalSettingRoutes from './global-setting.route';
 import pushNotificationRoutes from './push-notification.route';
 import rbacRoutes from './rbac.route';
 import dashboardRoutes from './dashboard.route';
+import adminNotificationRoutes from './admin-notification.route';
 
 const router = Router();
 
@@ -37,6 +38,7 @@ router.use('/settings', globalSettingRoutes);
 router.use('/push-notifications', pushNotificationRoutes);
 router.use('/rbac', rbacRoutes);
 router.use('/dashboard', dashboardRoutes);
+router.use('/admin-notifications', adminNotificationRoutes);
 
 // Add more routes here as you create them
 // router.use('/users', userRoutes);

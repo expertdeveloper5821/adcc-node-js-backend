@@ -7,6 +7,8 @@ import { AppError } from '@/utils/app-error';
 import { AuthRequest } from '@/middleware/auth.middleware';
 import { t } from '@/utils/i18n';
 import { uploadImageBufferToS3 } from '@/services/s3-upload.service';
+import User from '@/models/user.model';
+import { notifyAdminStoreItemPending } from '@/services/admin-notification.service';
 
 const isAdmin = (req: AuthRequest): boolean => req.user?.role === 'Admin';
 
@@ -134,6 +136,13 @@ export const createStoreItem = asyncHandler(async (req: AuthRequest, res: Respon
     status: 'Pending',
     isFeatured: false,
     createdBy: userId,
+  });
+
+  const seller = await User.findById(userId).select('fullName').lean();
+  void notifyAdminStoreItemPending({
+    itemTitle: item.title,
+    itemId: item._id.toString(),
+    sellerName: seller?.fullName?.trim() || 'Seller',
   });
 
   sendSuccess(res, item, t(lang, 'store.created'), 201);

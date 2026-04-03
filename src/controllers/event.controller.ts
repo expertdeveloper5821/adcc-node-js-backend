@@ -3,6 +3,7 @@ import { t } from "@/utils/i18n";
 import Event from '@/models/event.model';
 import EventResult from '@/models/eventResult.model';
 import Track from '@/models/track.model';
+import User from '@/models/user.model';
 import { parseTimeToSeconds } from '@/utils/event-results.util';
 import { sendSuccess } from '@/utils/response';
 import { asyncHandler } from '@/utils/async-handler';
@@ -19,6 +20,10 @@ import dayjs from 'dayjs';
 import { getEffectiveEventStatus, isEventCalendarDateInPast } from '@/utils/event-date';
 import mongoose, { type PipelineStage } from 'mongoose';
 import { localizeDocumentFields, SupportedLanguage, localizeEventStatic } from '@/utils/localization';
+import {
+  notifyAdminEventRegistration,
+  notifyAdminTrackRideCompleted,
+} from '@/services/admin-notification.service';
 
 const EVENT_LOCALIZED_FIELDS = {
   title: 'titleAr',
@@ -727,7 +732,7 @@ export const getEventResults = asyncHandler(async (req: AuthRequest, res: Respon
     throw new AppError(t(lang, 'event.already_submitted'), 400);
   }
 
-  const eventDoc = await Event.findById(eventId).select('trackId').lean();
+  const eventDoc = await Event.findById(eventId).select('trackId title').lean();
   const hasTrack = !!eventDoc?.trackId;
 
   const distanceKm = Number(req.body.distance) || 0;
@@ -749,6 +754,14 @@ export const getEventResults = asyncHandler(async (req: AuthRequest, res: Respon
 
   await addDistanceOnComplete(userId, distanceKm, hasTrack);
   await addPointsOnComplete(userId, defaultCompletionPoints);
+
+  const userDoc = await User.findById(userId).select('fullName').lean();
+  void notifyAdminTrackRideCompleted({
+    participantName: userDoc?.fullName?.trim() || 'Member',
+    eventTitle: eventDoc?.title || 'Event',
+    eventId: String(eventId),
+  });
+
   sendSuccess(res, eventResults, t(lang, "event.submitted"), 201);
 });
 
@@ -802,6 +815,13 @@ export const joinEvent = asyncHandler(async (req: AuthRequest, res: Response) =>
 
     await incrementStatsOnJoin(userId);
 
+    const regUser = await User.findById(userId).select('fullName').lean();
+    void notifyAdminEventRegistration({
+      participantName: regUser?.fullName?.trim() || 'Member',
+      eventTitle: event.title || 'Event',
+      eventId: String(eventId),
+    });
+
     return sendSuccess(
       res,
       eventJoin,
@@ -817,6 +837,13 @@ export const joinEvent = asyncHandler(async (req: AuthRequest, res: Response) =>
   });
 
   await incrementStatsOnJoin(userId);
+
+  const joinUser = await User.findById(userId).select('fullName').lean();
+  void notifyAdminEventRegistration({
+    participantName: joinUser?.fullName?.trim() || 'Member',
+    eventTitle: event.title || 'Event',
+    eventId: String(eventId),
+  });
 
   return sendSuccess(
     res,
