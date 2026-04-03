@@ -189,6 +189,12 @@
         "list": "Settings retrieved successfully",
         "details": "Setting retrieved successfully"
     },
+    "contentDashboard": {
+        "summary": "Content dashboard summary retrieved successfully"
+    },
+    "dashboard": {
+        "summary": "Dashboard summary retrieved successfully"
+    },
     "statuses": {
       "open": "Open",
       "draft": "Draft",
