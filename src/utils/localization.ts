@@ -81,7 +81,7 @@ export const localizeDocumentFields = <T extends Record<string, any>>(
   Object.entries(fieldMap).forEach(([englishField, arabicField]) => {
     if (localized[arabicField]) {
       localized[englishField] = localized[arabicField];
-    }
+    } 
   });
 
   return localized as T;
