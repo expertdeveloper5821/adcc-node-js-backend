@@ -339,7 +339,7 @@ export const assignUserRole = asyncHandler(async (req: AuthRequest, res: Respons
     if (!role) {
       throw new AppError('Role not found', 404);
     }
-    await User.findByIdAndUpdate(userId, { roleId: role._id });
+    await User.findByIdAndUpdate(userId, { roleId: role._id, role: role.name });
   }
 
   const updated = await User.findById(userId)
