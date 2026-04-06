@@ -1,6 +1,8 @@
 import CommunityMembership from '@/models/communityMembership.model';
 import Community from '@/models/community.model';
+import User from '@/models/user.model';
 import { AppError } from '@/utils/app-error';
+import { notifyAdminCommunityMember } from '@/services/admin-notification.service';
 
 export class CommunityMembershipService {
   /**
@@ -41,6 +43,15 @@ export class CommunityMembershipService {
         // atomically add to members set
         await Community.findByIdAndUpdate(communityId, { $addToSet: { members: userId } });
 
+        const rejoinUser = await User.findById(userId).select('fullName').lean();
+        if (rejoinUser && community.title) {
+          void notifyAdminCommunityMember({
+            communityTitle: community.title,
+            memberName: rejoinUser.fullName?.trim() || 'Member',
+            communityId: String(communityId),
+          });
+        }
+
         return alreadyMember.populate('userId', 'fullName email');
       }
 
@@ -59,6 +70,15 @@ export class CommunityMembershipService {
 
     // atomically add new member (in case document was modified externally)
     await Community.findByIdAndUpdate(communityId, { $addToSet: { members: userId } });
+
+    const newMemberUser = await User.findById(userId).select('fullName').lean();
+    if (newMemberUser && community.title) {
+      void notifyAdminCommunityMember({
+        communityTitle: community.title,
+        memberName: newMemberUser.fullName?.trim() || 'Member',
+        communityId: String(communityId),
+      });
+    }
 
     return membership.populate('userId', 'fullName email');
 }

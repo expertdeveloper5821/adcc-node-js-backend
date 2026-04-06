@@ -10,6 +10,7 @@ import {
   createRole,
   deletePermission,
   deleteRole,
+  getMyRbacContext,
   getMyPermissions,
   getPermissionMatrix,
   getRoleById,
@@ -52,6 +53,7 @@ const parseMultipartFields = (req: Request, res: Response, next: NextFunction): 
 
 const rbacManage = [authenticate, requireStaffPermission('admin.manage_roles')];
 
+router.get('/me', authenticate, authenticatedOnly, getMyRbacContext);
 router.get('/me/permissions', authenticate, authenticatedOnly, getMyPermissions);
 
 router.get('/matrix', ...rbacManage, getPermissionMatrix);
