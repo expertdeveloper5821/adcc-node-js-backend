@@ -22,7 +22,7 @@ router.get('/', authenticate, requireStaffPermission('manage_users'), getAllUser
 router.get(
   '/registration-stats',
   authenticate,
-  requireStaffPermission('manage_users'),
+  // requireStaffPermission('manage_users'),
   getUserRegistrationStats
 );
 router.get('/:userId', authenticate, getUserById);
