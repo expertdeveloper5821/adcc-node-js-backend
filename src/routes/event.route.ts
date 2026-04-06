@@ -46,7 +46,7 @@ router.get('/', authenticate, validate(getEventsQuerySchema), getAllEvents);
 router.get(
   '/completed-stats',
   authenticate,
-  requireStaffPermission('manage_events'),
+  // requireStaffPermission('manage_events'),
   getCompletedEventStats
 );
 router.get('/:id', authenticate, getEventById);
