@@ -19,56 +19,58 @@ import {
 import dayjs from 'dayjs';
 import { getEffectiveEventStatus, isEventCalendarDateInPast } from '@/utils/event-date';
 import mongoose, { type PipelineStage } from 'mongoose';
-import { localizeDocumentFields, SupportedLanguage, localizeEventStatic } from '@/utils/localization';
+import { SupportedLanguage } from '@/utils/localization';
+import  {localizeEventPayload}  from '@/utils/event-payload';
+// import { localizeDocumentFields, SupportedLanguage, localizeEventStatic } from '@/utils/localization';
 import {
   notifyAdminEventRegistration,
   notifyAdminTrackRideCompleted,
 } from '@/services/admin-notification.service';
 
-const EVENT_LOCALIZED_FIELDS = {
-  title: 'titleAr',
-  description: 'descriptionAr',
-  address: 'addressAr',
-};
+// const EVENT_LOCALIZED_FIELDS = {
+//   title: 'titleAr',
+//   description: 'descriptionAr',
+//   address: 'addressAr',
+// };
 
-const SCHEDULE_LOCALIZED_FIELDS = {
-  title: 'titleAr',
-  description: 'descriptionAr',
-};
+// const SCHEDULE_LOCALIZED_FIELDS = {
+//   title: 'titleAr',
+//   description: 'descriptionAr',
+// };
 
-const localizeEventPayload = (event: Record<string, any>, lang: SupportedLanguage) => {
-  const payload = { ...event };
-  if (payload.eventDate && isEventCalendarDateInPast(new Date(payload.eventDate))) {
-    if (payload.status === 'Open' || payload.status === 'Full') {
-      payload.status = 'Closed';
-    }
-  }
+// const localizeEventPayload = (event: Record<string, any>, lang: SupportedLanguage) => {
+//   const payload = { ...event };
+//   if (payload.eventDate && isEventCalendarDateInPast(new Date(payload.eventDate))) {
+//     if (payload.status === 'Open' || payload.status === 'Full') {
+//       payload.status = 'Closed';
+//     }
+//   }
 
-  const localizedEvent = localizeDocumentFields(payload, lang, EVENT_LOCALIZED_FIELDS);
+//   const localizedEvent = localizeDocumentFields(payload, lang, EVENT_LOCALIZED_FIELDS);
   
-  // Localize static values
-  localizeEventStatic(localizedEvent, lang);
+//   // Localize static values
+//   localizeEventStatic(localizedEvent, lang);
 
-  if (Array.isArray(localizedEvent.schedule)) {
-    localizedEvent.schedule = localizedEvent.schedule.map((item: Record<string, any>) =>
-      localizeDocumentFields(item, lang, SCHEDULE_LOCALIZED_FIELDS)
-    );
-  }
+//   if (Array.isArray(localizedEvent.schedule)) {
+//     localizedEvent.schedule = localizedEvent.schedule.map((item: Record<string, any>) =>
+//       localizeDocumentFields(item, lang, SCHEDULE_LOCALIZED_FIELDS)
+//     );
+//   }
 
-  if (localizedEvent.communityId && typeof localizedEvent.communityId === 'object') {
-    localizedEvent.communityId = localizeDocumentFields(localizedEvent.communityId, lang, {
-      title: 'titleAr',
-    });
-  }
+//   if (localizedEvent.communityId && typeof localizedEvent.communityId === 'object') {
+//     localizedEvent.communityId = localizeDocumentFields(localizedEvent.communityId, lang, {
+//       title: 'titleAr',
+//     });
+//   }
 
-  if (localizedEvent.trackId && typeof localizedEvent.trackId === 'object') {
-    localizedEvent.trackId = localizeDocumentFields(localizedEvent.trackId, lang, {
-      title: 'titleAr',
-    });
-  }
+//   if (localizedEvent.trackId && typeof localizedEvent.trackId === 'object') {
+//     localizedEvent.trackId = localizeDocumentFields(localizedEvent.trackId, lang, {
+//       title: 'titleAr',
+//     });
+//   }
 
-  return localizedEvent;
-};
+//   return localizedEvent;
+// };
 
 const normalizeGalleryImagesInput = (value: unknown): string[] => {
   if (!value) return [];
@@ -469,7 +471,7 @@ export const getCompletedEventStats = asyncHandler(async (req: AuthRequest, res:
 
   const rangeFilter = {
     status: 'Completed',
-    updatedAt: {
+    eventDate: {
       $gte: fromDate,
       $lte: toDate,
     },
@@ -483,7 +485,7 @@ export const getCompletedEventStats = asyncHandler(async (req: AuthRequest, res:
         _id: {
           $dateToString: {
             format,
-            date: '$updatedAt',
+            date: '$eventDate',
           },
         },
         count: { $sum: 1 },
@@ -526,6 +528,7 @@ export const getCompletedEventStats = asyncHandler(async (req: AuthRequest, res:
  */
 export const getEventById = asyncHandler(async (req: Request, res: Response) => {
   const lang = ((req as any).lang || 'en') as SupportedLanguage;
+   console.log("local-e",lang)
   const { id } = req.params;
 
   const event = await Event.findById(id)

@@ -57,6 +57,9 @@
     "list_retrieved": "Users retrieved successfully",
     "verified_updated": "User verification status updated successfully"
   },
+  "dashboard": {
+    "landing_retrieved": "Dashboard landing data retrieved successfully"
+  },
   "image": {
     "required": "Image URL is required",
     "invalid": "Invalid image URL",

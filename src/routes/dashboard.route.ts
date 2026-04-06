@@ -1,11 +1,21 @@
-import { Router } from 'express';
+import express from 'express';
 import { authenticate } from '@/middleware/auth.middleware';
 import { requireStaffPermission } from '@/middleware/rbac.middleware';
 import { validate } from '@/middleware/validate.middleware';
-import { getStaffDashboardSummary } from '@/controllers/dashboard.controller';
+import { getDashboardLanding, getStaffDashboardSummary } from '@/controllers/dashboard.controller';
 import { staffDashboardQuerySchema } from '@/validators/dashboard.validator';
 
-const router = Router();
+// const router = Router();
+
+const router = express.Router();
+
+router.get(
+  '/landing',
+  authenticate,
+  requireStaffPermission('view_dashboard'),
+  getDashboardLanding
+);
+
 
 router.get(
   '/summary',
