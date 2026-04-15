@@ -18,9 +18,6 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const API_VERSION = process.env.API_VERSION || 'v1';
 
-// Connect database
-connectDB();
-
 // Middleware
 app.use(helmet());
 app.use(cors({
@@ -49,6 +46,17 @@ app.use(`/${API_VERSION}`, languageMiddleware, routes);
 app.use(notFound as any);
 app.use(errorHandler as any);
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+const startServer = async () => {
+  try {
+    await connectDB();
+
+    app.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`);
+    });
+  } catch (error) {
+    console.error('Failed to start server due to database connection error:', error);
+    process.exit(1);
+  }
+};
+
+startServer();
